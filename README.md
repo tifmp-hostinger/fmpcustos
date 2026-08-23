@@ -69,6 +69,7 @@ administrador no banco, ele não faz nada — rodar de novo nunca reabre uma con
 Para quem prefere rodar direto no Postgres:
 
 ```bash
+psql "$DATABASE_URL" -f scripts/sql/00-diagnostico.sql    # só leitura: mostra o estado
 psql "$DATABASE_URL" -f scripts/sql/01-esquema.sql        # tabelas, enums, índices
 psql "$DATABASE_URL" -f scripts/sql/02-dados-iniciais.sql # 13 setores + categorias
 
@@ -76,7 +77,16 @@ npx tsx scripts/gerar-sql-admin.ts "voce@fmp.com.br" "Seu Nome" "suaSenhaForte12
 psql "$DATABASE_URL" -f scripts/sql/03-administrador.sql  # primeiro admin
 ```
 
-Os dois primeiros são gerados a partir das migrations e do seed, então nunca
+Se o container já está no ar, as migrations **já foram aplicadas** e você não
+precisa do `01`: vá direto para o `02`.
+
+O `02` roda **sem transação**, de propósito. Cada comando é independente e
+idempotente, então um erro aparece com a causa real, em vez de virar
+`current transaction is aborted` (25P02) — que só informa que algo anterior
+falhou e esconde o motivo. Ele também não usa `gen_random_uuid()` nem blocos
+`DO $$`, que quebram em cliente gráfico ou em PostgreSQL antigo.
+
+O `01` e o `02` são gerados a partir das migrations e do seed, então nunca
 divergem deles. Rodar de novo não duplica nada. O terceiro é um **gerador**,
 não um arquivo fixo: a senha vira hash na sua máquina e o SQL nunca carrega a
 senha em texto — por isso ele fica fora do versionamento.

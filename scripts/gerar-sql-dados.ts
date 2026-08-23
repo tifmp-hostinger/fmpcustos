@@ -1,12 +1,17 @@
 /**
- * Gera scripts/sql/02-dados-iniciais.sql a partir do MESMO seed usado pela
- * aplicação, para que as duas formas de popular o banco nunca divirjam.
+ * Gera scripts/sql/02-dados-iniciais.sql a partir da MESMA lista usada pelo
+ * seed da aplicação, para que as duas formas de popular o banco não divirjam.
  *
  *   npx tsx scripts/gerar-sql-dados.ts
+ *
+ * O SQL gerado é deliberadamente simples: sem transação, sem blocos DO $$, sem
+ * funções que dependam da versão do PostgreSQL. Ele precisa rodar tanto por
+ * psql quanto colado num cliente gráfico, e um cliente gráfico costuma dividir
+ * o script por ponto e vírgula — o que quebra qualquer bloco mais elaborado.
  */
 import { writeFileSync } from "node:fs";
 
-const SETORES = [
+const SETORES: Array<[string, string]> = [
   ["FIN", "Financeiro e Tesouraria"],
   ["TI", "Tecnologia da Informação"],
   ["COM", "Comercial"],
@@ -41,7 +46,7 @@ const CATEGORIAS: Array<[string, string, string | null]> = [
   ["FINAN", "Financeiro e bancário", null],
 ];
 
-const CAPACIDADES = [
+const CAPACIDADES: Array<[string, string]> = [
   ["VIDEOCONF", "Videoconferência"],
   ["GESTAO_PROJ", "Gestão de projetos"],
   ["AVA", "Ambiente virtual de aprendizagem"],
@@ -65,10 +70,10 @@ const aspas = (v: string) => `'${v.replace(/'/g, "''")}'`;
 /**
  * IDs fixos e legíveis, em vez de gen_random_uuid().
  *
- * gen_random_uuid() só é nativo no PostgreSQL 13+; antes disso exige a extensão
+ * gen_random_uuid() só é nativa no PostgreSQL 13+; antes disso exige a extensão
  * pgcrypto e permissão de superusuário, que nem sempre existe num banco
- * gerenciado. Gerar o id aqui remove a dependência e ainda torna o registro
- * rastreável: dá para ver de olho o que veio da carga inicial.
+ * gerenciado. Gerar o id aqui remove a dependência de versão e ainda torna o
+ * registro rastreável: dá para ver de olho o que veio da carga inicial.
  */
 const id = (prefixo: string, codigo: string) =>
   `seed_${prefixo}_${codigo.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
@@ -78,67 +83,62 @@ const linhas: string[] = [
   "-- 02 · DADOS INICIAIS",
   "--",
   "-- Os 13 setores da FMP, a árvore de categorias e o catálogo de capacidades.",
-  "-- Idempotente: rodar de novo não duplica nada.",
   "--",
   "-- Como rodar:",
   '--   psql "$DATABASE_URL" -f scripts/sql/02-dados-iniciais.sql',
+  "-- ou cole o conteúdo inteiro no seu cliente de banco.",
   "--",
-  "-- SE VOCÊ VIR \"current transaction is aborted\" (SQL state 25P02):",
-  "-- esse NÃO é o erro. Ele apenas informa que alguma instrução ANTERIOR falhou",
-  "-- e que o resto do bloco foi ignorado. Role até o PRIMEIRO erro da saída —",
-  "-- é ele que diz o que aconteceu. Em cliente gráfico o primeiro erro costuma",
-  "-- ficar escondido acima; rodando por psql ele aparece no topo.",
+  "-- SEM transação, de propósito. Cada comando é independente e idempotente,",
+  "-- então o cliente mostra o erro REAL do comando que falhou, em vez de",
+  '-- "current transaction is aborted" (25P02) — que só informa que algo',
+  "-- anterior falhou e esconde a causa. Rodar de novo é seguro: nada duplica.",
+  "--",
+  '-- Se aparecer "relation ... does not exist": o esquema ainda não foi criado.',
+  "-- Rode antes o 01-esquema.sql, ou deixe o container aplicar as migrations.",
   "--",
   "-- GERADO POR scripts/gerar-sql-dados.ts — não edite à mão.",
   "-- ============================================================================",
   "",
-  "BEGIN;",
-  "",
-  "-- Guarda: sem o esquema, a mensagem precisa dizer o que fazer -----------",
-  "DO $$",
-  "BEGIN",
-  "  IF to_regclass('public.setor') IS NULL THEN",
-  "    RAISE EXCEPTION 'O esquema ainda nao existe neste banco. Rode antes: psql \"$DATABASE_URL\" -f scripts/sql/01-esquema.sql (ou deixe o container aplicar as migrations no start).';",
-  "  END IF;",
-  "END $$;",
-  "",
-  "-- Setores ---------------------------------------------------------------",
+  "-- Setores --------------------------------------------------------------",
   'INSERT INTO "setor" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VALUES',
-];
-
-linhas.push(
   SETORES.map(
     ([codigo, nome]) =>
       `  (${aspas(id("setor", codigo))}, ${aspas(codigo)}, ${aspas(nome)}, true, now(), now())`,
   ).join(",\n") + "\nON CONFLICT (codigo) DO NOTHING;",
   "",
-  "-- Categorias raiz -------------------------------------------------------",
+  "-- Categorias raiz ------------------------------------------------------",
   'INSERT INTO "categoria" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VALUES',
   CATEGORIAS.filter(([, , pai]) => pai === null)
-    .map(([codigo, nome]) => `  (${aspas(id("cat", codigo))}, ${aspas(codigo)}, ${aspas(nome)}, true, now(), now())`)
+    .map(
+      ([codigo, nome]) =>
+        `  (${aspas(id("cat", codigo))}, ${aspas(codigo)}, ${aspas(nome)}, true, now(), now())`,
+    )
     .join(",\n") + "\nON CONFLICT (codigo) DO NOTHING;",
   "",
-  "-- Subcategorias ---------------------------------------------------------",
-);
+  "-- Subcategorias --------------------------------------------------------",
+];
 
 for (const [codigo, nome, pai] of CATEGORIAS.filter(([, , p]) => p !== null)) {
   linhas.push(
-    `INSERT INTO "categoria" (id, codigo, nome, ativo, "categoriaPaiId", "criadoEm", "atualizadoEm")`,
+    'INSERT INTO "categoria" (id, codigo, nome, ativo, "categoriaPaiId", "criadoEm", "atualizadoEm")',
     `SELECT ${aspas(id("cat", codigo))}, ${aspas(codigo)}, ${aspas(nome)}, true, p.id, now(), now()`,
-    `FROM "categoria" p WHERE p.codigo = ${aspas(pai!)}`,
+    `FROM "categoria" p WHERE p.codigo = ${aspas(pai as string)}`,
     "ON CONFLICT (codigo) DO NOTHING;",
     "",
   );
 }
 
 linhas.push(
-  "-- Capacidades funcionais ------------------------------------------------",
+  "-- Capacidades funcionais -----------------------------------------------",
   'INSERT INTO "capacidade" (id, codigo, nome) VALUES',
-  CAPACIDADES.map(([codigo, nome]) => `  (${aspas(id("cap", codigo))}, ${aspas(codigo)}, ${aspas(nome)})`).join(
-    ",\n",
-  ) + "\nON CONFLICT (codigo) DO NOTHING;",
+  CAPACIDADES.map(
+    ([codigo, nome]) => `  (${aspas(id("cap", codigo))}, ${aspas(codigo)}, ${aspas(nome)})`,
+  ).join(",\n") + "\nON CONFLICT (codigo) DO NOTHING;",
   "",
-  "COMMIT;",
+  "-- Conferência: deve mostrar 13 setores, 16 categorias e 16 capacidades ---",
+  "SELECT (SELECT count(*) FROM setor)      AS setores,",
+  "       (SELECT count(*) FROM categoria)  AS categorias,",
+  "       (SELECT count(*) FROM capacidade) AS capacidades;",
   "",
 );
 

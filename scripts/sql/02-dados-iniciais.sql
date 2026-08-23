@@ -2,31 +2,23 @@
 -- 02 · DADOS INICIAIS
 --
 -- Os 13 setores da FMP, a árvore de categorias e o catálogo de capacidades.
--- Idempotente: rodar de novo não duplica nada.
 --
 -- Como rodar:
 --   psql "$DATABASE_URL" -f scripts/sql/02-dados-iniciais.sql
+-- ou cole o conteúdo inteiro no seu cliente de banco.
 --
--- SE VOCÊ VIR "current transaction is aborted" (SQL state 25P02):
--- esse NÃO é o erro. Ele apenas informa que alguma instrução ANTERIOR falhou
--- e que o resto do bloco foi ignorado. Role até o PRIMEIRO erro da saída —
--- é ele que diz o que aconteceu. Em cliente gráfico o primeiro erro costuma
--- ficar escondido acima; rodando por psql ele aparece no topo.
+-- SEM transação, de propósito. Cada comando é independente e idempotente,
+-- então o cliente mostra o erro REAL do comando que falhou, em vez de
+-- "current transaction is aborted" (25P02) — que só informa que algo
+-- anterior falhou e esconde a causa. Rodar de novo é seguro: nada duplica.
+--
+-- Se aparecer "relation ... does not exist": o esquema ainda não foi criado.
+-- Rode antes o 01-esquema.sql, ou deixe o container aplicar as migrations.
 --
 -- GERADO POR scripts/gerar-sql-dados.ts — não edite à mão.
 -- ============================================================================
 
-BEGIN;
-
--- Guarda: sem o esquema, a mensagem precisa dizer o que fazer -----------
-DO $$
-BEGIN
-  IF to_regclass('public.setor') IS NULL THEN
-    RAISE EXCEPTION 'O esquema ainda nao existe neste banco. Rode antes: psql "$DATABASE_URL" -f scripts/sql/01-esquema.sql (ou deixe o container aplicar as migrations no start).';
-  END IF;
-END $$;
-
--- Setores ---------------------------------------------------------------
+-- Setores --------------------------------------------------------------
 INSERT INTO "setor" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VALUES
   ('seed_setor_fin', 'FIN', 'Financeiro e Tesouraria', true, now(), now()),
   ('seed_setor_ti', 'TI', 'Tecnologia da Informação', true, now(), now()),
@@ -43,7 +35,7 @@ INSERT INTO "setor" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VALUES
   ('seed_setor_jur', 'JUR', 'Jurídico', true, now(), now())
 ON CONFLICT (codigo) DO NOTHING;
 
--- Categorias raiz -------------------------------------------------------
+-- Categorias raiz ------------------------------------------------------
 INSERT INTO "categoria" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VALUES
   ('seed_cat_tec', 'TEC', 'Tecnologia', true, now(), now()),
   ('seed_cat_pred', 'PRED', 'Predial e Facilities', true, now(), now()),
@@ -53,7 +45,7 @@ INSERT INTO "categoria" (id, codigo, nome, ativo, "criadoEm", "atualizadoEm") VA
   ('seed_cat_finan', 'FINAN', 'Financeiro e bancário', true, now(), now())
 ON CONFLICT (codigo) DO NOTHING;
 
--- Subcategorias ---------------------------------------------------------
+-- Subcategorias --------------------------------------------------------
 INSERT INTO "categoria" (id, codigo, nome, ativo, "categoriaPaiId", "criadoEm", "atualizadoEm")
 SELECT 'seed_cat_tec_telecom', 'TEC.TELECOM', 'Telecomunicação', true, p.id, now(), now()
 FROM "categoria" p WHERE p.codigo = 'TEC'
@@ -104,7 +96,7 @@ SELECT 'seed_cat_academ_acervo', 'ACADEM.ACERVO', 'Acervo e bases de pesquisa', 
 FROM "categoria" p WHERE p.codigo = 'ACADEM'
 ON CONFLICT (codigo) DO NOTHING;
 
--- Capacidades funcionais ------------------------------------------------
+-- Capacidades funcionais -----------------------------------------------
 INSERT INTO "capacidade" (id, codigo, nome) VALUES
   ('seed_cap_videoconf', 'VIDEOCONF', 'Videoconferência'),
   ('seed_cap_gestao_proj', 'GESTAO_PROJ', 'Gestão de projetos'),
@@ -124,4 +116,7 @@ INSERT INTO "capacidade" (id, codigo, nome) VALUES
   ('seed_cap_impressao', 'IMPRESSAO', 'Impressão e digitalização')
 ON CONFLICT (codigo) DO NOTHING;
 
-COMMIT;
+-- Conferência: deve mostrar 13 setores, 16 categorias e 16 capacidades ---
+SELECT (SELECT count(*) FROM setor)      AS setores,
+       (SELECT count(*) FROM categoria)  AS categorias,
+       (SELECT count(*) FROM capacidade) AS capacidades;

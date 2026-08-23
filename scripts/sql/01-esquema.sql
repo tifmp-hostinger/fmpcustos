@@ -20,14 +20,6 @@
 
 BEGIN;
 
--- Guarda: rodar duas vezes deve dizer o motivo, não despejar erro cru.
-DO $$
-BEGIN
-  IF to_regclass('public.setor') IS NOT NULL THEN
-    RAISE EXCEPTION 'O esquema ja existe neste banco. Este script so roda em banco vazio; para dados iniciais use 02-dados-iniciais.sql.';
-  END IF;
-END $$;
-
 -- CreateEnum
 CREATE TYPE "Natureza" AS ENUM ('RECORRENTE', 'PONTUAL', 'CAPEX', 'PESSOAL');
 
