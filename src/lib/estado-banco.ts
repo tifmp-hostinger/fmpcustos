@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { authSecretConfigurada, ERRO_AUTH_SECRET } from "@/lib/sessao";
 
 export type EstadoBanco =
   | { ok: true }
@@ -12,6 +13,19 @@ export type EstadoBanco =
  * quem está operando o painel.
  */
 export async function verificarBanco(): Promise<EstadoBanco> {
+  if (!authSecretConfigurada()) {
+    return {
+      ok: false,
+      motivo: "AUTH_SECRET não está definida",
+      detalhe: ERRO_AUTH_SECRET,
+      causas: [
+        "Gere um segredo: openssl rand -base64 32",
+        "Defina AUTH_SECRET nas variáveis de ambiente do serviço, no painel.",
+        "Sem ela ninguém consegue entrar, mesmo com o banco funcionando.",
+      ],
+    };
+  }
+
   if (!process.env.DATABASE_URL) {
     return {
       ok: false,

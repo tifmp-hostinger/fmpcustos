@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { gerarHashSenha, gerarSenhaTemporaria } from "../src/lib/senha";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -106,6 +107,8 @@ async function main() {
     });
   }
 
+  await semearAdministrador();
+
   const [setores, categorias, capacidades] = await Promise.all([
     prisma.setor.count(),
     prisma.categoria.count(),
@@ -114,6 +117,77 @@ async function main() {
   console.log(
     `Pronto: ${setores} setores, ${categorias} categorias, ${capacidades} capacidades.`,
   );
+}
+
+/**
+ * Cria o primeiro administrador, uma única vez.
+ *
+ * Sem isto não existe nenhuma forma de entrar no sistema recém-instalado.
+ * É idempotente: se já houver qualquer administrador, não faz nada — para que
+ * rodar o seed de novo nunca reabra uma conta ou reponha uma senha conhecida.
+ */
+async function semearAdministrador() {
+  const jaExiste = await prisma.usuario.count({ where: { papel: "ADMIN" } });
+  if (jaExiste > 0) {
+    console.log("Administrador já existe — nada a fazer.");
+    return;
+  }
+
+  const email = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
+  const nome = (process.env.ADMIN_NOME ?? "Administrador").trim();
+
+  if (!email) {
+    console.log("");
+    console.log("Nenhum administrador foi criado: ADMIN_EMAIL não está definida.");
+    console.log("Defina ADMIN_EMAIL (e opcionalmente ADMIN_NOME) e rode o seed de novo.");
+    console.log("");
+    return;
+  }
+
+  // ADMIN_SENHA é opcional. Sem ela, geramos uma temporária e imprimimos uma vez.
+  const senha = process.env.ADMIN_SENHA?.trim() || gerarSenhaTemporaria();
+  const definidaPeloOperador = Boolean(process.env.ADMIN_SENHA?.trim());
+
+  await prisma.colaborador.upsert({
+    where: { email },
+    update: {
+      usuario: {
+        upsert: {
+          create: {
+            papel: "ADMIN",
+            senhaHash: await gerarHashSenha(senha),
+            precisaTrocarSenha: !definidaPeloOperador,
+          },
+          update: { papel: "ADMIN", ativo: true },
+        },
+      },
+    },
+    create: {
+      nome,
+      email,
+      usuario: {
+        create: {
+          papel: "ADMIN",
+          senhaHash: await gerarHashSenha(senha),
+          precisaTrocarSenha: !definidaPeloOperador,
+        },
+      },
+    },
+  });
+
+  console.log("");
+  console.log("======================================================================");
+  console.log("Administrador criado.");
+  console.log(`  E-mail: ${email}`);
+  if (definidaPeloOperador) {
+    console.log("  Senha:  a que você definiu em ADMIN_SENHA");
+  } else {
+    console.log(`  Senha:  ${senha}`);
+    console.log("  Esta senha é temporária e será trocada no primeiro acesso.");
+    console.log("  Ela não será exibida de novo.");
+  }
+  console.log("======================================================================");
+  console.log("");
 }
 
 main()

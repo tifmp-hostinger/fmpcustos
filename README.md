@@ -5,9 +5,9 @@ Plataforma corporativa de inteligência de custos da **FMP — Fundação Escola
 Cobre os 13 setores da Fundação desde a primeira versão. Não é um sistema de cadastro:
 o objetivo é que o dado gere indicador, alerta, rateio e recomendação.
 
-> **Estado atual:** esqueleto da Entrega 1. Modelo de dados, importador/auditor da
-> planilha, camada semântica e empacotamento estão prontos. Telas de cadastro,
-> autenticação e fechamento de competência ainda não.
+> **Estado atual:** sistema utilizável. Login, gestão de usuários por perfil e
+> setor, cadastro de custos e dashboards de decisão estão no ar. Fechamento de
+> competência, CAPEX e pessoal ainda não.
 
 ---
 
@@ -21,24 +21,65 @@ o objetivo é que o dado gere indicador, alerta, rateio e recomendação.
 | Seed dos 13 setores, categorias e capacidades | ✅ |
 | Dockerfile multi-stage para EasyPanel | ✅ |
 | CI (typecheck, lint, migrations, build) | ✅ |
-| Autenticação SSO Microsoft | ⛔ Entrega 1 |
-| Telas de cadastro e fechamento de competência | ⛔ Entrega 1 |
+| Login com e-mail e senha, sessão assinada | ✅ |
+| Gestão de usuários por perfil e setor | ✅ |
+| Cadastro de custos com escopo por setor | ✅ |
+| Dashboards de decisão | ✅ |
+| Scripts SQL para aplicar direto no banco | ✅ |
+| Fechamento mensal por competência | ⛔ próximo |
+| SSO Microsoft Entra ID | ⛔ próximo |
 | CAPEX e custo de pessoal | ⏸ decisão em aberto (integrar × construir) |
+
+---
+
+## Quem faz o quê
+
+| Perfil | Enxerga | Pode |
+| --- | --- | --- |
+| **Administrador** | todos os setores | tudo, incluindo criar usuários e definir perfil e setor |
+| **Gestor de setor** | só o próprio setor | cadastrar e editar os custos da própria área |
+| **Gestor de contrato** | só o próprio setor | cadastrar e editar os custos da própria área |
+| **Controladoria** | todos os setores | consultar; não gerencia usuários |
+| **Leitor** | só o próprio setor | consultar |
+
+O gestor de setor **não escolhe** o setor ao lançar: o custo vai para a área dele.
+Só quem enxerga por inteiro pode escolher.
 
 ---
 
 ## Começando
 
 ```bash
-cp .env.example .env          # ajuste DATABASE_URL
+cp .env.example .env
+# Preencha DATABASE_URL, AUTH_SECRET (openssl rand -base64 32) e ADMIN_EMAIL.
 npm install
 docker compose up -d db       # ou aponte para um Postgres existente
 npm run db:migrate
-npm run db:seed               # 13 setores, 16 categorias, 16 capacidades
+npm run db:seed               # setores, categorias, capacidades e o 1º admin
 npm run dev
 ```
 
 Aplicação em <http://localhost:3000>. Healthcheck em `/api/health`.
+
+O seed imprime a senha do administrador **uma única vez**. Se já houver qualquer
+administrador no banco, ele não faz nada — rodar de novo nunca reabre uma conta.
+
+### Aplicar o banco por SQL, sem o Prisma
+
+Para quem prefere rodar direto no Postgres:
+
+```bash
+psql "$DATABASE_URL" -f scripts/sql/01-esquema.sql        # tabelas, enums, índices
+psql "$DATABASE_URL" -f scripts/sql/02-dados-iniciais.sql # 13 setores + categorias
+
+npx tsx scripts/gerar-sql-admin.ts "voce@fmp.com.br" "Seu Nome" "suaSenhaForte123"
+psql "$DATABASE_URL" -f scripts/sql/03-administrador.sql  # primeiro admin
+```
+
+Os dois primeiros são gerados a partir das migrations e do seed, então nunca
+divergem deles. Rodar de novo não duplica nada. O terceiro é um **gerador**,
+não um arquivo fixo: a senha vira hash na sua máquina e o SQL nunca carrega a
+senha em texto — por isso ele fica fora do versionamento.
 
 ### Auditar a planilha atual
 
@@ -88,6 +129,14 @@ Um sistema com 1 setor preenchido e 12 vazios é pior que a planilha, porque
 parece completo. Nenhuma visão consolidada é renderizada sem dizer quem ainda
 não reportou.
 
+**9. Escopo por setor é aplicado na consulta, não na tela.**
+`escopoDeItens()` em `src/lib/consultas.ts` entra no `where` de toda busca.
+Esconder um botão não é controle de acesso.
+
+**10. Os gráficos são de magnitude, não de identidade.**
+Todas as barras medem reais por mês, então usam um único tom. Colorir por
+posição no ranking faria a cor mudar de dono a cada filtro.
+
 ---
 
 ## Estrutura
@@ -125,6 +174,8 @@ docs/
 | `npm run db:seed` | Popula setores, categorias e capacidades |
 | `npm run db:studio` | Prisma Studio |
 | `npm run importar -- <arquivo.xlsx>` | Importa e audita uma planilha |
+| `npx tsx scripts/gerar-sql-dados.ts` | Regera o SQL de dados iniciais |
+| `npx tsx scripts/gerar-sql-admin.ts <email> <nome> [senha]` | Gera o SQL do primeiro admin |
 
 ---
 

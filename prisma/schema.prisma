@@ -227,13 +227,20 @@ model Usuario {
   papel PapelUsuario @default(LEITOR)
   ativo Boolean      @default(true)
 
+  /// Hash scrypt da senha, no formato scrypt$N$r$p$salt$hash.
+  /// Nulo enquanto o usuário nunca definiu senha (criado pelo admin e ainda sem acesso).
+  senhaHash String?
+  /// Obriga troca no próximo login — usado quando o admin cria ou reseta a senha.
+  precisaTrocarSenha Boolean @default(true)
+
   colaboradorId String      @unique
   colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
 
   /// Escopo de setores que o usuário enxerga. Vazio + papel ADMIN/CONTROLADORIA = todos.
-  acessos    AcessoSetor[]
-  auditorias Auditoria[]
-  importacoes Importacao[]
+  acessos      AcessoSetor[]
+  auditorias   Auditoria[]
+  importacoes  Importacao[]
+  itensCriados ItemCusto[]  @relation("ItensCriados")
 
   ultimoAcesso DateTime?
   criadoEm     DateTime  @default(now())
@@ -275,6 +282,7 @@ model Fornecedor {
 
   contratos Contrato[]
   servicos  Servico[]
+  itens     ItemCusto[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -457,6 +465,12 @@ model ItemCusto {
   servicoId String?
   servico   Servico? @relation(fields: [servicoId], references: [id])
 
+  /// Fornecedor direto no item. O contrato continua sendo o lugar da vigência e
+  /// das cláusulas, mas exigi-lo para lançar um custo travava o cadastro: quem
+  /// lança sabe de quem é a cobrança muito antes de ter o contrato em mãos.
+  fornecedorId String?
+  fornecedor   Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
@@ -488,6 +502,9 @@ model ItemCusto {
   refPedido   String?
   refProposta String?
   observacoes String?
+
+  criadoPorId String?
+  criadoPor   Usuario? @relation("ItensCriados", fields: [criadoPorId], references: [id])
 
   faixas      FaixaPreco[]
   lancamentos LancamentoCusto[]

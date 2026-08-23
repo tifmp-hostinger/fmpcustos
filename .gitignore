@@ -20,3 +20,4 @@ npm-debug.log*
 # Saídas do importador — dados reais não vão para o repositório
 dados/entrada/*.xlsx
 dados/saida/
+scripts/sql/03-administrador.sql

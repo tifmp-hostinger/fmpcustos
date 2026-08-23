@@ -48,10 +48,19 @@ Monte a `DATABASE_URL` com os dados anotados no passo 1:
 
 ```
 DATABASE_URL=postgresql://<usuario>:<senha>@<nome-do-servico-postgres>:5432/<banco>?schema=public
+AUTH_SECRET=<gerar com: openssl rand -base64 32>
 NODE_ENV=production
 APP_URL=https://custos.fmp.edu.br
-AUTH_SECRET=<gerar com: openssl rand -base64 32>
+
+# Lidos só pelo seed, na primeira vez:
+ADMIN_EMAIL=voce@fmp.com.br
+ADMIN_NOME=Seu Nome
 ```
+
+`AUTH_SECRET` é **obrigatória**: ela assina o cookie de sessão. Sem ela ninguém
+entra, e a tela de login diz exatamente isso em vez de dar erro genérico.
+Trocá-la depois derruba todas as sessões abertas — o que é o comportamento certo
+se você suspeitar de vazamento.
 
 Use o **hostname interno** do serviço Postgres (o nome do serviço dentro do
 projeto), não `localhost` nem IP público.
@@ -67,6 +76,11 @@ O seed **não** roda automaticamente. Execute uma vez, pelo terminal do serviço
 ```bash
 prisma db seed
 ```
+
+Ele cria os 13 setores, as categorias, o catálogo de capacidades e **o primeiro
+administrador**, a partir de `ADMIN_EMAIL`. A senha temporária aparece no log
+uma única vez — anote. Se já existir algum administrador, o seed não mexe em
+nada.
 
 A imagem inclui a CLI do Prisma e o `tsx` justamente para este passo, e
 `/app/node_modules/.bin` já está no `PATH`.
