@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
@@ -25,8 +26,15 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-serif text-3xl font-bold tracking-tight">{item.descricao}</h1>
-      <p className="mt-1.5 text-[var(--ink-2)]">Editando um custo já cadastrado.</p>
+      <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
+        <Link href="/custos" className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]">Custos</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-[var(--ink-2)]">Editar</span>
+      </nav>
+      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">{item.descricao}</h1>
+      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+        Alterações ficam registradas na auditoria, com autor e data.
+      </p>
 
       <FormularioCusto
         categorias={categorias}

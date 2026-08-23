@@ -197,6 +197,55 @@ export async function pendenciasDeDado(escopo: Escopo) {
   return { semValor, semCategoria, semVigencia };
 }
 
+/**
+ * Pendências com identidade: quais itens estão incompletos, com link direto.
+ * A contagem diz que algo falta; a lista diz ONDE clicar para resolver.
+ */
+export async function itensComPendencia(escopo: Escopo, limite = 5) {
+  const base = {
+    status: { in: [...STATUS_CORRENTE] },
+    ...(escopo.setorIds === null
+      ? {}
+      : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+  };
+  const selecao = {
+    id: true,
+    descricao: true,
+    fornecedor: { select: { nome: true } },
+  } as const;
+
+  const [semValor, semVigencia] = await Promise.all([
+    prisma.itemCusto.findMany({
+      where: { ...base, valorMensalNormalizado: null },
+      select: selecao,
+      orderBy: { atualizadoEm: "desc" },
+      take: limite,
+    }),
+    prisma.itemCusto.findMany({
+      where: { ...base, dataFim: null, valorMensalNormalizado: { not: null } },
+      select: selecao,
+      orderBy: { valorMensalNormalizado: "desc" },
+      take: limite,
+    }),
+  ]);
+  return { semValor, semVigencia };
+}
+
+/** Os maiores custos do escopo — o resumo que um gestor quer ver primeiro. */
+export async function maioresItens(escopo: Escopo, naturezas: Natureza[], limite = 5) {
+  return prisma.itemCusto.findMany({
+    where: filtroBase(escopo, naturezas),
+    select: {
+      id: true,
+      descricao: true,
+      valorMensalNormalizado: true,
+      fornecedor: { select: { nome: true } },
+    },
+    orderBy: { valorMensalNormalizado: "desc" },
+    take: limite,
+  });
+}
+
 /** Quais setores já lançaram alguma coisa. Impede ler um parcial como total. */
 export async function setoresQueLancaram() {
   const setores = await prisma.setor.findMany({

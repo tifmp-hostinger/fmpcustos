@@ -24,11 +24,29 @@ export default async function Usuarios() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-serif text-3xl font-bold tracking-tight">Usuários</h1>
-      <p className="mt-1.5 text-[var(--ink-2)]">
-        Cada pessoa entra com o próprio e-mail e enxerga apenas o setor ao qual está
-        vinculada. Administrador e Controladoria enxergam todos.
+      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-3)]">
+        Administração
       </p>
+      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">Usuários</h1>
+      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+        Cada pessoa entra com o próprio e-mail e enxerga apenas o setor ao qual está vinculada.
+        Administrador e Controladoria enxergam todos.
+      </p>
+
+      <ol className="mt-5 grid gap-2 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4 text-[13px] text-[var(--ink-2)] sm:grid-cols-3">
+        <li className="flex gap-2.5">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">1</span>
+          Você cria o usuário e escolhe o perfil e o setor.
+        </li>
+        <li className="flex gap-2.5">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">2</span>
+          O sistema gera uma senha temporária — repasse com segurança.
+        </li>
+        <li className="flex gap-2.5">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">3</span>
+          No primeiro acesso, a pessoa define a própria senha.
+        </li>
+      </ol>
 
       <div className="mt-8">
         <NovoUsuario setores={setores} />

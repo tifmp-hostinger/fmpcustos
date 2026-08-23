@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { listarCategorias, listarSetores } from "@/lib/consultas";
@@ -14,10 +15,16 @@ export default async function NovoCusto() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-serif text-3xl font-bold tracking-tight">Cadastrar custo</h1>
-      <p className="mt-1.5 text-[var(--ink-2)]">
-        Informe o valor de <strong>cada cobrança</strong> e a periodicidade. O equivalente
-        mensal é calculado pelo sistema — nunca digitado.
+      <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
+        <Link href="/custos" className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]">Custos</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-[var(--ink-2)]">Novo</span>
+      </nav>
+      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">Cadastrar custo</h1>
+      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+        Três blocos: <strong>o que é</strong>, <strong>quanto custa</strong> e{" "}
+        <strong>quando renova</strong>. Informe o valor de cada cobrança — o equivalente mensal o
+        sistema calcula sozinho.
       </p>
 
       <FormularioCusto
