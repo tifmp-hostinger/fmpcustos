@@ -184,6 +184,8 @@ docs/
 | `npm run db:seed` | Popula setores, categorias e capacidades |
 | `npm run db:studio` | Prisma Studio |
 | `npm run importar -- <arquivo.xlsx>` | Importa e audita uma planilha |
+| `npm run diagnostico` | Estado do ambiente: variáveis, banco, esquema, usuários |
+| `npm run senha -- <email> '<senha>'` | Define a senha de um usuário; cria como ADMIN se não existir |
 | `npx tsx scripts/gerar-sql-dados.ts` | Regera o SQL de dados iniciais |
 | `npx tsx scripts/gerar-sql-admin.ts <email> <nome> [senha]` | Gera o SQL do primeiro admin |
 

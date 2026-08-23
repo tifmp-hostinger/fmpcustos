@@ -125,7 +125,35 @@ A imagem expõe `/api/health`, e o `HEALTHCHECK` do Dockerfile aponta para ele.
 Ele mede **liveness do processo**, não do banco: responde 200 sempre que a
 aplicação está de pé, informando o estado do banco no corpo da resposta.
 
-## 6. Quando algo dá errado
+## 6. Não consigo entrar
+
+A mensagem de login é sempre a mesma — "E-mail ou senha incorretos" — e isso é
+proposital: revelar quais e-mails existem entrega informação a quem tenta
+adivinhar. O efeito colateral é que, para quem opera, "usuário não existe" e
+"senha errada" ficam indistinguíveis.
+
+Para saber qual dos dois é, rode no terminal do serviço:
+
+```bash
+npx tsx prisma/diagnostico.ts
+```
+
+Ele só faz leitura e responde: as variáveis estão definidas, o banco conecta, o
+esquema foi aplicado, quantos setores existem e — o que mais importa aqui —
+quais usuários existem, se estão ativos e se têm senha.
+
+Para criar ou redefinir uma senha de forma explícita:
+
+```bash
+npx tsx prisma/definir-senha.ts admin@fmp.com.br 'SuaSenhaForte2026'
+```
+
+Se o usuário não existir, ele é criado como administrador. Quem roda isto já tem
+shell no container, ou seja, já tem controle total — a ferramenta não abre
+nenhuma porta que não estivesse aberta. Use aspas simples em volta da senha, para
+o shell não interpretar `$` e `!`.
+
+## 7. Quando algo dá errado
 
 A aplicação **não** morre quando o banco está fora. O entrypoint tenta aplicar as
 migrations 6 vezes, com espera crescente, e mesmo falhando entrega o controle ao
@@ -142,7 +170,7 @@ Com o banco indisponível você tem dois lugares para olhar, ambos respondendo:
 
 O log do container traz o mesmo texto.
 
-## 7. Ordem do primeiro deploy
+## 8. Ordem do primeiro deploy
 
 1. Criar o serviço Postgres e configurar backup — **antes de tudo**
 2. Subir o serviço App com as variáveis de ambiente apontando para ele

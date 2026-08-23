@@ -14,7 +14,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "importar": "tsx scripts/importar-planilha.ts"
+    "importar": "tsx scripts/importar-planilha.ts",
+    "diagnostico": "tsx prisma/diagnostico.ts",
+    "senha": "tsx prisma/definir-senha.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
