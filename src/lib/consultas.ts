@@ -1,15 +1,55 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { setoresVisiveis, type UsuarioSessao } from "@/lib/sessao";
 
 /**
  * Filtro de itens de custo respeitando o escopo de setor do usuário.
  * Só rateios VIGENTES contam: um item transferido para outro setor (rateio
  * antigo com vigenciaFim preenchida) deixa de pertencer ao setor de origem.
+ *
+ * `lixeira` escolhe de que lado da exclusão reversível se está olhando. O
+ * padrão exclui os itens na lixeira de toda consulta do sistema — item que a
+ * pessoa acabou de excluir não pode continuar aparecendo em lista nem somando
+ * em painel.
  */
-export function escopoDeItens(usuario: UsuarioSessao) {
+export function escopoDeItens(
+  usuario: UsuarioSessao,
+  lixeira: "fora" | "dentro" | "ambos" = "fora",
+  /**
+   * Inclui os custos em que o setor da pessoa tem uma fatia PROPOSTA, ainda não
+   * aceita. Sem isso, o gestor que recebe uma proposta não consegue abrir o
+   * custo para decidir: ele não é dono de nenhuma fatia vigente, então o item
+   * fica fora do escopo dele e a página responde 404 — inclusive pelo link do
+   * próprio cartão de aceite, na tela inicial. Pedir uma decisão sobre algo que
+   * a pessoa não pode nem abrir é o oposto de fluido.
+   */
+  incluirPropostas = false,
+) {
+  const exclusao =
+    lixeira === "fora"
+      ? { excluidoEm: null }
+      : lixeira === "dentro"
+        ? { excluidoEm: { not: null } }
+        : {};
+
   const setores = setoresVisiveis(usuario);
-  if (setores === null) return {};
-  return { rateios: { some: { setorId: { in: setores }, vigenciaFim: null } } };
+  if (setores === null) return exclusao;
+
+  const caminhos: Prisma.ItemCustoWhereInput[] = [
+    { rateios: { some: { setorId: { in: setores }, vigenciaFim: null } } },
+  ];
+  if (incluirPropostas) {
+    caminhos.push({
+      propostas: {
+        some: { status: "PENDENTE", parcelas: { some: { setorId: { in: setores } } } },
+      },
+    });
+  }
+
+  // `AND` em vez de `OR` no topo: quem chama acrescenta o próprio `OR` (a busca
+  // por texto, por exemplo), e dois `OR` no mesmo objeto fariam um sobrescrever
+  // o outro — o escopo de setor sumiria em silêncio na primeira busca.
+  return { ...exclusao, AND: [{ OR: caminhos }] };
 }
 
 export async function listarCategorias() {

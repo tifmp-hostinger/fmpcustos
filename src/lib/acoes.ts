@@ -5,17 +5,63 @@
  * de erro. Sem isso, um erro de validação apaga o que já foi preenchido — o que
  * é irritante num login e inaceitável num formulário de vinte campos.
  * Nunca inclua senha aqui.
+ *
+ * `campo` diz QUAL campo recusou, para o formulário focar nele em vez de deixar
+ * a pessoa caçar o erro num formulário de quatorze campos.
  */
-export type Resultado =
-  | { ok: true; mensagem?: string }
-  | { ok: false; erro: string; valores?: Record<string, string> };
 
-export const falha = (erro: string, valores?: Record<string, string>): Resultado => ({
-  ok: false,
-  erro,
-  valores,
-});
-export const sucesso = (mensagem?: string): Resultado => ({ ok: true, mensagem });
+/**
+ * O que o aviso de sucesso precisa carregar para o "Desfazer" existir de fato.
+ *
+ * `acao` é o nome da operação inversa e `id` o registro afetado — juntos, é tudo
+ * que a ação de desfazer precisa. Um botão Desfazer que não sabe o que reverter
+ * é enfeite; este par é o que o torna verdadeiro.
+ */
+export type Desfazer = {
+  acao: "restaurarCusto" | "reverterCampo";
+  id: string;
+  /** Estado anterior, serializado, para `reverterCampo` saber ao que voltar. */
+  antes?: Record<string, string | null>;
+};
+
+export type Resultado =
+  | {
+      ok: true;
+      mensagem?: string;
+      /** Segunda linha do aviso: o delta, o total, o motivo. Nunca mais que uma. */
+      detalhe?: string;
+      /** Linha a destacar na lista depois da gravação — "foi esta que mudou". */
+      destaqueId?: string;
+      desfazer?: Desfazer;
+      /** Para onde ir depois do sucesso. Ausente = fica onde está. */
+      irPara?: string;
+    }
+  | { ok: false; erro: string; valores?: Record<string, string>; campo?: string };
+
+export const falha = (
+  erro: string,
+  valores?: Record<string, string>,
+  campo?: string,
+): Resultado => ({ ok: false, erro, valores, campo });
+
+export const sucesso = (
+  mensagem?: string,
+  extras?: { detalhe?: string; destaqueId?: string; desfazer?: Desfazer; irPara?: string },
+): Resultado => ({ ok: true, mensagem, ...extras });
+
+/**
+ * Recolhe o FormData inteiro em texto, para devolver ao formulário quando a
+ * validação recusa. Campos de senha nunca voltam — devolver senha ao HTML é
+ * como escrevê-la no papel de parede.
+ */
+export function valoresDigitados(dados: FormData): Record<string, string> {
+  const fora = /senha|password|token|secret/i;
+  const valores: Record<string, string> = {};
+  for (const [chave, valor] of dados.entries()) {
+    if (typeof valor === "string" && !fora.test(chave)) valores[chave] = valor;
+  }
+  return valores;
+}
 
 /** Lê um campo de texto obrigatório do FormData. */
 export function texto(dados: FormData, campo: string): string {

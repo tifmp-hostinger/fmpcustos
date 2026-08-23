@@ -255,6 +255,7 @@ model Usuario {
   auditorias       Auditoria[]
   importacoes      Importacao[]
   itensCriados     ItemCusto[]             @relation("ItensCriados")
+  itensExcluidos   ItemCusto[]             @relation("ItensExcluidos")
   propostasCriadas PropostaRateio[]        @relation("PropostasCriadas")
   aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
 
@@ -522,6 +523,20 @@ model ItemCusto {
   criadoPorId String?
   criadoPor   Usuario? @relation("ItensCriados", fields: [criadoPorId], references: [id])
 
+  /// Exclusão reversível. Excluir de verdade apaga a série mensal inteira, e o
+  /// botão "Desfazer" do aviso precisa ter o que desfazer: sem esta coluna, o
+  /// delete já foi confirmado no banco e o Desfazer seria mentira.
+  /// Some das listas na hora, fica 30 dias na aba "Excluídos", e só então é
+  /// expurgado fisicamente.
+  excluidoEm    DateTime?
+  excluidoPorId String?
+  excluidoPor   Usuario?  @relation("ItensExcluidos", fields: [excluidoPorId], references: [id])
+
+  /// Contrato sem data de término é diferente de contrato cuja data ninguém
+  /// preencheu. Sem esta marcação, sair da fila de pendências exige inventar
+  /// uma data — e dado inventado é pior que dado faltando.
+  semPrazoDeterminado Boolean @default(false)
+
   faixas      FaixaPreco[]
   lancamentos LancamentoCusto[]
   rateios     Rateio[]
@@ -535,6 +550,7 @@ model ItemCusto {
   @@index([contratoId])
   @@index([natureza, status])
   @@index([categoriaId])
+  @@index([excluidoEm])
   @@map("item_custo")
 }
 

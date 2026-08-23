@@ -92,6 +92,8 @@ export function Campo({
   valor,
   dica,
   placeholder,
+  erro,
+  lista,
   ...resto
 }: {
   rotulo: string;
@@ -101,7 +103,12 @@ export function Campo({
   valor?: string | number | null;
   dica?: string;
   placeholder?: string;
+  /** Mensagem da validação do servidor, ancorada neste campo. */
+  erro?: string;
+  /** id de um <datalist> para sugestão de valores já existentes. */
+  lista?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const idErro = useId();
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
@@ -112,16 +119,43 @@ export function Campo({
         {...resto}
         type={tipo}
         name={nome}
-        required={obrigatorio}
+        // `required` não é usado para os campos que o servidor valida: a
+        // validação nativa do navegador aparece num balão que some sozinho,
+        // não é lida por leitor de tela em vários casos e não sabe explicar
+        // por que "1,2,3" não é um valor. A recusa acontece uma vez só, com
+        // a frase certa, e vinda de quem realmente decide — o servidor.
+        aria-required={obrigatorio}
+        aria-invalid={erro ? true : undefined}
+        aria-describedby={erro ? idErro : undefined}
+        list={lista}
         placeholder={placeholder}
         defaultValue={valor ?? undefined}
-        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none ${
+          erro
+            ? "border-[var(--accent)] focus:border-[var(--accent)]"
+            : "border-[var(--rule)] focus:border-[var(--accent)]"
+        }`}
       />
-      {dica && <span className="mt-1 block text-xs text-[var(--ink-3)]">{dica}</span>}
+      {erro ? (
+        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent)]">
+          {erro}
+        </span>
+      ) : (
+        dica && <span className="mt-1 block text-xs text-[var(--ink-3)]">{dica}</span>
+      )}
     </label>
   );
 }
 
+/**
+ * Seleção com guarda de valor legado.
+ *
+ * Um `<select>` cujo valor atual não está entre as opções não fica vazio: ele
+ * cai silenciosamente na primeira opção, e o próximo salvamento grava essa
+ * primeira opção como se fosse escolha de alguém. Foi assim que itens CAPEX
+ * viraram RECORRENTE numa edição de valor. Aqui o valor fora da lista aparece
+ * explicitamente, marcado, para a pessoa ver o que está prestes a mudar.
+ */
 export function Selecao({
   rotulo,
   nome,
@@ -130,6 +164,8 @@ export function Selecao({
   obrigatorio,
   dica,
   vazio,
+  erro,
+  onChange,
 }: {
   rotulo: string;
   nome: string;
@@ -138,7 +174,13 @@ export function Selecao({
   obrigatorio?: boolean;
   dica?: string;
   vazio?: string;
+  erro?: string;
+  onChange?: React.ChangeEventHandler<HTMLSelectElement>;
 }) {
+  const idErro = useId();
+  const atual = valor ?? "";
+  const legado = atual !== "" && !opcoes.some((o) => o.valor === atual);
+
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
@@ -147,18 +189,34 @@ export function Selecao({
       </span>
       <select
         name={nome}
-        required={obrigatorio}
-        defaultValue={valor ?? ""}
-        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+        aria-required={obrigatorio}
+        aria-invalid={erro ? true : undefined}
+        aria-describedby={erro || legado ? idErro : undefined}
+        defaultValue={atual}
+        onChange={onChange}
+        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)] ${
+          erro || legado ? "border-[var(--accent)]" : "border-[var(--rule)]"
+        }`}
       >
         {vazio && <option value="">{vazio}</option>}
+        {legado && <option value={atual}>{atual} — valor fora da lista atual</option>}
         {opcoes.map((o) => (
           <option key={o.valor} value={o.valor}>
             {o.rotulo}
           </option>
         ))}
       </select>
-      {dica && <span className="mt-1 block text-xs text-[var(--ink-3)]">{dica}</span>}
+      {erro ? (
+        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent)]">
+          {erro}
+        </span>
+      ) : legado ? (
+        <span id={idErro} className="mt-1 block text-xs text-[var(--accent)]">
+          O valor gravado não está mais na lista. Escolha um antes de salvar.
+        </span>
+      ) : (
+        dica && <span className="mt-1 block text-xs text-[var(--ink-3)]">{dica}</span>
+      )}
     </label>
   );
 }
@@ -201,7 +259,11 @@ export function Enviar({ children = "Salvar" }: { children?: React.ReactNode }) 
   );
 }
 
-export function Aviso({ resultado }: { resultado: { ok: boolean; erro?: string; mensagem?: string } | null }) {
+export function Aviso({
+  resultado,
+}: {
+  resultado: { ok: boolean; erro?: string; mensagem?: string } | null;
+}) {
   if (!resultado) return null;
   const erro = !resultado.ok;
   return (

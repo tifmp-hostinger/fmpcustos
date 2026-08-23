@@ -97,3 +97,87 @@ export const IconeEditar = ({ className }: Props) => (
     <path d="m14.5 7.5 3 3" />
   </svg>
 );
+
+export const IconeFechar = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+);
+
+export const IconeVoltar = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h11a5 5 0 0 1 0 10h-4" />
+  </svg>
+);
+
+/** Três pontos na vertical: o menu de tudo o mais que a linha faz. */
+export const IconeMenuLinha = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconeLixeira = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M4 7h16M10 4h4M9 7v12M15 7v12" />
+    <path d="M6 7l1 13.5h10L18 7" />
+  </svg>
+);
+
+export const IconeCopiar = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V6a2 2 0 0 1 2-2h8" />
+  </svg>
+);
+
+/** Divisão entre setores: uma barra que se reparte. */
+export const IconeRateio = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <rect x="3" y="9" width="18" height="6" rx="1.6" />
+    <path d="M11 9v6" />
+  </svg>
+);
+
+/** Âncora: a fatia que absorve o restante e faz a soma fechar. */
+export const IconeAncora = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <circle cx="12" cy="5" r="2.2" />
+    <path d="M12 7.2V20" />
+    <path d="M5 13a7 7 0 0 0 14 0" />
+    <path d="M8 10H5v3M16 10h3v3" />
+  </svg>
+);
+
+export const IconeHistorico = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M3.5 9a9 9 0 1 1 .8 5" />
+    <path d="M3 4.5V9h4.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+);
+
+/** Encerrar: o custo para de correr, mas o histórico permanece. */
+export const IconeEncerrar = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9 9.5h6v5H9z" />
+  </svg>
+);
+
+export const IconeRestaurar = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M20.5 9a9 9 0 1 0-.8 5" />
+    <path d="M21 4.5V9h-4.5" />
+  </svg>
+);
+
+/** Filtro: a lista deixa de ser tudo e passa a ser uma pergunta. */
+export const IconeFiltro = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M3.5 5h17l-6.5 7.5V19l-4 2v-8.5z" />
+  </svg>
+);

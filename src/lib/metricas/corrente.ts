@@ -14,6 +14,9 @@ import type { Natureza } from "@/generated/prisma/enums";
  * Duas regras que valem para todas as funções aqui:
  *  - só entram itens ATIVO e EM_ANALISE; cancelado e substituído ficam de fora
  *    do corrente e permanecem no histórico;
+ *  - item na lixeira (`excluidoEm`) nunca entra em métrica: ele já sumiu da
+ *    lista para quem o excluiu, e continuar somando no painel faria os dois
+ *    números divergirem sem explicação;
  *  - `naturezas` é parâmetro obrigatório. Consolidar recorrente com pontual é
  *    sempre um ato explícito de quem chama.
  */
@@ -31,6 +34,7 @@ type Escopo = { setorIds: string[] | null };
 
 function filtroBase(escopo: Escopo, naturezas: Natureza[]) {
   return {
+    excluidoEm: null,
     status: { in: [...STATUS_CORRENTE] },
     natureza: { in: naturezas },
     valorMensalNormalizado: { not: null },
@@ -40,9 +44,7 @@ function filtroBase(escopo: Escopo, naturezas: Natureza[]) {
   };
 }
 
-function ordenarComParticipacao(
-  bruto: Map<string, { rotulo: string; valor: Decimal }>,
-): Fatia[] {
+function ordenarComParticipacao(bruto: Map<string, { rotulo: string; valor: Decimal }>): Fatia[] {
   const total = [...bruto.values()].reduce((s, v) => s.plus(v.valor), new Decimal(0));
   return [...bruto]
     .map(([chave, v]) => ({
@@ -65,10 +67,7 @@ const paraDecimal = (v: unknown): Decimal =>
  * casas e a soma dos setores excederia o total corporativo, quebrando a regra
  * "o mesmo número em todo lugar".
  */
-export async function custoMensalCorrente(
-  escopo: Escopo,
-  naturezas: Natureza[],
-): Promise<Decimal> {
+export async function custoMensalCorrente(escopo: Escopo, naturezas: Natureza[]): Promise<Decimal> {
   const itens = await prisma.itemCusto.findMany({
     where: filtroBase(escopo, naturezas),
     select: {
@@ -178,6 +177,7 @@ export async function renovacoesProximas(escopo: Escopo, dias = 90) {
 
   return prisma.itemCusto.findMany({
     where: {
+      excluidoEm: null,
       status: { in: [...STATUS_CORRENTE] },
       dataFim: { not: null, gte: hoje, lte: limite },
       ...(escopo.setorIds === null
@@ -190,7 +190,11 @@ export async function renovacoesProximas(escopo: Escopo, dias = 90) {
       dataFim: true,
       valorMensalNormalizado: true,
       fornecedor: { select: { nome: true } },
-      rateios: { where: { vigenciaFim: null }, select: { setor: { select: { nome: true } } }, take: 1 },
+      rateios: {
+        where: { vigenciaFim: null },
+        select: { setor: { select: { nome: true } } },
+        take: 1,
+      },
     },
     orderBy: { dataFim: "asc" },
     take: 20,
@@ -202,6 +206,7 @@ export async function pendenciasDeDado(escopo: Escopo) {
   const [semValor, semCategoria, semVigencia] = await Promise.all([
     prisma.itemCusto.count({
       where: {
+        excluidoEm: null,
         status: { in: [...STATUS_CORRENTE, "PENDENTE_APURACAO"] },
         valorPeriodo: null,
         ...(escopo.setorIds === null
@@ -211,6 +216,7 @@ export async function pendenciasDeDado(escopo: Escopo) {
     }),
     prisma.itemCusto.count({
       where: {
+        excluidoEm: null,
         status: { in: [...STATUS_CORRENTE] },
         categoriaId: null,
         ...(escopo.setorIds === null
@@ -220,8 +226,10 @@ export async function pendenciasDeDado(escopo: Escopo) {
     }),
     prisma.itemCusto.count({
       where: {
+        excluidoEm: null,
         status: { in: [...STATUS_CORRENTE] },
         dataFim: null,
+        semPrazoDeterminado: false,
         ...(escopo.setorIds === null
           ? {}
           : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
@@ -254,6 +262,7 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
     // por design, e não é pendência.
     prisma.itemCusto.findMany({
       where: {
+        excluidoEm: null,
         status: { in: [...STATUS_CORRENTE, "PENDENTE_APURACAO"] },
         valorPeriodo: null,
         ...escopoRateio,
@@ -264,8 +273,10 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
     }),
     prisma.itemCusto.findMany({
       where: {
+        excluidoEm: null,
         status: { in: [...STATUS_CORRENTE] },
         dataFim: null,
+        semPrazoDeterminado: false,
         valorMensalNormalizado: { not: null },
         ...escopoRateio,
       },

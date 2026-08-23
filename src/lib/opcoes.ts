@@ -1,9 +1,30 @@
 /** Rótulos em português para os enums, usados nos formulários e listagens. */
 
+/**
+ * As quatro naturezas do enum, todas.
+ *
+ * Esta lista já foi menor que o enum — só RECORRENTE e PONTUAL — e o efeito era
+ * silencioso e grave: qualquer edição de um item CAPEX ou PESSOAL reenviava o
+ * `<select>` com a primeira opção e reclassificava o item como RECORRENTE.
+ * A tela corrompia classificação contábil por omissão.
+ *
+ * CAPEX e pessoal ainda não têm entidade própria (imobilizado, folha), mas a
+ * natureza existe no banco desde o início justamente para que o dia em que
+ * entrarem não exija remexer no que já foi lançado. Segregar é o requisito.
+ */
 export const NATUREZAS = [
   { valor: "RECORRENTE", rotulo: "Recorrente (assinatura, contrato, mensalidade)" },
   { valor: "PONTUAL", rotulo: "Pontual (compra avulsa, serviço único)" },
+  { valor: "CAPEX", rotulo: "Investimento / CAPEX (bem que vira patrimônio)" },
+  { valor: "PESSOAL", rotulo: "Pessoal (folha, encargos, benefícios)" },
 ];
+
+/** Os valores válidos, derivados da lista acima — nunca redigitados. */
+export const VALORES_NATUREZA = NATUREZAS.map((n) => n.valor) as [string, ...string[]];
+
+export const ROTULOS_NATUREZA: Record<string, string> = Object.fromEntries(
+  NATUREZAS.map((n) => [n.valor, n.rotulo]),
+);
 
 export const PERIODICIDADES = [
   { valor: "MENSAL", rotulo: "Mensal" },
@@ -39,7 +60,10 @@ export const PAPEIS = [
   { valor: "GESTOR_SETOR", rotulo: "Gestor de setor — lança e edita os custos da própria área" },
   { valor: "LEITOR", rotulo: "Leitor — só consulta os custos da própria área" },
   { valor: "CONTROLADORIA", rotulo: "Controladoria — consulta todos os setores" },
-  { valor: "GESTOR_CONTRATO", rotulo: "Gestor de contrato — lança e edita os custos da própria área" },
+  {
+    valor: "GESTOR_CONTRATO",
+    rotulo: "Gestor de contrato — lança e edita os custos da própria área",
+  },
   { valor: "ADMIN", rotulo: "Administrador — acesso total e gestão de usuários" },
 ];
 

@@ -1,18 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { valorMensalNormalizado } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
+import { NATUREZAS as OPCOES_NATUREZA } from "@/lib/opcoes";
 import {
   dataOpcional,
   dinheiro,
   falha,
   inteiroOpcional,
   opcaoValida,
+  sucesso,
   texto,
   textoOpcional,
+  valoresDigitados,
   type Resultado,
 } from "@/lib/acoes";
 import type {
@@ -66,7 +68,12 @@ type Campos = {
   setorId: string | null;
 };
 
-const NATUREZAS = ["RECORRENTE", "PONTUAL", "CAPEX", "PESSOAL"] as const;
+/**
+ * A lista que valida é derivada da lista que a tela exibe. Enquanto eram duas
+ * constantes independentes, elas divergiram — e a divergência reclassificava
+ * itens CAPEX como RECORRENTE sem ninguém perceber. Divergir agora é impossível.
+ */
+const NATUREZAS = OPCOES_NATUREZA.map((n) => n.valor) as unknown as readonly Natureza[];
 const PERIODICIDADES = [
   "MENSAL",
   "BIMESTRAL",
@@ -94,8 +101,18 @@ const STATUS = [
  */
 function lerCampos(dados: FormData): Campos | null {
   const natureza = opcaoValida<Natureza>(dados, "natureza", NATUREZAS, "RECORRENTE");
-  const periodicidade = opcaoValida<Periodicidade>(dados, "periodicidade", PERIODICIDADES, "MENSAL");
-  const comportamento = opcaoValida<ComportamentoCusto>(dados, "comportamento", COMPORTAMENTOS, "FIXO");
+  const periodicidade = opcaoValida<Periodicidade>(
+    dados,
+    "periodicidade",
+    PERIODICIDADES,
+    "MENSAL",
+  );
+  const comportamento = opcaoValida<ComportamentoCusto>(
+    dados,
+    "comportamento",
+    COMPORTAMENTOS,
+    "FIXO",
+  );
   const moeda = opcaoValida<Moeda>(dados, "moeda", MOEDAS, "BRL");
   const status = opcaoValida<StatusItem>(dados, "status", STATUS, "ATIVO");
   if (!natureza || !periodicidade || !comportamento || !moeda || !status) return null;
@@ -119,14 +136,26 @@ function lerCampos(dados: FormData): Campos | null {
   };
 }
 
-function validar(campos: Campos): string | null {
-  if (!campos.descricao) return "Descreva o custo.";
-  if (!campos.fornecedor) return "Informe o fornecedor.";
+/**
+ * Além da frase, devolve QUAL campo recusou: o formulário foca nele em vez de
+ * deixar a pessoa caçar o erro entre catorze campos.
+ */
+function validar(campos: Campos, valorDigitado: string): { erro: string; campo: string } | null {
+  if (!campos.descricao) return { erro: "Descreva o custo.", campo: "descricao" };
+  if (!campos.fornecedor) return { erro: "Informe o fornecedor.", campo: "fornecedor" };
+
   if (campos.valorPeriodo === null && campos.status !== "PENDENTE_APURACAO") {
-    return "Informe o valor, ou marque o status como “Valor a apurar”.";
+    // Campo em branco e campo ilegível são erros diferentes, e dizer "informe o
+    // valor" para quem visivelmente digitou algo faz a pessoa duvidar da tela.
+    return {
+      erro: valorDigitado
+        ? `Não consegui ler «${valorDigitado}» como valor. Escreva no formato 1.234,56.`
+        : "Informe o valor, ou marque a situação como “Valor a apurar”.",
+      campo: "valorPeriodo",
+    };
   }
   if (campos.dataInicio && campos.dataFim && campos.dataFim < campos.dataInicio) {
-    return "A data de término é anterior à de início.";
+    return { erro: "A data de término é anterior à de início.", campo: "dataFim" };
   }
   return null;
 }
@@ -136,18 +165,19 @@ export async function salvarCusto(
   dados: FormData,
 ): Promise<Resultado> {
   const usuario = await exigirSessao();
+  const digitado = valoresDigitados(dados);
   if (!podeLancar(usuario.papel)) return falha("Seu perfil não permite lançar custos.");
 
   const id = textoOpcional(dados, "id");
   const campos = lerCampos(dados);
-  if (!campos) return falha("Um dos campos de seleção veio com valor inválido.");
+  if (!campos) return falha("Um dos campos de seleção veio com valor inválido.", digitado);
 
-  const problema = validar(campos);
-  if (problema) return falha(problema);
+  const problema = validar(campos, texto(dados, "valorPeriodo"));
+  if (problema) return falha(problema.erro, digitado, problema.campo);
 
   const setorId = await setorDoLancamento(usuario.papel, usuario.setorId, campos.setorId);
   if (!setorId) {
-    return falha("Seu usuário não está vinculado a um setor. Peça ao administrador.");
+    return falha("Seu usuário não está vinculado a um setor. Peça ao administrador.", digitado);
   }
 
   // Quem não vê por inteiro só mexe no que é INTEIRAMENTE do próprio setor:
@@ -164,6 +194,7 @@ export async function salvarCusto(
     if (permitido === 0) {
       return falha(
         "Este custo não é (ou não é só) da sua área. Alterações em custos compartilhados são feitas pela Controladoria ou pelo administrador.",
+        digitado,
       );
     }
   }
@@ -190,11 +221,11 @@ export async function salvarCusto(
   };
 
   const anterior = id ? await prisma.itemCusto.findUnique({ where: { id } }) : null;
-  if (id && !anterior) return falha("Este custo não existe mais.");
+  if (id && !anterior) return falha("Este custo não existe mais.", digitado);
 
   // Item, rateio e auditoria numa transação só: falhar no meio deixaria um
   // item sem rateio — invisível para todo mundo, inclusive para quem o criou.
-  await prisma.$transaction(async (tx) => {
+  const salvo = await prisma.$transaction(async (tx) => {
     const item = id
       ? await tx.itemCusto.update({ where: { id }, data: comuns })
       : await tx.itemCusto.create({ data: { ...comuns, criadoPorId: usuario.id } });
@@ -237,55 +268,60 @@ export async function salvarCusto(
         },
       },
     });
+    return item;
   });
 
   revalidatePath("/custos");
+  revalidatePath(`/custos/${salvo.id}`);
   revalidatePath("/");
-  redirect("/custos");
+
+  // Sem redirect. Redirecionar lança NEXT_REDIRECT, o `Resultado` é descartado
+  // no meio do caminho e a tela de destino chega sem nenhuma notícia do que
+  // acabou de acontecer — era por isso que cadastrar, editar e cancelar
+  // produziam exatamente a mesma tela muda. Quem chamou decide para onde ir.
+  return sucesso(
+    id ? `${campos.descricao} foi atualizado.` : `${campos.descricao} foi cadastrado.`,
+    { destaqueId: salvo.id },
+  );
 }
 
-export async function excluirCusto(dados: FormData): Promise<void> {
+/**
+ * Expurgo físico dos itens que passaram dos 30 dias na lixeira.
+ *
+ * A exclusão do dia a dia é reversível (`excluirItem`, em acoes-rapidas.ts).
+ * Este é o único caminho que apaga de verdade, e ele não é uma ação de tela:
+ * roda por rotina, sobre o que já esperou um mês para ser resgatado.
+ */
+export async function expurgarLixeira(diasDeGuarda = 30): Promise<number> {
   const usuario = await exigirSessao();
-  const id = texto(dados, "id");
-  if (!podeLancar(usuario.papel) || !id) redirect("/custos");
+  if (!vePorInteiro(usuario.papel)) return 0;
 
-  if (!vePorInteiro(usuario.papel)) {
-    const permitido = await prisma.itemCusto.count({
-      where: {
-        id,
-        rateios: {
-          some: { setorId: usuario.setorId ?? "", vigenciaFim: null, percentual: 100 },
-        },
-      },
-    });
-    if (permitido === 0) redirect("/custos");
-  }
+  const corte = new Date();
+  corte.setUTCDate(corte.getUTCDate() - diasDeGuarda);
 
-  // Excluir apagaria em cascata a série mensal inteira (lançamentos e rateios)
-  // — histórico contábil não se destrói com um clique. Com histórico, o caminho
-  // é cancelar; excluir fica reservado a cadastros errados ainda sem série.
-  const comHistorico = await prisma.lancamentoCusto.count({ where: { itemCustoId: id } });
-  if (comHistorico > 0) {
-    redirect(`/custos/${id}?erro=tem-historico`);
-  }
-
-  const anterior = await prisma.itemCusto.findUnique({ where: { id } });
-  if (!anterior) redirect("/custos");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.itemCusto.delete({ where: { id } });
-    await tx.auditoria.create({
-      data: {
-        tabela: "item_custo",
-        registroId: id,
-        acao: "EXCLUSAO",
-        usuarioId: usuario.id,
-        diff: { antes: JSON.parse(JSON.stringify(anterior)), depois: null },
-      },
-    });
+  const vencidos = await prisma.itemCusto.findMany({
+    where: { excluidoEm: { not: null, lt: corte } },
+    select: { id: true, descricao: true },
   });
 
-  revalidatePath("/custos");
-  revalidatePath("/");
-  redirect("/custos");
+  for (const item of vencidos) {
+    await prisma.$transaction(async (tx) => {
+      await tx.itemCusto.delete({ where: { id: item.id } });
+      await tx.auditoria.create({
+        data: {
+          tabela: "item_custo",
+          registroId: item.id,
+          acao: "EXCLUSAO",
+          usuarioId: usuario.id,
+          diff: { antes: { descricao: item.descricao }, depois: null },
+        },
+      });
+    });
+  }
+
+  if (vencidos.length > 0) {
+    revalidatePath("/custos");
+    revalidatePath("/");
+  }
+  return vencidos.length;
 }

@@ -4,23 +4,55 @@ import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { escopoDeItens, listarSetores } from "@/lib/consultas";
 import { formatarBRL } from "@/lib/dinheiro";
-import { FormularioRateio } from "./formulario";
+import { fatiasIniciais } from "@/lib/rateio";
+import { EditorDeRateio } from "./formulario";
+import { PropostaEmAberto } from "./proposta";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Rota de página do rateio.
+ *
+ * O caminho principal passou a ser o painel lateral aberto direto da lista —
+ * dividir um custo entre setores não deveria custar sair de onde se está. Esta
+ * página continua existindo porque link direto tem que funcionar: é o endereço
+ * que se cola num e-mail para o gestor da outra área, e o destino do "Dividir
+ * entre setores" para quem chegou pela página do custo.
+ */
 export default async function PaginaRateio({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const usuario = await exigirSessao();
 
   const item = await prisma.itemCusto.findFirst({
-    where: { id, ...escopoDeItens(usuario) },
+    where: { id, ...escopoDeItens(usuario, "fora", true) },
     select: {
       id: true,
       descricao: true,
       valorMensalNormalizado: true,
       rateios: {
         where: { vigenciaFim: null },
-        select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
+        select: { setorId: true, percentual: true },
+      },
+      propostas: {
+        where: { status: "PENDENTE" },
+        select: {
+          id: true,
+          justificativa: true,
+          criadoEm: true,
+          criadoPorId: true,
+          criadoPor: { select: { colaborador: { select: { nome: true } } } },
+          parcelas: {
+            select: {
+              id: true,
+              percentual: true,
+              aceite: true,
+              comentario: true,
+              setorId: true,
+              setor: { select: { nome: true } },
+            },
+          },
+        },
+        take: 1,
       },
     },
   });
@@ -36,11 +68,16 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
   if (!dono) redirect(`/custos/${id}`);
 
   const setores = await listarSetores();
+  const valorMensal = item.valorMensalNormalizado?.toString() ?? null;
+  const proposta = item.propostas[0] ?? null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
       <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
-        <Link href="/custos" className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]">
+        <Link
+          href="/custos"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+        >
           Custos
         </Link>
         <span className="mx-1.5">/</span>
@@ -59,21 +96,46 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
       </h1>
       <p className="mt-2 text-[14px] text-[var(--ink-2)]">
         {item.descricao}
-        {item.valorMensalNormalizado && (
-          <> · {formatarBRL(item.valorMensalNormalizado.toString())}/mês</>
-        )}
-        . Defina qual fração do custo cabe a cada setor — a soma precisa dar 100%.
+        {valorMensal && <> · {formatarBRL(valorMensal)}/mês</>}. Um dos setores absorve o restante,
+        então a soma fecha sozinha — não é preciso somar de cabeça.
       </p>
 
-      <FormularioRateio
-        itemId={item.id}
-        setores={setores}
-        aplicaDireto={global}
-        inicial={item.rateios.map((r) => ({
-          setorId: r.setorId,
-          pct: Number(r.percentual).toString().replace(".", ","),
-        }))}
-      />
+      {proposta ? (
+        <div className="mt-8">
+          <PropostaEmAberto
+            proposta={{
+              id: proposta.id,
+              justificativa: proposta.justificativa,
+              criadoEm: proposta.criadoEm.toISOString(),
+              autor: proposta.criadoPor.colaborador.nome,
+              souOAutor: proposta.criadoPorId === usuario.id,
+              parcelas: proposta.parcelas.map((p) => ({
+                id: p.id,
+                setorNome: p.setor.nome,
+                percentual: p.percentual.toString(),
+                aceite: p.aceite,
+                comentario: p.comentario,
+                minhaVez:
+                  p.aceite === "PENDENTE" &&
+                  (global || (podeLancar(usuario.papel) && usuario.setorId === p.setorId)),
+              })),
+            }}
+            valorMensal={valorMensal}
+            podeCancelar={proposta.criadoPorId === usuario.id || global}
+          />
+        </div>
+      ) : (
+        <div className="mt-8">
+          <EditorDeRateio
+            itemId={item.id}
+            descricao={item.descricao}
+            valorMensal={valorMensal}
+            setores={setores}
+            aplicaDireto={global}
+            inicial={fatiasIniciais(item.rateios, usuario.setorId)}
+          />
+        </div>
+      )}
     </main>
   );
 }

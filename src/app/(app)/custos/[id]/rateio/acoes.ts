@@ -1,42 +1,71 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { Decimal } from "decimal.js";
 import { prisma } from "@/lib/db";
-import { rateioFecha } from "@/lib/dinheiro";
+import {
+  MAXIMO_FATIAS,
+  MINIMO,
+  TOTAL,
+  balancear,
+  percentualParaBanco,
+  textoDeUnidades,
+  unidadesDeTexto,
+  type Fatia,
+} from "@/lib/rateio";
 import { exigirSessao, podeLancar, vePorInteiro, type UsuarioSessao } from "@/lib/sessao";
-import { falha, texto, textoOpcional, type Resultado } from "@/lib/acoes";
+import { falha, sucesso, texto, textoOpcional, type Resultado } from "@/lib/acoes";
 
-type Parcela = { setorId: string; percentual: Decimal };
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-/** Lê as linhas setor+percentual do formulário (setor_0/pct_0, setor_1/pct_1…). */
-function lerParcelas(dados: FormData): Parcela[] | string {
-  const parcelas: Parcela[] = [];
+/**
+ * Lê as linhas do formulário e resolve a âncora **no servidor**.
+ *
+ * O percentual da âncora que chega do cliente é descartado de propósito: ele é
+ * derivado, e derivado que trafega vira derivado que pode ser forjado. Aqui a
+ * âncora é sempre recalculada como 100% menos a soma das demais, de modo que
+ * uma requisição montada à mão não consegue gravar um rateio que não fecha.
+ */
+function lerFatias(dados: FormData): Fatia[] | string {
+  const ancoraSetor = texto(dados, "ancora");
+  if (!ancoraSetor) return "Escolha qual setor absorve o restante.";
+
+  const fatias: Fatia[] = [];
   const vistos = new Set<string>();
 
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < MAXIMO_FATIAS; i++) {
     const setorId = texto(dados, `setor_${i}`);
-    const pctTexto = texto(dados, `pct_${i}`).replace(",", ".");
-    if (!setorId && !pctTexto) continue;
+    const pctBruto = texto(dados, `pct_${i}`);
+    if (!setorId && !pctBruto) continue;
     if (!setorId) return "Escolha o setor de todas as linhas preenchidas.";
-
-    const pct = Number(pctTexto);
-    if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
-      return "Cada percentual precisa estar entre 0 e 100.";
-    }
     if (vistos.has(setorId)) return "O mesmo setor aparece em duas linhas.";
     vistos.add(setorId);
-    parcelas.push({ setorId, percentual: new Decimal(pct.toFixed(2)) });
+
+    const ancora = setorId === ancoraSetor;
+    if (ancora) {
+      fatias.push({ setorId, unidades: 0, ancora: true });
+      continue;
+    }
+
+    const unidades = unidadesDeTexto(pctBruto);
+    if (unidades === null) return `Não consegui ler «${pctBruto}» como percentual.`;
+    if (unidades < MINIMO) {
+      return `Fatia mínima de ${textoDeUnidades(MINIMO)}% — remova a linha se o setor não participa.`;
+    }
+    if (unidades > TOTAL) return "Nenhuma fatia pode passar de 100%.";
+    fatias.push({ setorId, unidades, ancora: false });
   }
 
-  if (parcelas.length === 0) return "Informe ao menos uma linha de rateio.";
-  if (!rateioFecha(parcelas.map((p) => p.percentual))) {
-    const soma = parcelas.reduce((s, p) => s.plus(p.percentual), new Decimal(0));
-    return `Os percentuais precisam somar 100% — estão em ${soma.toFixed(2)}%.`;
+  if (fatias.length === 0) return "Informe ao menos uma linha de rateio.";
+  if (!vistos.has(ancoraSetor)) return "O setor âncora precisa estar entre as linhas.";
+
+  const balanco = balancear(fatias);
+  if (balanco.ancora < 0) {
+    return `As fatias somam ${textoDeUnidades(TOTAL - balanco.ancora)}% — ${textoDeUnidades(-balanco.ancora)}% além do total.`;
   }
-  return parcelas;
+  if (balanco.ancora < MINIMO && fatias.length > 1) {
+    return `Sobrariam apenas ${textoDeUnidades(balanco.ancora)}% para o setor âncora. Escolha outra âncora ou reduza as demais fatias.`;
+  }
+  return balanco.fatias;
 }
 
 /** O gestor pode propor quando o custo é inteiramente (100%) da área dele. */
@@ -46,17 +75,18 @@ async function podePropor(usuario: UsuarioSessao, itemId: string): Promise<boole
   const dono = await prisma.itemCusto.count({
     where: {
       id: itemId,
+      excluidoEm: null,
       rateios: { some: { setorId: usuario.setorId, vigenciaFim: null, percentual: 100 } },
     },
   });
   return dono > 0;
 }
 
-/** Encerra os rateios vigentes e aplica as parcelas como rateio novo. */
-async function aplicarParcelas(
+/** Encerra os rateios vigentes e aplica as fatias como rateio novo. */
+async function aplicarFatias(
   tx: Tx,
   itemId: string,
-  parcelas: Array<{ setorId: string; percentual: string }>,
+  fatias: Array<{ setorId: string; percentual: string }>,
   aprovadoPor: string,
 ) {
   const hoje = new Date();
@@ -64,13 +94,13 @@ async function aplicarParcelas(
     where: { itemCustoId: itemId, vigenciaFim: null },
     data: { vigenciaFim: hoje },
   });
-  for (const p of parcelas) {
+  for (const f of fatias) {
     await tx.rateio.create({
       data: {
         itemCustoId: itemId,
-        setorId: p.setorId,
+        setorId: f.setorId,
         metodo: "PERCENTUAL",
-        percentual: p.percentual,
+        percentual: f.percentual,
         vigenciaInicio: hoje,
         aprovadoPor,
         aprovadoEm: hoje,
@@ -79,7 +109,19 @@ async function aplicarParcelas(
   }
 }
 
-export async function proporRateio(
+function atualizarListas(itemId: string) {
+  revalidatePath("/");
+  revalidatePath("/custos");
+  revalidatePath(`/custos/${itemId}`);
+}
+
+function resumo(fatias: Fatia[], nomes: Map<string, string>): string {
+  return fatias
+    .map((f) => `${nomes.get(f.setorId) ?? "setor"} ${textoDeUnidades(f.unidades)}%`)
+    .join(" · ");
+}
+
+export async function salvarRateio(
   _anterior: Resultado | null,
   dados: FormData,
 ): Promise<Resultado> {
@@ -89,38 +131,50 @@ export async function proporRateio(
 
   if (!itemId) return falha("Custo não informado.");
   if (!(await podePropor(usuario, itemId))) {
-    return falha("Você só pode propor rateio de um custo que hoje é inteiramente da sua área.");
+    return falha("Você só pode ratear um custo que hoje é inteiramente da sua área.");
   }
 
-  const parcelas = lerParcelas(dados);
-  if (typeof parcelas === "string") return falha(parcelas);
+  const fatias = lerFatias(dados);
+  if (typeof fatias === "string") return falha(fatias);
 
   const pendente = await prisma.propostaRateio.count({
     where: { itemCustoId: itemId, status: "PENDENTE" },
   });
   if (pendente > 0) {
-    return falha("Já existe uma proposta aguardando aceite para este custo.");
+    return falha(
+      "Já existe uma proposta aguardando aceite para este custo. Cancele-a antes de propor outra.",
+    );
   }
 
-  const direto = vePorInteiro(usuario.papel);
+  const setores = await prisma.setor.findMany({
+    where: { id: { in: fatias.map((f) => f.setorId) } },
+    select: { id: true, nome: true },
+  });
+  const nomes = new Map(setores.map((s) => [s.id, s.nome]));
+  if (nomes.size !== fatias.length) return falha("Um dos setores escolhidos não existe mais.");
 
-  await prisma.$transaction(async (tx) => {
+  const direto = vePorInteiro(usuario.papel);
+  const gravaveis = fatias.map((f) => ({
+    setorId: f.setorId,
+    percentual: percentualParaBanco(f.unidades),
+  }));
+
+  const aplicada = await prisma.$transaction(async (tx) => {
     const proposta = await tx.propostaRateio.create({
       data: {
         itemCustoId: itemId,
         criadoPorId: usuario.id,
         justificativa,
-        status: direto ? "APROVADA" : "PENDENTE",
-        decididaEm: direto ? new Date() : null,
+        status: "PENDENTE",
         parcelas: {
-          create: parcelas.map((p) => ({
-            setorId: p.setorId,
-            percentual: p.percentual.toString(),
-            // A fatia do próprio setor do proponente já nasce aceita — propor
-            // já é concordar. Controladoria/admin aplicam direto: tudo aceito.
-            aceite: direto || p.setorId === usuario.setorId ? "ACEITO" : "PENDENTE",
-            decididoPorId: direto || p.setorId === usuario.setorId ? usuario.id : null,
-            decididoEm: direto || p.setorId === usuario.setorId ? new Date() : null,
+          create: fatias.map((f) => ({
+            setorId: f.setorId,
+            percentual: percentualParaBanco(f.unidades),
+            // A fatia do próprio setor de quem propõe já nasce aceita — propor
+            // já é concordar. Controladoria e admin aplicam direto: tudo aceito.
+            aceite: direto || f.setorId === usuario.setorId ? "ACEITO" : "PENDENTE",
+            decididoPorId: direto || f.setorId === usuario.setorId ? usuario.id : null,
+            decididoEm: direto || f.setorId === usuario.setorId ? new Date() : null,
           })),
         },
       },
@@ -129,12 +183,7 @@ export async function proporRateio(
 
     const tudoAceito = proposta.parcelas.every((p) => p.aceite === "ACEITO");
     if (tudoAceito) {
-      await aplicarParcelas(
-        tx,
-        itemId,
-        parcelas.map((p) => ({ setorId: p.setorId, percentual: p.percentual.toString() })),
-        usuario.email,
-      );
+      await aplicarFatias(tx, itemId, gravaveis, usuario.email);
       await tx.propostaRateio.update({
         where: { id: proposta.id },
         data: { status: "APROVADA", decididaEm: new Date() },
@@ -147,21 +196,28 @@ export async function proporRateio(
         registroId: proposta.id,
         acao: "CRIACAO",
         usuarioId: usuario.id,
-        diff: {
-          depois: {
-            itemId,
-            parcelas: parcelas.map((p) => ({ setorId: p.setorId, pct: p.percentual.toString() })),
-            aplicadaDireto: tudoAceito,
-          },
-        },
+        diff: { depois: { itemId, fatias: gravaveis, aplicadaDireto: tudoAceito } },
       },
     });
+    return tudoAceito;
   });
 
-  revalidatePath("/");
-  revalidatePath("/custos");
-  revalidatePath(`/custos/${itemId}`);
-  redirect(`/custos/${itemId}`);
+  atualizarListas(itemId);
+
+  if (aplicada) {
+    return sucesso("Rateio aplicado.", {
+      detalhe: resumo(fatias, nomes),
+      destaqueId: itemId,
+    });
+  }
+
+  const aguardando = fatias
+    .filter((f) => f.setorId !== usuario.setorId)
+    .map((f) => nomes.get(f.setorId) ?? "setor");
+  return sucesso("Proposta enviada.", {
+    detalhe: `Aguardando o aceite de ${aguardando.join(", ")}. O rateio entra em vigor quando todos aceitarem.`,
+    destaqueId: itemId,
+  });
 }
 
 export async function decidirAceite(
@@ -183,7 +239,16 @@ export async function decidirAceite(
       id: true,
       setorId: true,
       aceite: true,
-      proposta: { select: { id: true, status: true, itemCustoId: true } },
+      percentual: true,
+      setor: { select: { nome: true } },
+      proposta: {
+        select: {
+          id: true,
+          status: true,
+          itemCustoId: true,
+          itemCusto: { select: { descricao: true } },
+        },
+      },
     },
   });
   if (!parcela || parcela.proposta.status !== "PENDENTE") {
@@ -198,7 +263,7 @@ export async function decidirAceite(
     return falha("O aceite desta fatia cabe ao gestor do setor que a recebe.");
   }
 
-  await prisma.$transaction(async (tx) => {
+  const vigorou = await prisma.$transaction(async (tx) => {
     await tx.propostaRateioParcela.update({
       where: { id: parcela.id },
       data: {
@@ -214,63 +279,99 @@ export async function decidirAceite(
         where: { id: parcela.proposta.id },
         data: { status: "REJEITADA", decididaEm: new Date() },
       });
-    } else {
-      const restantes = await tx.propostaRateioParcela.count({
-        where: { propostaId: parcela.proposta.id, aceite: "PENDENTE" },
-      });
-      if (restantes === 0) {
-        const todas = await tx.propostaRateioParcela.findMany({
-          where: { propostaId: parcela.proposta.id },
-          select: { setorId: true, percentual: true },
-        });
-        await aplicarParcelas(
-          tx,
-          parcela.proposta.itemCustoId,
-          todas.map((p) => ({ setorId: p.setorId, percentual: p.percentual.toString() })),
-          usuario.email,
-        );
-        await tx.propostaRateio.update({
-          where: { id: parcela.proposta.id },
-          data: { status: "APROVADA", decididaEm: new Date() },
-        });
-      }
+      return false;
     }
 
+    const restantes = await tx.propostaRateioParcela.count({
+      where: { propostaId: parcela.proposta.id, aceite: "PENDENTE" },
+    });
+    if (restantes > 0) return false;
+
+    const todas = await tx.propostaRateioParcela.findMany({
+      where: { propostaId: parcela.proposta.id },
+      select: { setorId: true, percentual: true },
+    });
+    await aplicarFatias(
+      tx,
+      parcela.proposta.itemCustoId,
+      todas.map((p) => ({ setorId: p.setorId, percentual: p.percentual.toString() })),
+      usuario.email,
+    );
+    await tx.propostaRateio.update({
+      where: { id: parcela.proposta.id },
+      data: { status: "APROVADA", decididaEm: new Date() },
+    });
+    return true;
+  });
+
+  await prisma.auditoria.create({
+    data: {
+      tabela: "proposta_rateio_parcela",
+      registroId: parcela.id,
+      acao: "ALTERACAO",
+      usuarioId: usuario.id,
+      diff: { depois: { decisao, comentario, entrouEmVigor: vigorou } },
+    },
+  });
+
+  atualizarListas(parcela.proposta.itemCustoId);
+
+  if (decisao === "recusar") {
+    return sucesso("Proposta recusada.", {
+      detalhe: `${parcela.proposta.itemCusto.descricao} continua com o rateio anterior. Quem propôs é avisado na tela inicial.`,
+    });
+  }
+  return sucesso(
+    `Fatia de ${textoDeUnidades(Math.round(Number(parcela.percentual) * 10_000))}% aceita.`,
+    {
+      detalhe: vigorou
+        ? `${parcela.proposta.itemCusto.descricao}: rateio em vigor.`
+        : "Ainda faltam outros setores aceitarem.",
+    },
+  );
+}
+
+export async function cancelarProposta(
+  _anterior: Resultado | null,
+  dados: FormData,
+): Promise<Resultado> {
+  const usuario = await exigirSessao();
+  const propostaId = texto(dados, "propostaId");
+  if (!propostaId) return falha("Proposta não informada.");
+
+  const proposta = await prisma.propostaRateio.findUnique({
+    where: { id: propostaId },
+    select: {
+      status: true,
+      criadoPorId: true,
+      itemCustoId: true,
+      itemCusto: { select: { descricao: true } },
+    },
+  });
+  if (!proposta) return falha("Esta proposta não existe mais.");
+  if (proposta.status !== "PENDENTE") return falha("Esta proposta já foi decidida.");
+  if (proposta.criadoPorId !== usuario.id && !vePorInteiro(usuario.papel)) {
+    return falha("Só quem propôs pode cancelar.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.propostaRateio.update({
+      where: { id: propostaId },
+      data: { status: "CANCELADA", decididaEm: new Date() },
+    });
     await tx.auditoria.create({
       data: {
-        tabela: "proposta_rateio_parcela",
-        registroId: parcela.id,
+        tabela: "proposta_rateio",
+        registroId: propostaId,
         acao: "ALTERACAO",
         usuarioId: usuario.id,
-        diff: { depois: { decisao, comentario } },
+        diff: { depois: { status: "CANCELADA" } },
       },
     });
   });
 
-  revalidatePath("/");
-  revalidatePath("/custos");
-  revalidatePath(`/custos/${parcela.proposta.itemCustoId}`);
-  return { ok: true, mensagem: decisao === "aceitar" ? "Fatia aceita." : "Proposta recusada." };
-}
-
-export async function cancelarProposta(dados: FormData): Promise<void> {
-  const usuario = await exigirSessao();
-  const propostaId = texto(dados, "propostaId");
-  if (!propostaId) redirect("/");
-
-  const proposta = await prisma.propostaRateio.findUnique({
-    where: { id: propostaId },
-    select: { status: true, criadoPorId: true, itemCustoId: true },
+  atualizarListas(proposta.itemCustoId);
+  return sucesso(`Proposta de ${proposta.itemCusto.descricao} cancelada.`, {
+    detalhe: "O rateio anterior continua valendo. Você pode propor outro agora.",
   });
-  if (!proposta || proposta.status !== "PENDENTE") redirect("/");
-  if (proposta.criadoPorId !== usuario.id && !vePorInteiro(usuario.papel)) redirect("/");
-
-  await prisma.propostaRateio.update({
-    where: { id: propostaId },
-    data: { status: "CANCELADA", decididaEm: new Date() },
-  });
-
-  revalidatePath("/");
-  revalidatePath(`/custos/${proposta.itemCustoId}`);
-  redirect(`/custos/${proposta.itemCustoId}`);
 }
