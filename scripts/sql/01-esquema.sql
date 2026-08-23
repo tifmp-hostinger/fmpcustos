@@ -696,6 +696,70 @@ ALTER TABLE "item_custo" ADD CONSTRAINT "item_custo_fornecedorId_fkey" FOREIGN K
 -- AddForeignKey
 ALTER TABLE "item_custo" ADD CONSTRAINT "item_custo_criadoPorId_fkey" FOREIGN KEY ("criadoPorId") REFERENCES "usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+-- ---- migration: 20260823083446_proposta_de_rateio ----
+-- CreateEnum
+CREATE TYPE "StatusProposta" AS ENUM ('PENDENTE', 'APROVADA', 'REJEITADA', 'CANCELADA');
+
+-- CreateEnum
+CREATE TYPE "StatusAceite" AS ENUM ('PENDENTE', 'ACEITO', 'REJEITADO');
+
+-- CreateTable
+CREATE TABLE "proposta_rateio" (
+    "id" TEXT NOT NULL,
+    "itemCustoId" TEXT NOT NULL,
+    "status" "StatusProposta" NOT NULL DEFAULT 'PENDENTE',
+    "justificativa" TEXT,
+    "criadoPorId" TEXT NOT NULL,
+    "decididaEm" TIMESTAMP(3),
+    "criadoEm" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "atualizadoEm" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "proposta_rateio_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "proposta_rateio_parcela" (
+    "id" TEXT NOT NULL,
+    "propostaId" TEXT NOT NULL,
+    "setorId" TEXT NOT NULL,
+    "percentual" DECIMAL(7,4) NOT NULL,
+    "aceite" "StatusAceite" NOT NULL DEFAULT 'PENDENTE',
+    "comentario" TEXT,
+    "decididoPorId" TEXT,
+    "decididoEm" TIMESTAMP(3),
+
+    CONSTRAINT "proposta_rateio_parcela_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "proposta_rateio_itemCustoId_status_idx" ON "proposta_rateio"("itemCustoId", "status");
+
+-- CreateIndex
+CREATE INDEX "proposta_rateio_parcela_setorId_aceite_idx" ON "proposta_rateio_parcela"("setorId", "aceite");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "proposta_rateio_parcela_propostaId_setorId_key" ON "proposta_rateio_parcela"("propostaId", "setorId");
+
+-- AddForeignKey
+ALTER TABLE "proposta_rateio" ADD CONSTRAINT "proposta_rateio_itemCustoId_fkey" FOREIGN KEY ("itemCustoId") REFERENCES "item_custo"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "proposta_rateio" ADD CONSTRAINT "proposta_rateio_criadoPorId_fkey" FOREIGN KEY ("criadoPorId") REFERENCES "usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "proposta_rateio_parcela" ADD CONSTRAINT "proposta_rateio_parcela_propostaId_fkey" FOREIGN KEY ("propostaId") REFERENCES "proposta_rateio"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "proposta_rateio_parcela" ADD CONSTRAINT "proposta_rateio_parcela_setorId_fkey" FOREIGN KEY ("setorId") REFERENCES "setor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "proposta_rateio_parcela" ADD CONSTRAINT "proposta_rateio_parcela_decididoPorId_fkey" FOREIGN KEY ("decididoPorId") REFERENCES "usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Fatia de proposta sempre entre mais-que-zero e 100.
+ALTER TABLE "proposta_rateio_parcela"
+  ADD CONSTRAINT "parcela_percentual_faixa"
+    CHECK (percentual > 0 AND percentual <= 100);
+
 -- ---- migration: 20260823120000_restricoes_de_integridade ----
 -- Restrições que o Prisma não expressa no schema, mas que impedem estados
 -- inválidos de dinheiro e rateio de entrarem por qualquer caminho (UI, SQL
@@ -743,6 +807,9 @@ VALUES ('42251f32-965c-0ec8-80db-1e8f7dd435e7', 'c50cb844fd608a903d3a25f6b6ec825
 ON CONFLICT DO NOTHING;
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
 VALUES ('a5871565-c549-7b1e-fd4a-d3389a805b4f', '6e302ea5f5e7cd83c287a533f40e2f373c3e07800d852efce5b9b4ccb7b014b6', now(), '20260823054102_autenticacao_e_fornecedor_no_item', 1)
+ON CONFLICT DO NOTHING;
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('9b5e880a-b327-8168-8c80-ecfaf10a14ef', '410b5968d9769f8541cadeee2965cb67ae75f0ab4ee3091ca415aac5c3fcae16', now(), '20260823083446_proposta_de_rateio', 1)
 ON CONFLICT DO NOTHING;
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
 VALUES ('e695c04f-02d9-bf94-9d99-d11773e6e9fc', '14cb84722e26614e7949801182d273c6f938bcda6fd02c6dedfe2d3999cb552e', now(), '20260823120000_restricoes_de_integridade', 1)

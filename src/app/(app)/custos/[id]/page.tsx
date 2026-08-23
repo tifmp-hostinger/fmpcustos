@@ -25,9 +25,37 @@ export default async function EditarCusto({
 
   const item = await prisma.itemCusto.findFirst({
     where: { id, ...escopoDeItens(usuario) },
-    include: { fornecedor: true, rateios: { where: { vigenciaFim: null }, take: 1 } },
+    include: {
+      fornecedor: true,
+      rateios: {
+        where: { vigenciaFim: null },
+        select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
+        orderBy: { percentual: "desc" },
+      },
+      propostas: {
+        where: { status: "PENDENTE" },
+        select: {
+          id: true,
+          justificativa: true,
+          criadoPor: { select: { colaborador: { select: { nome: true } } } },
+          parcelas: {
+            select: { aceite: true, percentual: true, setor: { select: { nome: true } } },
+          },
+        },
+        take: 1,
+      },
+    },
   });
   if (!item) notFound();
+
+  const global = vePorInteiro(usuario.papel);
+  const donoIntegral =
+    item.rateios.length === 1 &&
+    item.rateios[0].setorId === usuario.setorId &&
+    Number(item.rateios[0].percentual) === 100;
+  const podeRatear =
+    (global || (podeLancar(usuario.papel) && donoIntegral)) && item.propostas.length === 0;
+  const proposta = item.propostas[0];
 
   const [categorias, setores] = await Promise.all([listarCategorias(), listarSetores()]);
 
@@ -73,6 +101,68 @@ export default async function EditarCusto({
           setorId: item.rateios[0]?.setorId ?? usuario.setorId,
         }}
       />
+
+      <section className="mt-10 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+            Rateio entre setores
+          </h2>
+          {podeRatear && (
+            <Link
+              href={`/custos/${item.id}/rateio`}
+              className="text-[13px] font-medium text-[var(--accent)] no-underline hover:underline"
+            >
+              {item.rateios.length > 1 ? "Alterar rateio" : "Dividir entre setores"}
+            </Link>
+          )}
+        </div>
+
+        <ul className="mt-3 space-y-1.5">
+          {item.rateios.map((r) => (
+            <li key={r.setorId} className="flex items-baseline justify-between text-[14px]">
+              <span>{r.setor.nome}</span>
+              <span className="tabular-nums">{Number(r.percentual).toFixed(0)}%</span>
+            </li>
+          ))}
+          {item.rateios.length === 0 && (
+            <li className="text-[14px] text-[var(--ink-3)]">Sem setor responsável — não rateado.</li>
+          )}
+        </ul>
+
+        {proposta && (
+          <div className="mt-4 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-3.5 text-[13px]">
+            <p className="font-semibold text-[var(--accent)]">
+              Proposta de rateio aguardando aceite
+            </p>
+            <p className="mt-1 text-[var(--ink-2)]">
+              Proposta por {proposta.criadoPor.colaborador.nome}
+              {proposta.justificativa ? ` — “${proposta.justificativa}”` : ""}.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {proposta.parcelas.map((pc, i) => (
+                <li key={i} className="flex items-baseline justify-between">
+                  <span>{pc.setor.nome}</span>
+                  <span className="tabular-nums">
+                    {Number(pc.percentual).toFixed(0)}% ·{" "}
+                    {pc.aceite === "ACEITO" ? "aceito" : pc.aceite === "REJEITADO" ? "recusado" : "aguardando"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[12px] text-[var(--ink-3)]">
+              O aceite de cada fatia aparece na tela inicial do gestor do setor que a recebe.
+            </p>
+          </div>
+        )}
+
+        {!podeRatear && !proposta && !global && (
+          <p className="mt-3 text-[12px] text-[var(--ink-3)]">
+            {item.rateios.length > 1
+              ? "Custo compartilhado: alterações de rateio são feitas pela Controladoria ou pelo administrador."
+              : "Só o gestor da área responsável (ou a Controladoria) pode propor um rateio."}
+          </p>
+        )}
+      </section>
 
       {podeLancar(usuario.papel) && (
         <form action={excluirCusto} className="mt-10 border-t border-[var(--rule)] pt-6">

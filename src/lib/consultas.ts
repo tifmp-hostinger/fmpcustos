@@ -23,6 +23,61 @@ export async function listarCategorias() {
   }));
 }
 
+/** Fatias de rateio propostas ao setor do usuário, aguardando a decisão dele. */
+export async function aceitesPendentesDoSetor(setorId: string | null) {
+  if (!setorId) return [];
+  const parcelas = await prisma.propostaRateioParcela.findMany({
+    where: { setorId, aceite: "PENDENTE", proposta: { status: "PENDENTE" } },
+    select: {
+      id: true,
+      percentual: true,
+      proposta: {
+        select: {
+          justificativa: true,
+          itemCusto: { select: { id: true, descricao: true, valorMensalNormalizado: true } },
+          criadoPor: {
+            select: {
+              colaborador: { select: { nome: true, setor: { select: { nome: true } } } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { proposta: { criadoEm: "asc" } },
+    take: 10,
+  });
+  return parcelas.map((p) => ({
+    id: p.id,
+    percentual: Number(p.percentual).toFixed(0),
+    itemId: p.proposta.itemCusto.id,
+    itemDescricao: p.proposta.itemCusto.descricao,
+    valorMensal: p.proposta.itemCusto.valorMensalNormalizado?.toString() ?? null,
+    proponente: p.proposta.criadoPor.colaborador.nome,
+    setorProponente: p.proposta.criadoPor.colaborador.setor?.nome ?? null,
+    justificativa: p.proposta.justificativa,
+  }));
+}
+
+/** Propostas feitas pelo usuário que ainda aguardam aceite de alguém. */
+export async function propostasDoUsuario(usuarioId: string) {
+  const propostas = await prisma.propostaRateio.findMany({
+    where: { criadoPorId: usuarioId, status: "PENDENTE" },
+    select: {
+      id: true,
+      itemCusto: { select: { id: true, descricao: true } },
+      parcelas: { select: { aceite: true, setor: { select: { nome: true } } } },
+    },
+    orderBy: { criadoEm: "desc" },
+    take: 5,
+  });
+  return propostas.map((p) => ({
+    id: p.id,
+    itemId: p.itemCusto.id,
+    itemDescricao: p.itemCusto.descricao,
+    aguardando: p.parcelas.filter((x) => x.aceite === "PENDENTE").map((x) => x.setor.nome),
+  }));
+}
+
 export async function listarSetores() {
   const setores = await prisma.setor.findMany({
     where: { ativo: true },

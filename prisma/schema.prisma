@@ -71,6 +71,19 @@ enum StatusContrato {
   ENCERRADO
 }
 
+enum StatusProposta {
+  PENDENTE
+  APROVADA
+  REJEITADA
+  CANCELADA
+}
+
+enum StatusAceite {
+  PENDENTE
+  ACEITO
+  REJEITADO
+}
+
 enum MetodoRateio {
   PERCENTUAL
   POR_USUARIO
@@ -161,12 +174,13 @@ model Setor {
   responsavelDadoId String?
   responsavelDado   Colaborador? @relation("ResponsavelDadoSetor", fields: [responsavelDadoId], references: [id])
 
-  colaboradores Colaborador[] @relation("SetorDoColaborador")
-  centrosCusto  CentroCusto[]
-  contratos     Contrato[]
-  rateios       Rateio[]
-  orcamentos    Orcamento[]
-  acessos       AcessoSetor[]
+  colaboradores    Colaborador[] @relation("SetorDoColaborador")
+  centrosCusto     CentroCusto[]
+  contratos        Contrato[]
+  rateios          Rateio[]
+  orcamentos       Orcamento[]
+  acessos          AcessoSetor[]
+  parcelasProposta PropostaRateioParcela[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -237,10 +251,12 @@ model Usuario {
   colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
 
   /// Escopo de setores que o usuário enxerga. Vazio + papel ADMIN/CONTROLADORIA = todos.
-  acessos      AcessoSetor[]
-  auditorias   Auditoria[]
-  importacoes  Importacao[]
-  itensCriados ItemCusto[]  @relation("ItensCriados")
+  acessos          AcessoSetor[]
+  auditorias       Auditoria[]
+  importacoes      Importacao[]
+  itensCriados     ItemCusto[]             @relation("ItensCriados")
+  propostasCriadas PropostaRateio[]        @relation("PropostasCriadas")
+  aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
 
   ultimoAcesso DateTime?
   criadoEm     DateTime  @default(now())
@@ -511,6 +527,7 @@ model ItemCusto {
   rateios     Rateio[]
   licenca     Licenca?
   alertas     Alerta[]
+  propostas   PropostaRateio[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -633,6 +650,58 @@ model Rateio {
   @@index([lancamentoId])
   @@index([setorId])
   @@map("rateio")
+}
+
+/**
+ * Proposta de rateio: o gestor do custo propõe a divisão entre setores, e cada
+ * setor que RECEBE uma fatia precisa aceitar antes de ela entrar em vigor —
+ * ninguém ganha custo no orçamento sem concordar. Controladoria e admin
+ * aplicam direto (a proposta nasce aprovada, como registro).
+ */
+model PropostaRateio {
+  id String @id @default(cuid())
+
+  itemCustoId String
+  itemCusto   ItemCusto @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  status        StatusProposta @default(PENDENTE)
+  justificativa String?
+
+  criadoPorId String
+  criadoPor   Usuario @relation("PropostasCriadas", fields: [criadoPorId], references: [id])
+
+  decididaEm DateTime?
+
+  parcelas PropostaRateioParcela[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([itemCustoId, status])
+  @@map("proposta_rateio")
+}
+
+model PropostaRateioParcela {
+  id String @id @default(cuid())
+
+  propostaId String
+  proposta   PropostaRateio @relation(fields: [propostaId], references: [id], onDelete: Cascade)
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id])
+
+  percentual Decimal @db.Decimal(7, 4)
+
+  aceite     StatusAceite @default(PENDENTE)
+  comentario String?
+
+  decididoPorId String?
+  decididoPor   Usuario? @relation("AceitesDecididos", fields: [decididoPorId], references: [id])
+  decididoEm    DateTime?
+
+  @@unique([propostaId, setorId])
+  @@index([setorId, aceite])
+  @@map("proposta_rateio_parcela")
 }
 
 // ---------------------------------------------------------------------------

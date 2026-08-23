@@ -12,7 +12,9 @@ import {
   setoresQueLancaram,
 } from "@/lib/metricas";
 import { formatarBRL } from "@/lib/dinheiro";
+import { aceitesPendentesDoSetor, propostasDoUsuario } from "@/lib/consultas";
 import { exigirSessao, podeLancar, setoresVisiveis, vePorInteiro } from "@/lib/sessao";
+import { CartaoAceite } from "./aceites";
 import { BarrasRanqueadas, Indicador } from "@/components/graficos";
 import {
   IconeAlerta,
@@ -59,11 +61,13 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
     );
   }
 
-  const [mensal, maiores, renovacoes, pendencias] = await Promise.all([
+  const [mensal, maiores, renovacoes, pendencias, aceites, propostas] = await Promise.all([
     custoMensalCorrente(escopo, [...RECORRENTE]),
     maioresItens(escopo, [...RECORRENTE], 5),
     renovacoesProximas(escopo, 90),
     lanca ? itensComPendencia(escopo, 4) : Promise.resolve({ semValor: [], semVigencia: [] }),
+    lanca ? aceitesPendentesDoSetor(usuario.setorId) : Promise.resolve([]),
+    lanca ? propostasDoUsuario(usuario.id) : Promise.resolve([]),
   ]);
 
   const totalPendencias = pendencias.semValor.length + pendencias.semVigencia.length;
@@ -92,6 +96,50 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
           </Link>
         )}
       </div>
+
+          {aceites.length > 0 && (
+        <section className="mt-5 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
+          <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--accent)]">
+            <IconeAlerta />
+            Aceites aguardando você
+          </h2>
+          <p className="mt-1 text-[12px] text-[var(--ink-3)]">
+            Outro setor propôs dividir um custo com a sua área. Nada entra no seu número sem o
+            seu aceite.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {aceites.map((a) => (
+              <CartaoAceite
+                key={a.id}
+                parcela={{
+                  ...a,
+                  valorMensal: a.valorMensal ? formatarBRL(a.valorMensal) : null,
+                }}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {propostas.length > 0 && (
+        <section className="mt-5 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+            Suas propostas de rateio
+          </h2>
+          <ul className="mt-3 space-y-2 text-[13px]">
+            {propostas.map((pr) => (
+              <li key={pr.id} className="flex flex-wrap items-baseline justify-between gap-2">
+                <Link href={`/custos/${pr.itemId}`} className="font-medium no-underline hover:underline">
+                  {pr.itemDescricao}
+                </Link>
+                <span className="text-[var(--ink-3)]">
+                  aguardando {pr.aguardando.join(", ")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {vazio && lanca ? (
         <PrimeiroCusto setor={setor} />
