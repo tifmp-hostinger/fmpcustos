@@ -78,9 +78,23 @@ prisma db seed
 ```
 
 Ele cria os 13 setores, as categorias, o catálogo de capacidades e **o primeiro
-administrador**, a partir de `ADMIN_EMAIL`. A senha temporária aparece no log
-uma única vez — anote. Se já existir algum administrador, o seed não mexe em
-nada.
+administrador**, a partir de `ADMIN_EMAIL`.
+
+`ADMIN_SENHA` é opcional. Sem ela, uma senha temporária é sorteada e impressa no
+log **uma única vez** — anote antes de fechar. Com ela, a senha precisa cumprir a
+mesma regra que a aplicação exige de todo mundo: ao menos 10 caracteres, com
+letras e números. O administrador enxerga o custo de todos os setores e gerencia
+os acessos, então é o pior lugar possível para abrir exceção.
+
+### Já rodei o seed e quero trocar a senha do administrador
+
+Mudar `ADMIN_SENHA` no ambiente **não** altera a senha de quem já existe: o seed
+é idempotente de propósito, para nunca reabrir uma conta sozinho. Para redefinir,
+seja explícito:
+
+```bash
+ADMIN_RESET_SENHA=true ADMIN_SENHA='suaSenhaForte123' prisma db seed
+```
 
 A imagem inclui a CLI do Prisma e o `tsx` justamente para este passo, e
 `/app/node_modules/.bin` já está no `PATH`.

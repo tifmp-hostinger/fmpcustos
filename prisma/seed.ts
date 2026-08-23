@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { gerarHashSenha, gerarSenhaTemporaria } from "../src/lib/senha";
+import { gerarHashSenha, gerarSenhaTemporaria, validarSenha } from "../src/lib/senha";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -127,14 +127,9 @@ async function main() {
  * rodar o seed de novo nunca reabra uma conta ou reponha uma senha conhecida.
  */
 async function semearAdministrador() {
-  const jaExiste = await prisma.usuario.count({ where: { papel: "ADMIN" } });
-  if (jaExiste > 0) {
-    console.log("Administrador já existe — nada a fazer.");
-    return;
-  }
-
   const email = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
   const nome = (process.env.ADMIN_NOME ?? "Administrador").trim();
+  const resetar = /^(1|true|sim)$/i.test((process.env.ADMIN_RESET_SENHA ?? "").trim());
 
   if (!email) {
     console.log("");
@@ -144,40 +139,84 @@ async function semearAdministrador() {
     return;
   }
 
-  // ADMIN_SENHA é opcional. Sem ela, geramos uma temporária e imprimimos uma vez.
-  const senha = process.env.ADMIN_SENHA?.trim() || gerarSenhaTemporaria();
-  const definidaPeloOperador = Boolean(process.env.ADMIN_SENHA?.trim());
+  const jaExiste = await prisma.usuario.count({ where: { papel: "ADMIN" } });
+  if (jaExiste > 0 && !resetar) {
+    console.log("");
+    console.log("======================================================================");
+    console.log(`Já existe administrador — o seed não mexeu em nada.`);
+    console.log("");
+    console.log("Mudar ADMIN_SENHA no ambiente NÃO altera a senha de quem já existe:");
+    console.log("o seed é idempotente de propósito, para nunca reabrir uma conta.");
+    console.log("");
+    console.log("Para redefinir a senha do administrador, rode com:");
+    console.log("  ADMIN_RESET_SENHA=true ADMIN_SENHA='suaSenhaForte123' prisma db seed");
+    console.log("======================================================================");
+    console.log("");
+    return;
+  }
 
-  await prisma.colaborador.upsert({
+  // ADMIN_SENHA é opcional. Sem ela, geramos uma temporária e imprimimos uma vez.
+  const informada = process.env.ADMIN_SENHA?.trim();
+  const definidaPeloOperador = Boolean(informada);
+
+  // A mesma regra que a aplicação exige na troca de senha vale aqui. Aceitar
+  // uma senha fraca no administrador de um sistema que concentra o custo da
+  // instituição inteira seria o pior lugar para abrir exceção.
+  if (informada) {
+    const problema = validarSenha(informada);
+    if (problema) {
+      console.log("");
+      console.log("======================================================================");
+      console.log("ADMIN_SENHA recusada: " + problema);
+      console.log("");
+      console.log("Este usuário enxerga o custo de todos os setores e gerencia os");
+      console.log("acessos de todo mundo. Escolha outra, ou remova ADMIN_SENHA para");
+      console.log("que o seed sorteie uma temporária.");
+      console.log("======================================================================");
+      console.log("");
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const senha = informada || gerarSenhaTemporaria();
+
+  const senhaHash = await gerarHashSenha(senha);
+
+  // Em passos explícitos, e não com upsert aninhado: a relação usuário-colaborador
+  // é um-para-um, e o upsert aninhado do Prisma não aceita essa forma.
+  const colaborador = await prisma.colaborador.upsert({
     where: { email },
-    update: {
-      usuario: {
-        upsert: {
-          create: {
-            papel: "ADMIN",
-            senhaHash: await gerarHashSenha(senha),
-            precisaTrocarSenha: !definidaPeloOperador,
-          },
-          update: { papel: "ADMIN", ativo: true },
-        },
-      },
-    },
-    create: {
-      nome,
-      email,
-      usuario: {
-        create: {
-          papel: "ADMIN",
-          senhaHash: await gerarHashSenha(senha),
-          precisaTrocarSenha: !definidaPeloOperador,
-        },
-      },
-    },
+    update: { nome, ativo: true },
+    create: { nome, email },
+    select: { id: true, usuario: { select: { id: true } } },
   });
+
+  if (colaborador.usuario) {
+    await prisma.usuario.update({
+      where: { id: colaborador.usuario.id },
+      data: {
+        papel: "ADMIN",
+        ativo: true,
+        senhaHash,
+        precisaTrocarSenha: !definidaPeloOperador,
+      },
+    });
+  } else {
+    await prisma.usuario.create({
+      data: {
+        colaboradorId: colaborador.id,
+        papel: "ADMIN",
+        ativo: true,
+        senhaHash,
+        precisaTrocarSenha: !definidaPeloOperador,
+      },
+    });
+  }
 
   console.log("");
   console.log("======================================================================");
-  console.log("Administrador criado.");
+  console.log(resetar && jaExiste > 0 ? "Senha do administrador redefinida." : "Administrador criado.");
   console.log(`  E-mail: ${email}`);
   if (definidaPeloOperador) {
     console.log("  Senha:  a que você definiu em ADMIN_SENHA");

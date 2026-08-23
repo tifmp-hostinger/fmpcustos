@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { trocarSenha } from "./acoes";
-import { Aviso, Campo, Enviar } from "@/components/campos";
+import { Aviso, CampoSenha, Enviar } from "@/components/campos";
 import type { Resultado } from "@/lib/acoes";
 
 export default function TrocarSenha() {
@@ -21,25 +21,17 @@ export default function TrocarSenha() {
       </p>
 
       <form action={acao} className="mt-8 space-y-4">
-        <Campo
-          rotulo="Senha atual"
-          nome="atual"
-          tipo="password"
-          obrigatorio
-          autoComplete="current-password"
-        />
-        <Campo
+        <CampoSenha rotulo="Senha atual" nome="atual" obrigatorio />
+        <CampoSenha
           rotulo="Nova senha"
           nome="nova"
-          tipo="password"
           obrigatorio
           autoComplete="new-password"
           dica="Ao menos 10 caracteres, com letras e números."
         />
-        <Campo
+        <CampoSenha
           rotulo="Repita a nova senha"
           nome="confirmacao"
-          tipo="password"
           obrigatorio
           autoComplete="new-password"
         />

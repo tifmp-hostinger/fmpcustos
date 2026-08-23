@@ -62,8 +62,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Migrations + CLI do Prisma, para aplicar o schema no start.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-# O client gerado é importado por prisma/seed.ts (fora do bundle do Next).
+# O client gerado e os utilitários são importados por prisma/seed.ts, que roda
+# FORA do bundle do Next — o tracing do Next não os alcança.
 COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib ./src/lib
 # Árvore completa da CLI, mesclada no node_modules do standalone. O prisma.config.ts
 # resolve `prisma/config` e `dotenv` a partir daqui.
 COPY --from=migrator --chown=nextjs:nodejs /migrator/node_modules ./node_modules

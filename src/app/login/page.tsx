@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { entrar } from "./acoes";
-import { Aviso, Campo, Enviar } from "@/components/campos";
+import { Aviso, Campo, CampoSenha, Enviar } from "@/components/campos";
 import type { Resultado } from "@/lib/acoes";
 
 export default function Login() {
@@ -26,13 +26,7 @@ export default function Login() {
           autoComplete="username"
           valor={resultado && !resultado.ok ? resultado.valores?.email : undefined}
         />
-        <Campo
-          rotulo="Senha"
-          nome="senha"
-          tipo="password"
-          obrigatorio
-          autoComplete="current-password"
-        />
+        <CampoSenha rotulo="Senha" nome="senha" obrigatorio />
         <Aviso resultado={resultado} />
         <Enviar>Entrar</Enviar>
       </form>

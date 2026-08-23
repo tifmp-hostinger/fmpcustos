@@ -1,6 +1,88 @@
 "use client";
 
+import { useId, useState } from "react";
 import { useFormStatus } from "react-dom";
+
+/**
+ * Campo de senha com botão de mostrar/ocultar.
+ *
+ * Digitar senha às cegas é a maior fonte de "senha incorreta" que não é senha
+ * incorreta — ainda mais numa senha temporária repassada por outro canal.
+ * O botão fica fora do fluxo de tabulação e é anunciado por aria-label, para
+ * não atrapalhar quem navega por teclado ou leitor de tela.
+ */
+export function CampoSenha({
+  rotulo,
+  nome,
+  obrigatorio,
+  dica,
+  autoComplete = "current-password",
+}: {
+  rotulo: string;
+  nome: string;
+  obrigatorio?: boolean;
+  dica?: string;
+  autoComplete?: string;
+}) {
+  const [visivel, setVisivel] = useState(false);
+  const idDica = useId();
+
+  return (
+    <div>
+      <label className="block">
+        <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+          {rotulo}
+          {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
+        </span>
+        <span className="relative block">
+          <input
+            type={visivel ? "text" : "password"}
+            name={nome}
+            required={obrigatorio}
+            autoComplete={autoComplete}
+            aria-describedby={dica ? idDica : undefined}
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] py-2 pl-3 pr-11 text-[15px] outline-none focus:border-[var(--accent)]"
+          />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setVisivel((v) => !v)}
+            aria-label={visivel ? "Ocultar senha" : "Mostrar senha"}
+            title={visivel ? "Ocultar senha" : "Mostrar senha"}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[var(--ink-3)] hover:text-[var(--ink)]"
+          >
+            <Olho aberto={!visivel} />
+          </button>
+        </span>
+      </label>
+      {dica && (
+        <span id={idDica} className="mt-1 block text-xs text-[var(--ink-3)]">
+          {dica}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Olho({ aberto }: { aberto: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      {!aberto && <line x1="3" y1="3" x2="21" y2="21" />}
+    </svg>
+  );
+}
 
 export function Campo({
   rotulo,
