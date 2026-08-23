@@ -16,9 +16,30 @@ RUN npm ci
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# DATABASE_URL só é necessária em runtime; o generate não conecta ao banco.
 ENV NEXT_TELEMETRY_DISABLED=1
+# `prisma generate` NÃO conecta ao banco, mas carrega o prisma.config.ts — e o
+# helper env() falha se a variável não existir. Este valor é descartável e vive
+# só neste estágio: o runner recebe a DATABASE_URL real do painel.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npx prisma generate && npx next build
+
+# --- Ferramentas de operação (migrations e seed) --------------------------
+# A CLI do Prisma tem árvore de dependências própria (@prisma/config puxa
+# `effect`, entre outras). Copiar subpastas de node_modules a dedo quebra.
+# Aqui ela é instalada inteira, num estágio isolado, e só ela vai para o runner.
+#
+# tsx, adapter-pg e pg entram porque `prisma db seed` executa prisma/seed.ts —
+# o Next embute essas dependências no bundle do servidor, mas o seed roda fora dele.
+#
+# As versões DEVEM acompanhar as de package.json.
+FROM base AS migrator
+WORKDIR /migrator
+RUN npm install --no-save --no-audit --no-fund \
+      prisma@7.9.1 \
+      dotenv@17.4.2 \
+      tsx@4.23.12 \
+      @prisma/adapter-pg@7.9.1 \
+      pg@8.23.0
 
 # --- runtime -------------------------------------------------------------
 FROM base AS runner
@@ -26,6 +47,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# `prisma db seed` invoca `tsx` pelo PATH, não pelo node_modules/.bin.
+# Também permite ao operador rodar `prisma` direto no terminal do container.
+ENV PATH=/app/node_modules/.bin:$PATH
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
@@ -38,12 +62,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Migrations + CLI do Prisma, para aplicar o schema no start.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-# prisma.config.ts faz `import "dotenv/config"` — o pacote precisa resolver aqui,
-# mesmo que em produção as variáveis venham do painel e não de um arquivo .env.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
+# O client gerado é importado por prisma/seed.ts (fora do bundle do Next).
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
+# Árvore completa da CLI, mesclada no node_modules do standalone. O prisma.config.ts
+# resolve `prisma/config` e `dotenv` a partir daqui.
+COPY --from=migrator --chown=nextjs:nodejs /migrator/node_modules ./node_modules
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 

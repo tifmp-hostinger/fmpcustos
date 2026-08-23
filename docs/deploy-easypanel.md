@@ -50,8 +50,24 @@ que já está versionado em `prisma/migrations/`. É seguro no start de cada dep
 O seed **não** roda automaticamente. Execute uma vez, pelo terminal do serviço:
 
 ```bash
-npx tsx prisma/seed.ts
+prisma db seed
 ```
+
+A imagem inclui a CLI do Prisma e o `tsx` justamente para este passo, e
+`/app/node_modules/.bin` já está no `PATH`.
+
+### Por que a imagem carrega a CLI do Prisma
+
+Duas armadilhas encontradas ao validar este Dockerfile, documentadas para quem
+for mexer nele:
+
+1. **`prisma generate` exige `DATABASE_URL` no build.** Ele não conecta ao banco,
+   mas carrega o `prisma.config.ts`, e o helper `env()` falha se a variável não
+   existir. O estágio de build define um valor descartável; o runner recebe a URL
+   real do painel.
+2. **Não dá para copiar pedaços de `node_modules`.** `@prisma/config` depende de
+   `effect` e de outras transitivas. Por isso existe o estágio `migrator`, que
+   instala a CLI inteira e é copiado de uma vez.
 
 ## 4. Requisitos do VPS
 
