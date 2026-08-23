@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { completudePorSetor, custoTotal, renovacoesEmAberto } from "@/lib/metricas";
 import { formatarBRL } from "@/lib/dinheiro";
+import { verificarBanco } from "@/lib/estado-banco";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,12 @@ function competenciaAtual() {
 
 export default async function Painel() {
   const competencia = competenciaAtual();
+
+  // Banco fora não pode virar erro 500 sem pista: vira uma tela que diz o que checar.
+  const estado = await verificarBanco();
+  if (!estado.ok) {
+    return <Diagnostico estado={estado} />;
+  }
 
   const [setores, categorias, capacidades, fornecedores, contratos, itens] = await Promise.all([
     prisma.setor.count({ where: { ativo: true } }),
@@ -114,6 +121,48 @@ export default async function Painel() {
         Esqueleto da Entrega 1. CAPEX e pessoal estão declarados no modelo (enum{" "}
         <code className="rounded bg-black/5 px-1 dark:bg-white/10">Natureza</code>) e ainda sem
         entidades próprias — a decisão de construir ou integrar continua em aberto.
+      </p>
+    </main>
+  );
+}
+
+function Diagnostico({
+  estado,
+}: {
+  estado: Extract<Awaited<ReturnType<typeof verificarBanco>>, { ok: false }>;
+}) {
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-16">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+        FMP · Custos · Configuração pendente
+      </p>
+      <h1 className="mt-3 font-serif text-3xl leading-tight font-bold tracking-tight">
+        {estado.motivo}
+      </h1>
+      <p className="mt-3 text-[var(--ink-2)]">
+        A aplicação subiu, mas ainda não consegue ler os dados. Ela mostra este
+        diagnóstico em vez de um erro genérico.
+      </p>
+
+      <h2 className="mt-8 text-sm font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+        O que verificar, nesta ordem
+      </h2>
+      <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15px] text-[var(--ink-2)]">
+        {estado.causas.map((causa) => (
+          <li key={causa}>{causa}</li>
+        ))}
+      </ol>
+
+      <h2 className="mt-8 text-sm font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+        Erro original
+      </h2>
+      <pre className="mt-3 overflow-x-auto rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-4 py-3 text-xs leading-relaxed text-[var(--ink-2)]">
+        {estado.detalhe}
+      </pre>
+
+      <p className="mt-8 text-xs text-[var(--ink-3)]">
+        O log do container traz o mesmo diagnóstico. O estado em JSON está em{" "}
+        <code className="rounded bg-black/5 px-1 dark:bg-white/10">/api/health</code>.
       </p>
     </main>
   );

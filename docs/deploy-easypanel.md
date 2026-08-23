@@ -1,8 +1,21 @@
 # Deploy no EasyPanel
 
+> **A ordem importa.** O serviço Postgres tem que existir *antes* do serviço da
+> aplicação. Sem ele, a aplicação sobe mas não tem o que ler — e é o erro mais
+> comum no primeiro deploy.
+
 ## 1. Serviço Postgres
 
-No projeto do EasyPanel, crie um serviço **Postgres**. Ele roda a imagem oficial
+No projeto do EasyPanel: **+ Service → Postgres**. Anote três coisas que o
+painel gera ou que você define, porque elas montam a `DATABASE_URL` do passo 2:
+
+| Campo | Onde aparece | Vira o quê na URL |
+| --- | --- | --- |
+| Nome do serviço | você escolhe, ex. `fmpcustos-db` | o **host** |
+| Usuário e senha | gerados pelo painel | as credenciais |
+| Nome do banco | você escolhe, ex. `fmpcustos` | o banco |
+
+O serviço roda a imagem oficial Ele roda a imagem oficial
 com volume persistente, credenciais geradas e aba de **Backups** com agendamento,
 retenção e restauração — o que já cobre o requisito de backup da plataforma.
 
@@ -30,6 +43,8 @@ Crie um serviço **App** apontando para este repositório.
 - **Domínio:** habilite o SSL automático (Let's Encrypt)
 
 ### Variáveis de ambiente
+
+Monte a `DATABASE_URL` com os dados anotados no passo 1:
 
 ```
 DATABASE_URL=postgresql://<usuario>:<senha>@<nome-do-servico-postgres>:5432/<banco>?schema=public
@@ -78,13 +93,31 @@ for mexer nele:
 
 ## 5. Healthcheck
 
-A imagem expõe `/api/health`, que testa a conexão com o banco e responde 503
-quando o Postgres está fora. O `HEALTHCHECK` do Dockerfile já aponta para ele.
+A imagem expõe `/api/health`, e o `HEALTHCHECK` do Dockerfile aponta para ele.
+Ele mede **liveness do processo**, não do banco: responde 200 sempre que a
+aplicação está de pé, informando o estado do banco no corpo da resposta.
 
-## 6. Ordem do primeiro deploy
+## 6. Quando algo dá errado
 
-1. Subir o serviço Postgres e configurar backup
-2. Subir o serviço App com as variáveis de ambiente
+A aplicação **não** morre quando o banco está fora. O entrypoint tenta aplicar as
+migrations 6 vezes, com espera crescente, e mesmo falhando entrega o controle ao
+servidor. Isso é proposital: um container em loop de reinício não mostra nada, e
+o sintoma vira apenas "não abre".
+
+Com o banco indisponível você tem dois lugares para olhar, ambos respondendo:
+
+- a **URL do serviço** mostra uma tela nomeando o problema e o que verificar;
+- **`/api/health`** devolve o mesmo em JSON, e responde 200 mesmo com o banco
+  fora — de propósito. Se devolvesse 503, o HEALTHCHECK marcaria o container como
+  não saudável, o proxy pararia de rotear, e você perderia justamente o
+  diagnóstico.
+
+O log do container traz o mesmo texto.
+
+## 7. Ordem do primeiro deploy
+
+1. Criar o serviço Postgres e configurar backup — **antes de tudo**
+2. Subir o serviço App com as variáveis de ambiente apontando para ele
 3. Conferir que as migrations aplicaram (log do container)
 4. Rodar o seed
 5. Acessar `/api/health` e confirmar `{"status":"ok"}`

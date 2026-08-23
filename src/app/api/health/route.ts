@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { verificarBanco } from "@/lib/estado-banco";
 
 export const dynamic = "force-dynamic";
 
-/** Usado pelo healthcheck do container no EasyPanel. */
+/**
+ * Liveness do processo, com o estado do banco no corpo.
+ *
+ * Responde 200 sempre que a aplicação está de pé, mesmo com o banco fora. Se
+ * respondesse 503 nesse caso, o HEALTHCHECK do container marcaria o serviço como
+ * não saudável e o proxy deixaria de rotear — trocando um diagnóstico legível por
+ * um erro genérico de "não abre".
+ */
 export async function GET() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: "ok", banco: "conectado" });
-  } catch (erro) {
-    return NextResponse.json(
-      { status: "degradado", banco: "indisponivel", erro: String(erro) },
-      { status: 503 },
-    );
-  }
+  const banco = await verificarBanco();
+
+  return NextResponse.json({
+    status: "ok",
+    banco: banco.ok ? "conectado" : "indisponivel",
+    ...(banco.ok ? {} : { motivo: banco.motivo, causas: banco.causas }),
+  });
 }
