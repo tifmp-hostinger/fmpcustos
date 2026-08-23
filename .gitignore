@@ -21,3 +21,4 @@ npm-debug.log*
 dados/entrada/*.xlsx
 dados/saida/
 scripts/sql/03-administrador.sql
+scripts/sql/04-acesso-emergencia.sql

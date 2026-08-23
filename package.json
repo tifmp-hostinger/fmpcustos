@@ -16,7 +16,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "importar": "tsx scripts/importar-planilha.ts",
     "diagnostico": "tsx prisma/diagnostico.ts",
-    "senha": "tsx prisma/definir-senha.ts"
+    "senha": "tsx prisma/definir-senha.ts",
+    "sql:acesso": "tsx scripts/gerar-sql-acesso.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
