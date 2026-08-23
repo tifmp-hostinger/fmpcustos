@@ -1,0 +1,766 @@
+// Plataforma corporativa de inteligência de custos da FMP
+//
+// Princípios que este schema materializa:
+//  1. Contrato != Item de custo != Lançamento mensal. São três entidades.
+//  2. `natureza` está em todo fato. Nenhuma consulta soma naturezas diferentes por acidente.
+//  3. Dinheiro é Decimal(14,2) com moeda explícita. Nunca float, nunca texto.
+//  4. Status é enum. Cor de célula não é dado.
+//  5. Rateio é entidade versionada por vigência, com soma validada em 100%.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Segrega o custo por natureza. CAPEX e PESSOAL estão declarados mas ainda não
+/// têm entidades próprias: a decisão de construir ou integrar ficou em aberto.
+/// Declarar agora evita migration de enum quando ela for tomada.
+enum Natureza {
+  RECORRENTE
+  PONTUAL
+  CAPEX
+  PESSOAL
+}
+
+enum Periodicidade {
+  MENSAL
+  BIMESTRAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  UNICO
+  SOB_DEMANDA
+}
+
+enum ModeloCobranca {
+  FIXO
+  POR_USUARIO
+  POR_CONSUMO
+  POR_FAIXA
+  PONTUAL
+}
+
+enum ComportamentoCusto {
+  FIXO
+  VARIAVEL
+}
+
+/// Substitui a cor da célula e a coluna sem cabeçalho da planilha.
+enum StatusItem {
+  ATIVO
+  EM_ANALISE
+  CANCELAMENTO_SOLICITADO
+  CANCELADO
+  SUBSTITUIDO
+  /// Custo existe mas o valor ainda não foi apurado (o "CALCULAR" da planilha).
+  PENDENTE_APURACAO
+}
+
+enum StatusContrato {
+  ATIVO
+  EM_RENOVACAO
+  EM_ANALISE
+  ENCERRADO
+}
+
+enum MetodoRateio {
+  PERCENTUAL
+  POR_USUARIO
+  IGUALITARIO
+  MANUAL
+}
+
+enum Moeda {
+  BRL
+  USD
+  EUR
+}
+
+enum IndiceReajuste {
+  IPCA
+  IGPM
+  INPC
+  OUTRO
+  NENHUM
+}
+
+enum OrigemLancamento {
+  MANUAL
+  IMPORTACAO
+  INTEGRACAO
+}
+
+enum PapelUsuario {
+  ADMIN
+  GESTOR_CONTRATO
+  GESTOR_SETOR
+  CONTROLADORIA
+  LEITOR
+}
+
+enum AcaoAuditoria {
+  CRIACAO
+  ALTERACAO
+  EXCLUSAO
+}
+
+enum TipoDocumento {
+  CONTRATO
+  PROPOSTA
+  PEDIDO
+  ADITIVO
+  NOTA_FISCAL
+  OUTRO
+}
+
+enum TipoAlerta {
+  RENOVACAO_PROXIMA
+  REAJUSTE_ACIMA_INDICE
+  ESTOURO_ORCAMENTO
+  VARIACAO_ANOMALA
+  LICENCA_OCIOSA
+  DADO_INCOMPLETO
+  RATEIO_INCOMPLETO
+}
+
+enum StatusAlerta {
+  ABERTO
+  RECONHECIDO
+  RESOLVIDO
+  IGNORADO
+}
+
+// ---------------------------------------------------------------------------
+// Organização
+// ---------------------------------------------------------------------------
+
+model Setor {
+  id        String  @id @default(cuid())
+  codigo    String  @unique
+  nome      String
+  ativo     Boolean @default(true)
+
+  setorPaiId String?
+  setorPai   Setor?  @relation("HierarquiaSetor", fields: [setorPaiId], references: [id])
+  subsetores Setor[] @relation("HierarquiaSetor")
+
+  /// Quem responde pela gestão do setor.
+  gestorId String?
+  gestor   Colaborador? @relation("GestorDoSetor", fields: [gestorId], references: [id])
+
+  /// Quem responde por manter o dado de custo do setor em dia.
+  /// É o papel que determina a data real de go-live.
+  responsavelDadoId String?
+  responsavelDado   Colaborador? @relation("ResponsavelDadoSetor", fields: [responsavelDadoId], references: [id])
+
+  colaboradores Colaborador[] @relation("SetorDoColaborador")
+  centrosCusto  CentroCusto[]
+  contratos     Contrato[]
+  rateios       Rateio[]
+  orcamentos    Orcamento[]
+  acessos       AcessoSetor[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([setorPaiId])
+  @@map("setor")
+}
+
+model CentroCusto {
+  id      String  @id @default(cuid())
+  /// Código contábil real, vindo do TOTVS RM.
+  codigo  String  @unique
+  nome    String
+  ativo   Boolean @default(true)
+
+  setorId String?
+  setor   Setor?  @relation(fields: [setorId], references: [id])
+
+  contratos  Contrato[]
+  rateios    Rateio[]
+  orcamentos Orcamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([setorId])
+  @@map("centro_custo")
+}
+
+model Colaborador {
+  id        String    @id @default(cuid())
+  nome      String
+  email     String    @unique
+  matricula String?   @unique
+  ativo     Boolean   @default(true)
+  admissao  DateTime? @db.Date
+  desligamento DateTime? @db.Date
+
+  setorId String?
+  setor   Setor?  @relation("SetorDoColaborador", fields: [setorId], references: [id])
+
+  setoresQueGerencia   Setor[] @relation("GestorDoSetor")
+  setoresQueRespondePorDado Setor[] @relation("ResponsavelDadoSetor")
+
+  usuario              Usuario?
+  contratosResponsavel Contrato[]    @relation("ResponsavelContrato")
+  atribuicoes          AtribuicaoLicenca[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([setorId])
+  @@map("colaborador")
+}
+
+model Usuario {
+  id    String       @id @default(cuid())
+  papel PapelUsuario @default(LEITOR)
+  ativo Boolean      @default(true)
+
+  colaboradorId String      @unique
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
+
+  /// Escopo de setores que o usuário enxerga. Vazio + papel ADMIN/CONTROLADORIA = todos.
+  acessos    AcessoSetor[]
+  auditorias Auditoria[]
+  importacoes Importacao[]
+
+  ultimoAcesso DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  @@map("usuario")
+}
+
+/// Escopo de leitura por setor E por natureza. A separação por natureza é o que
+/// permite abrir a plataforma para os 13 setores sem abrir custo de pessoal junto.
+model AcessoSetor {
+  id        String     @id @default(cuid())
+  usuarioId String
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  setorId   String
+  setor     Setor      @relation(fields: [setorId], references: [id], onDelete: Cascade)
+  naturezas Natureza[]
+
+  @@unique([usuarioId, setorId])
+  @@map("acesso_setor")
+}
+
+// ---------------------------------------------------------------------------
+// Fornecedor, contrato e documentos
+// ---------------------------------------------------------------------------
+
+model Fornecedor {
+  id           String  @id @default(cuid())
+  nome         String  @unique
+  cnpj         String? @unique
+  site         String?
+  contatoNome  String?
+  contatoEmail String?
+  moedaPadrao  Moeda   @default(BRL)
+  /// Quão crítico é este fornecedor para a operação (1 baixo … 5 crítico).
+  criticidade  Int     @default(3)
+  observacoes  String?
+  ativo        Boolean @default(true)
+
+  contratos Contrato[]
+  servicos  Servico[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("fornecedor")
+}
+
+model Contrato {
+  id     String  @id @default(cuid())
+  numero String?
+  objeto String
+
+  fornecedorId String
+  fornecedor   Fornecedor @relation(fields: [fornecedorId], references: [id])
+
+  /// Setor que administra o contrato — não necessariamente quem paga por ele.
+  setorGestorId String?
+  setorGestor   Setor?  @relation(fields: [setorGestorId], references: [id])
+
+  centroCustoPadraoId String?
+  centroCustoPadrao   CentroCusto? @relation(fields: [centroCustoPadraoId], references: [id])
+
+  responsavelId String?
+  responsavel   Colaborador? @relation("ResponsavelContrato", fields: [responsavelId], references: [id])
+
+  dataAssinatura DateTime? @db.Date
+  dataInicio     DateTime? @db.Date
+  dataFim        DateTime? @db.Date
+  prazoMeses     Int?
+
+  renovacaoAutomatica Boolean        @default(false)
+  avisoPrevioDias     Int?
+  indiceReajuste      IndiceReajuste @default(NENHUM)
+  /// Mês do ano em que o reajuste incide (1–12).
+  mesAniversarioReajuste Int?
+  multaRescisoria        Decimal? @db.Decimal(14, 2)
+  condicoesCancelamento  String?
+
+  status      StatusContrato @default(ATIVO)
+  observacoes String?
+
+  itens      ItemCusto[]
+  aditivos   Aditivo[]
+  documentos Documento[]
+  alertas    Alerta[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([fornecedorId])
+  @@index([dataFim])
+  @@index([status])
+  @@map("contrato")
+}
+
+model Aditivo {
+  id         String   @id @default(cuid())
+  contratoId String
+  contrato   Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  data        DateTime @db.Date
+  descricao   String
+  deltaValor  Decimal? @db.Decimal(14, 2)
+  novoFim     DateTime? @db.Date
+  percentual  Decimal? @db.Decimal(7, 4)
+
+  criadoEm DateTime @default(now())
+
+  @@index([contratoId])
+  @@map("aditivo")
+}
+
+model Documento {
+  id   String        @id @default(cuid())
+  tipo TipoDocumento
+  nome String
+  /// Caminho no storage de objetos.
+  caminho String
+  hash    String?
+  tamanho Int?
+
+  contratoId String?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  /// Texto extraído do documento — base do RAG contratual na fase de IA.
+  textoExtraido String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([contratoId])
+  @@map("documento")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo: categoria, serviço e capacidades
+// ---------------------------------------------------------------------------
+
+model Categoria {
+  id     String  @id @default(cuid())
+  nome   String
+  codigo String  @unique
+  ativo  Boolean @default(true)
+
+  categoriaPaiId String?
+  categoriaPai   Categoria?  @relation("HierarquiaCategoria", fields: [categoriaPaiId], references: [id])
+  subcategorias  Categoria[] @relation("HierarquiaCategoria")
+
+  servicos   Servico[]
+  itens      ItemCusto[]
+  orcamentos Orcamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([categoriaPaiId])
+  @@map("categoria")
+}
+
+/// O sistema/produto como entidade própria. Existe para responder
+/// "quais ferramentas fazem a mesma coisa?" de forma determinística.
+model Servico {
+  id   String @id @default(cuid())
+  nome String
+
+  fornecedorId String
+  fornecedor   Fornecedor @relation(fields: [fornecedorId], references: [id])
+
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+
+  descricao String?
+  url       String?
+  ativo     Boolean @default(true)
+
+  capacidades ServicoCapacidade[]
+  itens       ItemCusto[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([fornecedorId, nome])
+  @@map("servico")
+}
+
+/// Tag funcional: videoconferência, gestão de projetos, AVA, assinatura digital…
+/// Duas ou mais assinaturas com a mesma capacidade = sobreposição detectável.
+model Capacidade {
+  id     String  @id @default(cuid())
+  codigo String  @unique
+  nome   String
+  descricao String?
+
+  servicos ServicoCapacidade[]
+
+  @@map("capacidade")
+}
+
+model ServicoCapacidade {
+  servicoId    String
+  servico      Servico    @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  capacidadeId String
+  capacidade   Capacidade @relation(fields: [capacidadeId], references: [id], onDelete: Cascade)
+
+  @@id([servicoId, capacidadeId])
+  @@map("servico_capacidade")
+}
+
+// ---------------------------------------------------------------------------
+// Item de custo
+// ---------------------------------------------------------------------------
+
+model ItemCusto {
+  id        String   @id @default(cuid())
+  descricao String
+  natureza  Natureza @default(RECORRENTE)
+
+  contratoId String?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id])
+
+  servicoId String?
+  servico   Servico? @relation(fields: [servicoId], references: [id])
+
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+
+  modeloCobranca ModeloCobranca     @default(FIXO)
+  comportamento  ComportamentoCusto @default(FIXO)
+
+  quantidade    Decimal? @db.Decimal(14, 4)
+  unidade       String?
+  valorUnitario Decimal? @db.Decimal(14, 2)
+
+  moeda         Moeda         @default(BRL)
+  periodicidade Periodicidade @default(MENSAL)
+  /// Valor cobrado a cada ocorrência da periodicidade.
+  valorPeriodo  Decimal?      @db.Decimal(14, 2)
+
+  /// Derivado de valorPeriodo + periodicidade. NUNCA digitado.
+  /// É o campo que torna comparável o que a planilha somava indevidamente.
+  valorMensalNormalizado Decimal? @db.Decimal(14, 2)
+
+  status StatusItem @default(ATIVO)
+
+  dataInicio DateTime? @db.Date
+  dataFim    DateTime? @db.Date
+
+  substituidoPorId String?     @unique
+  substituidoPor   ItemCusto?  @relation("Substituicao", fields: [substituidoPorId], references: [id])
+  substitui        ItemCusto?  @relation("Substituicao")
+
+  refPedido   String?
+  refProposta String?
+  observacoes String?
+
+  faixas      FaixaPreco[]
+  lancamentos LancamentoCusto[]
+  rateios     Rateio[]
+  licenca     Licenca?
+  alertas     Alerta[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([contratoId])
+  @@index([natureza, status])
+  @@index([categoriaId])
+  @@map("item_custo")
+}
+
+/// Modela preço por faixa: "APP MEU RH 1 AO 50 / 51 AO 100 / 101 AO 250 ID".
+model FaixaPreco {
+  id          String @id @default(cuid())
+  itemCustoId String
+  itemCusto   ItemCusto @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  qtdMin        Int
+  qtdMax        Int?
+  valorUnitario Decimal @db.Decimal(14, 4)
+
+  @@unique([itemCustoId, qtdMin])
+  @@map("faixa_preco")
+}
+
+// ---------------------------------------------------------------------------
+// Tempo: competência e lançamento
+// ---------------------------------------------------------------------------
+
+model Competencia {
+  id       String   @id @default(cuid())
+  /// Formato AAAA-MM.
+  ano      Int
+  mes      Int
+  fechada  Boolean  @default(false)
+  fechadaEm DateTime?
+
+  lancamentos LancamentoCusto[]
+
+  @@unique([ano, mes])
+  @@map("competencia")
+}
+
+/// Uma linha por item por mês. É daqui que saem série histórica, variação
+/// mês a mês, reajuste detectado e orçado × realizado.
+model LancamentoCusto {
+  id String @id @default(cuid())
+
+  itemCustoId String
+  itemCusto   ItemCusto @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  competenciaId String
+  competencia   Competencia @relation(fields: [competenciaId], references: [id])
+
+  natureza Natureza
+
+  valorPrevisto  Decimal? @db.Decimal(14, 2)
+  valorRealizado Decimal? @db.Decimal(14, 2)
+  quantidade     Decimal? @db.Decimal(14, 4)
+
+  moeda  Moeda    @default(BRL)
+  /// Taxa aplicada quando a moeda não é BRL. Guardada no lançamento, não no item,
+  /// para que o histórico não se reescreva quando o câmbio muda.
+  cambio Decimal? @db.Decimal(14, 6)
+
+  origem OrigemLancamento @default(MANUAL)
+  notaFiscal String?
+  observacoes String?
+
+  importacaoId String?
+  importacao   Importacao? @relation(fields: [importacaoId], references: [id])
+
+  rateios Rateio[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([itemCustoId, competenciaId])
+  @@index([competenciaId, natureza])
+  @@map("lancamento_custo")
+}
+
+// ---------------------------------------------------------------------------
+// Rateio
+// ---------------------------------------------------------------------------
+
+/// Aloca um custo a um setor. Pode estar no item (regra padrão, com vigência)
+/// ou no lançamento (exceção pontual daquela competência).
+/// A soma dos percentuais de um mesmo item/lançamento vigente deve dar 100%.
+model Rateio {
+  id     String       @id @default(cuid())
+  metodo MetodoRateio @default(PERCENTUAL)
+
+  itemCustoId String?
+  itemCusto   ItemCusto? @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  lancamentoId String?
+  lancamento   LancamentoCusto? @relation(fields: [lancamentoId], references: [id], onDelete: Cascade)
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id])
+
+  centroCustoId String?
+  centroCusto   CentroCusto? @relation(fields: [centroCustoId], references: [id])
+
+  /// 0–100, com 4 casas. Usado quando metodo = PERCENTUAL.
+  percentual Decimal? @db.Decimal(7, 4)
+  /// Usado quando metodo = MANUAL.
+  valor      Decimal? @db.Decimal(14, 2)
+
+  vigenciaInicio DateTime  @db.Date
+  vigenciaFim    DateTime? @db.Date
+
+  aprovadoPor String?
+  aprovadoEm  DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([itemCustoId])
+  @@index([lancamentoId])
+  @@index([setorId])
+  @@map("rateio")
+}
+
+// ---------------------------------------------------------------------------
+// Orçamento
+// ---------------------------------------------------------------------------
+
+model Orcamento {
+  id   String @id @default(cuid())
+  ano  Int
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id])
+
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+
+  centroCustoId String?
+  centroCusto   CentroCusto? @relation(fields: [centroCustoId], references: [id])
+
+  natureza Natureza @default(RECORRENTE)
+  valor    Decimal  @db.Decimal(14, 2)
+
+  /// 1 = orçado original; 2+ = revisões.
+  versao      Int      @default(1)
+  descricao   String?
+  criadoPor   String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([ano, setorId, categoriaId, natureza, versao])
+  @@index([ano, setorId])
+  @@map("orcamento")
+}
+
+// ---------------------------------------------------------------------------
+// Licenças e uso (Fase 2 — declarado agora para não exigir migration depois)
+// ---------------------------------------------------------------------------
+
+model Licenca {
+  id String @id @default(cuid())
+
+  itemCustoId String    @unique
+  itemCusto   ItemCusto @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  quantidadeContratada Int
+  custoUnitario        Decimal? @db.Decimal(14, 2)
+
+  atribuicoes AtribuicaoLicenca[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("licenca")
+}
+
+model AtribuicaoLicenca {
+  id        String  @id @default(cuid())
+  licencaId String
+  licenca   Licenca @relation(fields: [licencaId], references: [id], onDelete: Cascade)
+
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
+
+  dataAtribuicao DateTime  @db.Date
+  dataRevogacao  DateTime? @db.Date
+
+  /// Sem isto, "licença ociosa" é palpite. Alimentado por integração.
+  ultimoAcesso DateTime?
+  origem       OrigemLancamento @default(MANUAL)
+
+  @@unique([licencaId, colaboradorId, dataAtribuicao])
+  @@index([colaboradorId])
+  @@map("atribuicao_licenca")
+}
+
+// ---------------------------------------------------------------------------
+// Governança
+// ---------------------------------------------------------------------------
+
+model Alerta {
+  id   String     @id @default(cuid())
+  tipo TipoAlerta
+  status StatusAlerta @default(ABERTO)
+
+  titulo    String
+  descricao String?
+  /// 1 informativo … 5 urgente.
+  severidade Int @default(3)
+
+  contratoId String?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  itemCustoId String?
+  itemCusto   ItemCusto? @relation(fields: [itemCustoId], references: [id], onDelete: Cascade)
+
+  referencia  DateTime? @db.Date
+  resolvidoEm DateTime?
+  resolvidoPor String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([tipo, status])
+  @@map("alerta")
+}
+
+/// Append-only. Nada aqui é atualizado ou removido pela aplicação.
+model Auditoria {
+  id      String        @id @default(cuid())
+  tabela  String
+  registroId String
+  acao    AcaoAuditoria
+
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  /// Diferença entre antes e depois, em JSON.
+  diff Json?
+
+  criadoEm DateTime @default(now())
+
+  @@index([tabela, registroId])
+  @@index([criadoEm])
+  @@map("auditoria")
+}
+
+/// Rastreia a origem de cada dado carregado por planilha.
+model Importacao {
+  id      String @id @default(cuid())
+  arquivo String
+  hash    String?
+  aba     String?
+
+  linhasLidas    Int @default(0)
+  linhasAceitas  Int @default(0)
+  linhasRejeitadas Int @default(0)
+
+  relatorio Json?
+
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  lancamentos LancamentoCusto[]
+
+  criadoEm DateTime @default(now())
+
+  @@map("importacao")
+}

@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+.env
+.env.local
+.env.*.local
+
+src/generated/
+prisma/*.db
+
+.DS_Store
+*.log
+npm-debug.log*
+
+# Saídas do importador — dados reais não vão para o repositório
+dados/entrada/*.xlsx
+dados/saida/

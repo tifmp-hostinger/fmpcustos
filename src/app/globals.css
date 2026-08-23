@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* Identidade FMP */
+@theme {
+  --color-fmp-vermelho: #ee2a42;
+  --color-fmp-vermelho-escuro: #c81e33;
+  --color-fmp-preto: #191818;
+  --color-fmp-creme: #efeeea;
+  --color-fmp-areia: #bfbaa4;
+
+  --font-sans: var(--fonte-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--fonte-serif), Georgia, serif;
+}
+
+:root {
+  --ground: var(--color-fmp-creme);
+  --surface: #f7f6f3;
+  --ink: var(--color-fmp-preto);
+  --ink-2: #4a4644;
+  --ink-3: #78726c;
+  --rule: #d8d5cb;
+  --accent: var(--color-fmp-vermelho-escuro);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #141313;
+    --surface: #1d1b1a;
+    --ink: var(--color-fmp-creme);
+    --ink-2: #c6c1b8;
+    --ink-3: #948e85;
+    --rule: #332f2e;
+    --accent: #ff5468;
+  }
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
