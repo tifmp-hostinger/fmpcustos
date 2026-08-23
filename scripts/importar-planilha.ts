@@ -636,13 +636,126 @@ function gerarRelatorio(linhas: LinhaNormalizada[], arquivo: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Geração do SQL de carga
+// ---------------------------------------------------------------------------
+
+const sqlTexto = (v: string) => `'${v.replace(/'/g, "''")}'`;
+const sqlOuNulo = (v: string | null | undefined) => (v === null || v === undefined ? "NULL" : sqlTexto(v));
+const sqlNumero = (v: number | string | null | undefined) =>
+  v === null || v === undefined ? "NULL" : String(v);
+
+/** Identificador estável por aba e linha: reimportar atualiza em vez de duplicar. */
+const idItem = (l: LinhaNormalizada) =>
+  `imp_${l.aba.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${String(l.linha).padStart(3, "0")}`;
+
+/**
+ * Emite o SQL que carrega os custos no banco.
+ *
+ * O que entra é o dado JÁ NORMALIZADO pelo mesmo parser que produziu a
+ * auditoria — a carga e o relatório nunca divergem. Três decisões que valem
+ * registrar:
+ *
+ *  - a linha agregada que duplica outra aba fica de fora (o detalhe é mais útil
+ *    que o total, e somar os dois contaria o mesmo dinheiro duas vezes);
+ *  - o rateio nasce 100% no setor informado, porque nenhum custo pode ficar sem
+ *    dono. Reatribuir depois é trabalho de tela, não de carga;
+ *  - itens sem valor entram com status PENDENTE_APURACAO em vez de serem
+ *    descartados: o buraco tem que ficar visível no sistema.
+ */
+function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string {
+  const uteis = linhas.filter((l) => !l.duplicaAba && l.descricao && l.fornecedor);
+  const fornecedores = [...new Set(uteis.map((l) => l.fornecedor as string))].sort();
+
+  const out: string[] = [
+    "-- ============================================================================",
+    "-- CARGA DOS CUSTOS A PARTIR DA PLANILHA",
+    "--",
+    `-- ${uteis.length} itens, alocados 100% ao setor ${codigoSetor}.`,
+    "--",
+    "-- GERADO por scripts/importar-planilha.ts --sql. Não edite à mão.",
+    "--",
+    "-- Sem transação: um erro mostra a causa real, não \"25P02\".",
+    "-- Idempotente: reimportar atualiza os mesmos itens em vez de duplicar.",
+    "--",
+    "-- Pré-requisitos: esquema aplicado e setores/categorias carregados",
+    "-- (02-dados-iniciais.sql ou prisma db seed).",
+    "-- ============================================================================",
+    "",
+    "-- Fornecedores -----------------------------------------------------------",
+    'INSERT INTO "fornecedor" (id, nome, "moedaPadrao", criticidade, ativo, "criadoEm", "atualizadoEm") VALUES',
+    fornecedores
+      .map(
+        (nome, i) =>
+          `  ('imp_forn_${String(i).padStart(3, "0")}', ${sqlTexto(nome)}, 'BRL', 3, true, now(), now())`,
+      )
+      .join(",\n") + "\nON CONFLICT (nome) DO NOTHING;",
+    "",
+    "-- Itens de custo ---------------------------------------------------------",
+  ];
+
+  for (const l of uteis) {
+    const id = idItem(l);
+    out.push(
+      'INSERT INTO "item_custo" (id, descricao, natureza, "fornecedorId", "categoriaId",',
+      '  "modeloCobranca", comportamento, quantidade, "valorUnitario", moeda, periodicidade,',
+      '  "valorPeriodo", "valorMensalNormalizado", status, "refProposta", observacoes,',
+      '  "criadoEm", "atualizadoEm")',
+      `SELECT ${sqlTexto(id)}, ${sqlTexto(l.descricao as string)}, 'RECORRENTE', f.id, cat.id,`,
+      `  'FIXO', ${sqlTexto(l.comportamento ?? "FIXO")}, ${sqlNumero(l.quantidade)}, ${sqlNumero(l.valorUnitario)}, 'BRL', ${sqlTexto(l.periodicidade ?? "MENSAL")},`,
+      `  ${sqlNumero(l.valorPeriodo)}, ${sqlNumero(l.valorMensalNormalizado)}, ${sqlTexto(l.status)}, ${sqlOuNulo(l.refProposta)}, ${sqlOuNulo(l.observacoes)},`,
+      "  now(), now()",
+      `FROM "fornecedor" f`,
+      `  LEFT JOIN "categoria" cat ON cat.codigo = ${sqlOuNulo(l.categoria)}`,
+      `WHERE f.nome = ${sqlTexto(l.fornecedor as string)}`,
+      'ON CONFLICT (id) DO UPDATE SET',
+      '  descricao = EXCLUDED.descricao,',
+      '  "valorPeriodo" = EXCLUDED."valorPeriodo",',
+      '  "valorMensalNormalizado" = EXCLUDED."valorMensalNormalizado",',
+      '  periodicidade = EXCLUDED.periodicidade,',
+      '  status = EXCLUDED.status,',
+      '  observacoes = EXCLUDED.observacoes,',
+      '  "atualizadoEm" = now();',
+      "",
+    );
+  }
+
+  out.push(
+    "-- Rateio: 100% no setor responsável --------------------------------------",
+  );
+  for (const l of uteis) {
+    const id = idItem(l);
+    out.push(
+      'INSERT INTO "rateio" (id, metodo, "itemCustoId", "setorId", percentual, "vigenciaInicio", "criadoEm", "atualizadoEm")',
+      `SELECT ${sqlTexto("rat_" + id)}, 'PERCENTUAL', ${sqlTexto(id)}, s.id, 100, CURRENT_DATE, now(), now()`,
+      `FROM "setor" s WHERE s.codigo = ${sqlTexto(codigoSetor)}`,
+      "ON CONFLICT (id) DO NOTHING;",
+      "",
+    );
+  }
+
+  out.push(
+    "-- Conferência ------------------------------------------------------------",
+    'SELECT count(*) AS itens, sum("valorMensalNormalizado") AS mensal_normalizado',
+    'FROM "item_custo" WHERE id LIKE \'imp_%\';',
+    "",
+    "SELECT status, count(*) AS itens, sum(\"valorMensalNormalizado\") AS mensal",
+    'FROM "item_custo" WHERE id LIKE \'imp_%\' GROUP BY status ORDER BY 3 DESC NULLS LAST;',
+    "",
+  );
+
+  return out.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // Execução
 // ---------------------------------------------------------------------------
 
 async function main() {
   const arquivo = process.argv[2];
   if (!arquivo) {
-    console.error("Uso: npx tsx scripts/importar-planilha.ts <arquivo.xlsx> [--json]");
+    console.error(
+      "Uso: npx tsx scripts/importar-planilha.ts <arquivo.xlsx> [--sql <CODIGO_SETOR>]",
+    );
     process.exit(1);
   }
 
@@ -671,6 +784,13 @@ async function main() {
   console.log(relatorio.split("\n").slice(0, 22).join("\n"));
   console.log(`\nRelatório completo: ${destinoMd}`);
   console.log(`Dados normalizados: ${destinoJson}`);
+
+  if (process.argv.includes("--sql")) {
+    const setor = process.argv[process.argv.indexOf("--sql") + 1] ?? "TI";
+    const destinoSql = "dados/saida/carga-custos.sql";
+    writeFileSync(destinoSql, gerarSqlCarga(linhas, setor), "utf8");
+    console.log(`SQL de carga (setor ${setor}): ${destinoSql}`);
+  }
 }
 
 main().catch((e) => {

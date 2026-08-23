@@ -183,7 +183,8 @@ docs/
 | `npm run db:deploy` | Aplica migrations pendentes (produção) |
 | `npm run db:seed` | Popula setores, categorias e capacidades |
 | `npm run db:studio` | Prisma Studio |
-| `npm run importar -- <arquivo.xlsx>` | Importa e audita uma planilha |
+| `npm run importar -- <arquivo.xlsx>` | Audita uma planilha e gera o relatório |
+| `npm run importar -- <arquivo.xlsx> --sql TI` | O mesmo, e gera o SQL de carga para o setor |
 | `npm run diagnostico` | Estado do ambiente: variáveis, banco, esquema, usuários |
 | `npm run senha -- <email> '<senha>'` | Define a senha de um usuário; cria como ADMIN se não existir |
 | `npx tsx scripts/gerar-sql-dados.ts` | Regera o SQL de dados iniciais |
