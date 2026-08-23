@@ -148,6 +148,23 @@ Para criar ou redefinir uma senha de forma explícita:
 npx tsx prisma/definir-senha.ts admin@fmp.com.br 'SuaSenhaForte2026'
 ```
 
+### Se essas ferramentas ainda não existirem no container
+
+Elas só chegam à imagem depois de um redeploy. Quando ninguém consegue entrar,
+esperar não é opção — use o script de emergência
+`scripts/container/acesso.mjs`, que depende apenas de `pg` e `node:crypto` e
+funciona em qualquer versão da imagem. Cole o conteúdo dele no terminal do
+serviço com um heredoc e rode:
+
+```bash
+cat > /tmp/acesso.mjs <<'FIM'
+... cole o conteúdo do arquivo aqui ...
+FIM
+
+node /tmp/acesso.mjs                                   # lista os usuários
+node /tmp/acesso.mjs voce@fmp.com.br 'SuaSenha2026'    # cria ou redefine
+```
+
 Se o usuário não existir, ele é criado como administrador. Quem roda isto já tem
 shell no container, ou seja, já tem controle total — a ferramenta não abre
 nenhuma porta que não estivesse aberta. Use aspas simples em volta da senha, para
