@@ -36,7 +36,7 @@ function filtroBase(escopo: Escopo, naturezas: Natureza[]) {
     valorMensalNormalizado: { not: null },
     ...(escopo.setorIds === null
       ? {}
-      : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+      : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
   };
 }
 
@@ -57,18 +57,42 @@ function ordenarComParticipacao(
 const paraDecimal = (v: unknown): Decimal =>
   v === null || v === undefined ? new Decimal(0) : new Decimal(String(v));
 
-/** Soma do equivalente mensal dos itens correntes. */
+/**
+ * Soma do equivalente mensal dos itens correntes.
+ *
+ * Com escopo setorial, cada item entra pela FRAÇÃO rateada ao setor — não pelo
+ * valor cheio. Sem isso, um item 50% TI / 50% RH contaria inteiro nas duas
+ * casas e a soma dos setores excederia o total corporativo, quebrando a regra
+ * "o mesmo número em todo lugar".
+ */
 export async function custoMensalCorrente(
   escopo: Escopo,
   naturezas: Natureza[],
 ): Promise<Decimal> {
   const itens = await prisma.itemCusto.findMany({
     where: filtroBase(escopo, naturezas),
-    select: { valorMensalNormalizado: true },
+    select: {
+      valorMensalNormalizado: true,
+      rateios: {
+        where: { vigenciaFim: null },
+        select: { percentual: true, setorId: true },
+      },
+    },
   });
-  return arredondar(
-    itens.reduce((s, i) => s.plus(paraDecimal(i.valorMensalNormalizado)), new Decimal(0)),
-  );
+
+  let total = new Decimal(0);
+  for (const item of itens) {
+    const valor = paraDecimal(item.valorMensalNormalizado);
+    if (escopo.setorIds === null) {
+      total = total.plus(valor);
+      continue;
+    }
+    const fracao = item.rateios
+      .filter((r) => escopo.setorIds!.includes(r.setorId))
+      .reduce((s, r) => s.plus(paraDecimal(r.percentual)), new Decimal(0));
+    total = total.plus(valor.mul(fracao).div(100));
+  }
+  return arredondar(total);
 }
 
 /**
@@ -144,9 +168,13 @@ export const custoPorFornecedor = (e: Escopo, n: Natureza[]) =>
 
 /** Itens que vencem ou renovam dentro de N dias. */
 export async function renovacoesProximas(escopo: Escopo, dias = 90) {
+  // Truncado para o início do dia (UTC): dataFim é @db.Date (meia-noite UTC),
+  // e comparar com o horário corrente faria a renovação sumir do alerta
+  // exatamente no dia em que ela vence.
   const hoje = new Date();
+  hoje.setUTCHours(0, 0, 0, 0);
   const limite = new Date(hoje);
-  limite.setDate(limite.getDate() + dias);
+  limite.setUTCDate(limite.getUTCDate() + dias);
 
   return prisma.itemCusto.findMany({
     where: {
@@ -154,7 +182,7 @@ export async function renovacoesProximas(escopo: Escopo, dias = 90) {
       dataFim: { not: null, gte: hoje, lte: limite },
       ...(escopo.setorIds === null
         ? {}
-        : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+        : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
     },
     select: {
       id: true,
@@ -174,23 +202,29 @@ export async function pendenciasDeDado(escopo: Escopo) {
   const [semValor, semCategoria, semVigencia] = await Promise.all([
     prisma.itemCusto.count({
       where: {
-        status: { in: [...STATUS_CORRENTE] },
-        valorMensalNormalizado: null,
-        ...(escopo.setorIds === null ? {} : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+        status: { in: [...STATUS_CORRENTE, "PENDENTE_APURACAO"] },
+        valorPeriodo: null,
+        ...(escopo.setorIds === null
+          ? {}
+          : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
       },
     }),
     prisma.itemCusto.count({
       where: {
         status: { in: [...STATUS_CORRENTE] },
         categoriaId: null,
-        ...(escopo.setorIds === null ? {} : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+        ...(escopo.setorIds === null
+          ? {}
+          : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
       },
     }),
     prisma.itemCusto.count({
       where: {
         status: { in: [...STATUS_CORRENTE] },
         dataFim: null,
-        ...(escopo.setorIds === null ? {} : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
+        ...(escopo.setorIds === null
+          ? {}
+          : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
       },
     }),
   ]);
@@ -202,12 +236,10 @@ export async function pendenciasDeDado(escopo: Escopo) {
  * A contagem diz que algo falta; a lista diz ONDE clicar para resolver.
  */
 export async function itensComPendencia(escopo: Escopo, limite = 5) {
-  const base = {
-    status: { in: [...STATUS_CORRENTE] },
-    ...(escopo.setorIds === null
+  const escopoRateio =
+    escopo.setorIds === null
       ? {}
-      : { rateios: { some: { setorId: { in: escopo.setorIds } } } }),
-  };
+      : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } };
   const selecao = {
     id: true,
     descricao: true,
@@ -215,14 +247,28 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
   } as const;
 
   const [semValor, semVigencia] = await Promise.all([
+    // "Sem valor" = valorPeriodo vazio. O sistema marca esses itens como
+    // PENDENTE_APURACAO, então esse status ENTRA aqui — era o furo que
+    // escondia os "CALCULAR" importados. E a base é valorPeriodo, não o
+    // normalizado: item por consumo tem valor preenchido e normalizado nulo
+    // por design, e não é pendência.
     prisma.itemCusto.findMany({
-      where: { ...base, valorMensalNormalizado: null },
+      where: {
+        status: { in: [...STATUS_CORRENTE, "PENDENTE_APURACAO"] },
+        valorPeriodo: null,
+        ...escopoRateio,
+      },
       select: selecao,
       orderBy: { atualizadoEm: "desc" },
       take: limite,
     }),
     prisma.itemCusto.findMany({
-      where: { ...base, dataFim: null, valorMensalNormalizado: { not: null } },
+      where: {
+        status: { in: [...STATUS_CORRENTE] },
+        dataFim: null,
+        valorMensalNormalizado: { not: null },
+        ...escopoRateio,
+      },
       select: selecao,
       orderBy: { valorMensalNormalizado: "desc" },
       take: limite,
@@ -231,19 +277,42 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
   return { semValor, semVigencia };
 }
 
-/** Os maiores custos do escopo — o resumo que um gestor quer ver primeiro. */
+/**
+ * Os maiores custos do escopo — o resumo que um gestor quer ver primeiro.
+ * Com escopo setorial, o valor exibido é a fração rateada ao setor.
+ */
 export async function maioresItens(escopo: Escopo, naturezas: Natureza[], limite = 5) {
-  return prisma.itemCusto.findMany({
+  const itens = await prisma.itemCusto.findMany({
     where: filtroBase(escopo, naturezas),
     select: {
       id: true,
       descricao: true,
       valorMensalNormalizado: true,
       fornecedor: { select: { nome: true } },
+      rateios: { where: { vigenciaFim: null }, select: { percentual: true, setorId: true } },
     },
-    orderBy: { valorMensalNormalizado: "desc" },
-    take: limite,
+    orderBy: { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
+    take: limite * 3,
   });
+
+  return itens
+    .map((item) => {
+      const cheio = paraDecimal(item.valorMensalNormalizado);
+      const fracao =
+        escopo.setorIds === null
+          ? new Decimal(100)
+          : item.rateios
+              .filter((r) => escopo.setorIds!.includes(r.setorId))
+              .reduce((s, r) => s.plus(paraDecimal(r.percentual)), new Decimal(0));
+      return {
+        id: item.id,
+        descricao: item.descricao,
+        fornecedor: item.fornecedor,
+        valorMensalDoEscopo: arredondar(cheio.mul(fracao).div(100)),
+      };
+    })
+    .sort((a, b) => b.valorMensalDoEscopo.comparedTo(a.valorMensalDoEscopo))
+    .slice(0, limite);
 }
 
 /** Quais setores já lançaram alguma coisa. Impede ler um parcial como total. */

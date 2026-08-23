@@ -12,8 +12,15 @@ function paraInput(data: Date | null): string | null {
   return data ? data.toISOString().slice(0, 10) : null;
 }
 
-export default async function EditarCusto({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditarCusto({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ erro?: string | string[] }>;
+}) {
   const { id } = await params;
+  const { erro } = await searchParams;
   const usuario = await exigirSessao();
 
   const item = await prisma.itemCusto.findFirst({
@@ -32,6 +39,12 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
         <span className="text-[var(--ink-2)]">Editar</span>
       </nav>
       <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">{item.descricao}</h1>
+      {erro === "tem-historico" && (
+        <p className="mt-4 rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--accent)]/8 px-4 py-3 text-sm text-[var(--ink)]">
+          Este custo tem lançamentos mensais registrados e por isso não pode ser excluído — apagar
+          destruiria o histórico. Para encerrá-lo, mude a situação para <strong>Cancelado</strong>.
+        </p>
+      )}
       <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
         Alterações ficam registradas na auditoria, com autor e data.
       </p>

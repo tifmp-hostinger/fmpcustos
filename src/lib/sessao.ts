@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -7,7 +7,20 @@ import type { PapelUsuario } from "@/generated/prisma/enums";
 const COOKIE = "fmp_sessao";
 const DURACAO_SEGUNDOS = 60 * 60 * 12; // 12 horas
 
-type Conteudo = { uid: string; exp: number };
+/**
+ * `sv` é a "versão de senha": um resumo do hash da senha no momento do login.
+ * Trocar ou resetar a senha muda o hash — e derruba, na hora, toda sessão
+ * emitida antes. Sem isso, um cookie roubado sobreviveria à troca de senha
+ * pelas 12h restantes de validade.
+ */
+type Conteudo = { uid: string; exp: number; sv: string };
+
+export function versaoDeSenha(senhaHash: string | null): string {
+  return createHash("sha256")
+    .update(senhaHash ?? "sem-senha")
+    .digest("base64url")
+    .slice(0, 12);
+}
 
 export const ERRO_AUTH_SECRET =
   "AUTH_SECRET não está definida (ou tem menos de 16 caracteres). " +
@@ -28,9 +41,10 @@ function assinar(dados: string): string {
   return createHmac("sha256", segredo()).update(dados).digest("base64url");
 }
 
-function criarToken(uid: string): string {
+function criarToken(uid: string, sv: string): string {
   const conteudo: Conteudo = {
     uid,
+    sv,
     exp: Math.floor(Date.now() / 1000) + DURACAO_SEGUNDOS,
   };
   const corpo = Buffer.from(JSON.stringify(conteudo)).toString("base64url");
@@ -70,8 +84,12 @@ async function requisicaoSegura(): Promise<boolean> {
 }
 
 export async function abrirSessao(usuarioId: string): Promise<void> {
+  const registro = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { senhaHash: true },
+  });
   const jar = await cookies();
-  jar.set(COOKIE, criarToken(usuarioId), {
+  jar.set(COOKIE, criarToken(usuarioId, versaoDeSenha(registro?.senhaHash ?? null)), {
     httpOnly: true,
     sameSite: "lax",
     secure: await requisicaoSegura(),
@@ -114,14 +132,24 @@ export async function sessaoAtual(): Promise<UsuarioSessao | null> {
       id: true,
       papel: true,
       ativo: true,
+      senhaHash: true,
       precisaTrocarSenha: true,
       colaborador: {
-        select: { nome: true, email: true, setorId: true, setor: { select: { nome: true } } },
+        select: {
+          nome: true,
+          email: true,
+          ativo: true,
+          setorId: true,
+          setor: { select: { nome: true } },
+        },
       },
     },
   });
 
-  if (!usuario || !usuario.ativo) return null;
+  // colaborador.ativo entra na checagem: desligar a pessoa no cadastro tem que
+  // revogar o acesso mesmo que ninguém lembre de desativar o usuário.
+  if (!usuario || !usuario.ativo || !usuario.colaborador.ativo) return null;
+  if (conteudo.sv !== versaoDeSenha(usuario.senhaHash)) return null;
 
   return {
     id: usuario.id,

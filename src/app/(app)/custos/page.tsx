@@ -19,15 +19,20 @@ const FILTROS: Array<{ chave: string; rotulo: string; status: StatusItem[] | nul
   { chave: "todos", rotulo: "Todos", status: null },
 ];
 
+/** Query string repetida (?q=a&q=b) chega como array — normaliza para o primeiro. */
+function unico(v: string | string[] | undefined): string {
+  return (Array.isArray(v) ? v[0] : v) ?? "";
+}
+
 export default async function Custos({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; f?: string }>;
+  searchParams: Promise<{ q?: string | string[]; f?: string | string[] }>;
 }) {
-  const { q, f } = await searchParams;
+  const params = await searchParams;
   const usuario = await exigirSessao();
-  const filtro = FILTROS.find((x) => x.chave === f) ?? FILTROS[0];
-  const busca = (q ?? "").trim();
+  const filtro = FILTROS.find((x) => x.chave === unico(params.f)) ?? FILTROS[0];
+  const busca = unico(params.q).trim().slice(0, 120);
 
   const itens = await prisma.itemCusto.findMany({
     where: {
@@ -61,8 +66,13 @@ export default async function Custos({
     orderBy: [{ valorMensalNormalizado: { sort: "desc", nulls: "last" } }, { atualizadoEm: "desc" }],
   });
 
+  // O "/mês" do cabeçalho soma só itens correntes: apresentar um contrato
+  // cancelado como despesa mensal em andamento seria mentira aritmética.
   const totalMensal = itens.reduce(
-    (soma, i) => (i.valorMensalNormalizado ? soma.plus(i.valorMensalNormalizado.toString()) : soma),
+    (soma, i) =>
+      i.valorMensalNormalizado && (i.status === "ATIVO" || i.status === "EM_ANALISE")
+        ? soma.plus(i.valorMensalNormalizado.toString())
+        : soma,
     new Decimal(0),
   );
   const global = vePorInteiro(usuario.papel);
@@ -75,8 +85,13 @@ export default async function Custos({
           <h1 className="font-serif text-3xl font-bold tracking-tight">Custos</h1>
           <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
             {itens.length} {itens.length === 1 ? "item" : "itens"}
-            {busca && <> para “{busca}”</>} · {filtro.rotulo.toLowerCase()} · {escopoTexto} ·{" "}
-            <strong className="tabular-nums">{formatarBRL(totalMensal)}/mês</strong>
+            {busca && <> para “{busca}”</>} · {filtro.rotulo.toLowerCase()} · {escopoTexto}
+            {totalMensal.greaterThan(0) && (
+              <>
+                {" "}· <strong className="tabular-nums">{formatarBRL(totalMensal)}/mês</strong>{" "}
+                em itens correntes
+              </>
+            )}
           </p>
         </div>
         {podeLancar(usuario.papel) && (

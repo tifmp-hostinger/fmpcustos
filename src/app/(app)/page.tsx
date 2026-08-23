@@ -30,18 +30,34 @@ const RECORRENTE = ["RECORRENTE"] as const;
 export default async function Inicio() {
   const usuario = await exigirSessao();
   const global = vePorInteiro(usuario.papel);
-  return global ? <InicioCorporativo /> : <InicioDoSetor />;
+  return global ? <InicioCorporativo usuario={usuario} /> : <InicioDoSetor usuario={usuario} />;
 }
+
+type Usuario = Awaited<ReturnType<typeof exigirSessao>>;
 
 // ---------------------------------------------------------------------------
 // Visão do setor — Gestor (lança) e Leitor (consulta)
 // ---------------------------------------------------------------------------
 
-async function InicioDoSetor() {
-  const usuario = await exigirSessao();
+async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
   const escopo = { setorIds: setoresVisiveis(usuario) };
   const lanca = podeLancar(usuario.papel);
   const setor = usuario.setorNome ?? "seu setor";
+
+  if (!usuario.setorId) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <h1 className="font-serif text-3xl font-bold tracking-tight">
+          Falta vincular você a um <em className="text-[var(--accent)]">setor</em>
+        </h1>
+        <p className="mt-3 text-[15px] text-[var(--ink-2)]">
+          Seu usuário existe, mas ainda não está ligado a nenhuma área — por isso não há nada para
+          mostrar aqui{lanca ? " e o cadastro de custos ficaria sem destino" : ""}. Peça ao
+          administrador do sistema para definir o seu setor em <strong>Usuários</strong>.
+        </p>
+      </main>
+    );
+  }
 
   const [mensal, maiores, renovacoes, pendencias] = await Promise.all([
     custoMensalCorrente(escopo, [...RECORRENTE]),
@@ -51,7 +67,13 @@ async function InicioDoSetor() {
   ]);
 
   const totalPendencias = pendencias.semValor.length + pendencias.semVigencia.length;
-  const vazio = maiores.length === 0 && totalPendencias === 0;
+  // O convite de primeiro cadastro só aparece se NÃO existe item nenhum no
+  // setor — contado cru, sem filtro de status ou natureza. Um setor cheio de
+  // itens "a apurar" importados não pode ser convidado a recadastrar tudo.
+  const existentes = await prisma.itemCusto.count({
+    where: { rateios: { some: { setorId: usuario.setorId, vigenciaFim: null } } },
+  });
+  const vazio = existentes === 0;
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -134,9 +156,9 @@ async function InicioDoSetor() {
                           </span>
                         </span>
                         <span className="shrink-0 text-[14px] tabular-nums">
-                          {m.valorMensalNormalizado
-                            ? `${formatarBRL(m.valorMensalNormalizado.toString())}/mês`
-                            : "—"}
+                          {m.valorMensalDoEscopo.isZero()
+                            ? "—"
+                            : `${formatarBRL(m.valorMensalDoEscopo)}/mês`}
                         </span>
                       </Link>
                     </li>
@@ -198,8 +220,7 @@ function Pendente({ id, texto, acao }: { id: string; texto: string; acao: string
 // Visão corporativa — Admin e Controladoria
 // ---------------------------------------------------------------------------
 
-async function InicioCorporativo() {
-  const usuario = await exigirSessao();
+async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
   const escopo = { setorIds: null };
   const admin = usuario.papel === "ADMIN";
 
@@ -249,7 +270,7 @@ async function InicioCorporativo() {
         nunca são somadas sem pedido explícito.
       </p>
 
-      {admin && (usuarios <= 1 || lancaram < 3) && (
+      {admin && (usuarios <= 1 || lancaram < Math.min(3, setores.length)) && (
         <GuiaInicial usuariosAtivos={usuarios} setoresQueLancaram={lancaram} totalSetores={setores.length} />
       )}
 
@@ -306,6 +327,16 @@ async function InicioCorporativo() {
         <CartaoRenovacoes renovacoes={renovacoes} notaVazio={pendencias.semVigencia} />
       </div>
 
+      {(() => {
+        const naoRateado = porSetor.find((f) => f.chave === "nao-rateado");
+        return naoRateado ? (
+          <p className="mt-4 rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
+            <strong>{formatarBRL(naoRateado.valor)}/mês está sem setor responsável</strong> e
+            aparece como “Não rateado”. Dinheiro sem dono não pode ficar invisível.
+          </p>
+        ) : null;
+      })()}
+
       <section className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
           O que falta para o número estar completo
@@ -338,7 +369,7 @@ function GuiaInicial({
       acao: "Criar usuários",
     },
     {
-      feito: setoresQueLancaram >= 3,
+      feito: setoresQueLancaram >= Math.min(3, totalSetores),
       titulo: "Cada gestor cadastra os custos da área",
       texto: `Eles entram com o próprio e-mail e lançam o que a área paga. ${setoresQueLancaram} de ${totalSetores} setores já começaram.`,
       href: "/custos" as const,
@@ -418,7 +449,9 @@ function CartaoRenovacoes({
         <p className="mt-4 text-sm text-[var(--ink-3)]">
           Nada vencendo.{" "}
           {notaVazio !== undefined && notaVazio > 0
-            ? `Atenção: ${notaVazio} itens não têm data de término e por isso nunca aparecem aqui.`
+            ? notaVazio === 1
+              ? "Atenção: 1 item não tem data de término e por isso nunca aparece aqui."
+              : `Atenção: ${notaVazio} itens não têm data de término e por isso nunca aparecem aqui.`
             : "Custos sem data de término não aparecem aqui."}
         </p>
       ) : (

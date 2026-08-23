@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/db";
 import { setoresVisiveis, type UsuarioSessao } from "@/lib/sessao";
 
-/** Filtro de itens de custo respeitando o escopo de setor do usuário. */
+/**
+ * Filtro de itens de custo respeitando o escopo de setor do usuário.
+ * Só rateios VIGENTES contam: um item transferido para outro setor (rateio
+ * antigo com vigenciaFim preenchida) deixa de pertencer ao setor de origem.
+ */
 export function escopoDeItens(usuario: UsuarioSessao) {
   const setores = setoresVisiveis(usuario);
   if (setores === null) return {};
-  return { rateios: { some: { setorId: { in: setores } } } };
+  return { rateios: { some: { setorId: { in: setores }, vigenciaFim: null } } };
 }
 
 export async function listarCategorias() {

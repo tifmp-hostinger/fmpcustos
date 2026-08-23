@@ -10,6 +10,7 @@ import {
   dinheiro,
   falha,
   inteiroOpcional,
+  opcaoValida,
   texto,
   textoOpcional,
   type Resultado,
@@ -65,22 +66,55 @@ type Campos = {
   setorId: string | null;
 };
 
-function lerCampos(dados: FormData): Campos {
+const NATUREZAS = ["RECORRENTE", "PONTUAL", "CAPEX", "PESSOAL"] as const;
+const PERIODICIDADES = [
+  "MENSAL",
+  "BIMESTRAL",
+  "TRIMESTRAL",
+  "SEMESTRAL",
+  "ANUAL",
+  "UNICO",
+  "SOB_DEMANDA",
+] as const;
+const COMPORTAMENTOS = ["FIXO", "VARIAVEL"] as const;
+const MOEDAS = ["BRL", "USD", "EUR"] as const;
+const STATUS = [
+  "ATIVO",
+  "EM_ANALISE",
+  "CANCELAMENTO_SOLICITADO",
+  "CANCELADO",
+  "SUBSTITUIDO",
+  "PENDENTE_APURACAO",
+] as const;
+
+/**
+ * Valores de enum são validados contra a lista, nunca cast direto: um FormData
+ * forjado com valor fora do enum estouraria dentro do Prisma como erro 500 —
+ * e uma periodicidade inválida chegaria antes ao cálculo do valor mensal.
+ */
+function lerCampos(dados: FormData): Campos | null {
+  const natureza = opcaoValida<Natureza>(dados, "natureza", NATUREZAS, "RECORRENTE");
+  const periodicidade = opcaoValida<Periodicidade>(dados, "periodicidade", PERIODICIDADES, "MENSAL");
+  const comportamento = opcaoValida<ComportamentoCusto>(dados, "comportamento", COMPORTAMENTOS, "FIXO");
+  const moeda = opcaoValida<Moeda>(dados, "moeda", MOEDAS, "BRL");
+  const status = opcaoValida<StatusItem>(dados, "status", STATUS, "ATIVO");
+  if (!natureza || !periodicidade || !comportamento || !moeda || !status) return null;
+
   return {
-    descricao: texto(dados, "descricao"),
-    fornecedor: texto(dados, "fornecedor"),
+    descricao: texto(dados, "descricao").slice(0, 300),
+    fornecedor: texto(dados, "fornecedor").slice(0, 150),
     categoriaId: textoOpcional(dados, "categoriaId"),
-    natureza: (texto(dados, "natureza") || "RECORRENTE") as Natureza,
-    periodicidade: (texto(dados, "periodicidade") || "MENSAL") as Periodicidade,
-    comportamento: (texto(dados, "comportamento") || "FIXO") as ComportamentoCusto,
-    moeda: (texto(dados, "moeda") || "BRL") as Moeda,
-    status: (texto(dados, "status") || "ATIVO") as StatusItem,
+    natureza,
+    periodicidade,
+    comportamento,
+    moeda,
+    status,
     valorPeriodo: dinheiro(dados, "valorPeriodo"),
     quantidade: inteiroOpcional(dados, "quantidade"),
     valorUnitario: dinheiro(dados, "valorUnitario"),
     dataInicio: dataOpcional(dados, "dataInicio"),
     dataFim: dataOpcional(dados, "dataFim"),
-    observacoes: textoOpcional(dados, "observacoes"),
+    observacoes: textoOpcional(dados, "observacoes")?.slice(0, 2000) ?? null,
     setorId: textoOpcional(dados, "setorId"),
   };
 }
@@ -106,6 +140,7 @@ export async function salvarCusto(
 
   const id = textoOpcional(dados, "id");
   const campos = lerCampos(dados);
+  if (!campos) return falha("Um dos campos de seleção veio com valor inválido.");
 
   const problema = validar(campos);
   if (problema) return falha(problema);
@@ -115,12 +150,22 @@ export async function salvarCusto(
     return falha("Seu usuário não está vinculado a um setor. Peça ao administrador.");
   }
 
-  // Quem não vê por inteiro só mexe no que é do próprio setor.
+  // Quem não vê por inteiro só mexe no que é INTEIRAMENTE do próprio setor:
+  // rateio vigente (não uma alocação histórica já encerrada) e de 100% — num
+  // custo compartilhado, editar o valor mexeria na fatia dos outros setores,
+  // e isso é decisão de quem enxerga por inteiro.
   if (id && !vePorInteiro(usuario.papel)) {
     const permitido = await prisma.itemCusto.count({
-      where: { id, rateios: { some: { setorId } } },
+      where: {
+        id,
+        rateios: { some: { setorId, vigenciaFim: null, percentual: 100 } },
+      },
     });
-    if (permitido === 0) return falha("Este custo é de outro setor.");
+    if (permitido === 0) {
+      return falha(
+        "Este custo não é (ou não é só) da sua área. Alterações em custos compartilhados são feitas pela Controladoria ou pelo administrador.",
+      );
+    }
   }
 
   const fornecedorId = await acharOuCriarFornecedor(campos.fornecedor);
@@ -144,46 +189,54 @@ export async function salvarCusto(
     observacoes: campos.observacoes,
   };
 
-  const anterior = id
-    ? await prisma.itemCusto.findUnique({ where: { id } })
-    : null;
+  const anterior = id ? await prisma.itemCusto.findUnique({ where: { id } }) : null;
+  if (id && !anterior) return falha("Este custo não existe mais.");
 
-  const item = id
-    ? await prisma.itemCusto.update({ where: { id }, data: comuns })
-    : await prisma.itemCusto.create({
-        data: { ...comuns, criadoPorId: usuario.id },
+  // Item, rateio e auditoria numa transação só: falhar no meio deixaria um
+  // item sem rateio — invisível para todo mundo, inclusive para quem o criou.
+  await prisma.$transaction(async (tx) => {
+    const item = id
+      ? await tx.itemCusto.update({ where: { id }, data: comuns })
+      : await tx.itemCusto.create({ data: { ...comuns, criadoPorId: usuario.id } });
+
+    // Rateio: 100% no setor responsável — o custo nunca fica sem dono.
+    // Só a regra simples (rateio único e vigente) é gerida por esta tela; um
+    // item com rateio composto (ajustado pela Controladoria) não é tocado aqui,
+    // para o formulário não desmontar uma alocação feita com critério.
+    const vigentes = await tx.rateio.findMany({
+      where: { itemCustoId: item.id, vigenciaFim: null },
+      orderBy: { criadoEm: "asc" },
+    });
+    if (vigentes.length === 0) {
+      await tx.rateio.create({
+        data: {
+          itemCustoId: item.id,
+          setorId,
+          metodo: "PERCENTUAL",
+          percentual: "100",
+          vigenciaInicio: campos.dataInicio ?? new Date(),
+        },
       });
+    } else if (
+      vigentes.length === 1 &&
+      vigentes[0].setorId !== setorId &&
+      vePorInteiro(usuario.papel)
+    ) {
+      await tx.rateio.update({ where: { id: vigentes[0].id }, data: { setorId } });
+    }
 
-  // Rateio: 100% no setor responsável. O rateio entre setores é ajustado depois,
-  // por quem tem essa autoridade — mas o custo nunca fica sem dono.
-  const rateioExistente = await prisma.rateio.findFirst({
-    where: { itemCustoId: item.id, vigenciaFim: null },
-  });
-  if (!rateioExistente) {
-    await prisma.rateio.create({
+    await tx.auditoria.create({
       data: {
-        itemCustoId: item.id,
-        setorId,
-        metodo: "PERCENTUAL",
-        percentual: "100",
-        vigenciaInicio: campos.dataInicio ?? new Date(),
+        tabela: "item_custo",
+        registroId: item.id,
+        acao: id ? "ALTERACAO" : "CRIACAO",
+        usuarioId: usuario.id,
+        diff: {
+          antes: anterior ? JSON.parse(JSON.stringify(anterior)) : null,
+          depois: JSON.parse(JSON.stringify(item)),
+        },
       },
     });
-  } else if (rateioExistente.setorId !== setorId && vePorInteiro(usuario.papel)) {
-    await prisma.rateio.update({
-      where: { id: rateioExistente.id },
-      data: { setorId },
-    });
-  }
-
-  await prisma.auditoria.create({
-    data: {
-      tabela: "item_custo",
-      registroId: item.id,
-      acao: id ? "ALTERACAO" : "CRIACAO",
-      usuarioId: usuario.id,
-      diff: { antes: anterior ? JSON.parse(JSON.stringify(anterior)) : null, depois: JSON.parse(JSON.stringify(item)) },
-    },
   });
 
   revalidatePath("/custos");
@@ -198,21 +251,38 @@ export async function excluirCusto(dados: FormData): Promise<void> {
 
   if (!vePorInteiro(usuario.papel)) {
     const permitido = await prisma.itemCusto.count({
-      where: { id, rateios: { some: { setorId: usuario.setorId ?? "" } } },
+      where: {
+        id,
+        rateios: {
+          some: { setorId: usuario.setorId ?? "", vigenciaFim: null, percentual: 100 },
+        },
+      },
     });
     if (permitido === 0) redirect("/custos");
   }
 
+  // Excluir apagaria em cascata a série mensal inteira (lançamentos e rateios)
+  // — histórico contábil não se destrói com um clique. Com histórico, o caminho
+  // é cancelar; excluir fica reservado a cadastros errados ainda sem série.
+  const comHistorico = await prisma.lancamentoCusto.count({ where: { itemCustoId: id } });
+  if (comHistorico > 0) {
+    redirect(`/custos/${id}?erro=tem-historico`);
+  }
+
   const anterior = await prisma.itemCusto.findUnique({ where: { id } });
-  await prisma.itemCusto.delete({ where: { id } });
-  await prisma.auditoria.create({
-    data: {
-      tabela: "item_custo",
-      registroId: id,
-      acao: "EXCLUSAO",
-      usuarioId: usuario.id,
-      diff: { antes: anterior ? JSON.parse(JSON.stringify(anterior)) : null, depois: null },
-    },
+  if (!anterior) redirect("/custos");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.itemCusto.delete({ where: { id } });
+    await tx.auditoria.create({
+      data: {
+        tabela: "item_custo",
+        registroId: id,
+        acao: "EXCLUSAO",
+        usuarioId: usuario.id,
+        diff: { antes: JSON.parse(JSON.stringify(anterior)), depois: null },
+      },
+    });
   });
 
   revalidatePath("/custos");

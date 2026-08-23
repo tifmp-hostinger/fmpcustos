@@ -1,25 +1,31 @@
 -- ============================================================================
 -- 01 · ESQUEMA COMPLETO
 --
--- Gerado a partir de prisma/migrations. Aplica todas as tabelas, enums,
--- índices e chaves estrangeiras num banco vazio.
+-- GERADO por scripts/gerar-sql-esquema.sh a partir de prisma/migrations.
+-- Não edite à mão; regenere após criar uma migration.
 --
 -- Como rodar:
 --   psql "$DATABASE_URL" -f scripts/sql/01-esquema.sql
 --
 -- Você NÃO precisa deste arquivo se usar o container: o entrypoint roda
--- 'prisma migrate deploy' sozinho no start. Ele existe para quem prefere
--- aplicar direto no banco.
+-- 'prisma migrate deploy' sozinho no start.
 --
--- SE VOCÊ VIR "current transaction is aborted" (SQL state 25P02):
--- esse NÃO é o erro. Ele apenas informa que alguma instrução ANTERIOR falhou
--- e que o resto do bloco foi ignorado. Role até o PRIMEIRO erro da saída —
--- é ele que diz o que aconteceu. Em cliente gráfico o primeiro erro costuma
--- ficar escondido acima; rodando por psql ele aparece no topo.
----- ============================================================================
+-- Este script CRIA o esquema e roda numa transação: DDL é tudo ou nada.
+-- Por isso, aqui um erro vira "current transaction is aborted" (25P02) nos
+-- comandos seguintes — o erro real é sempre o PRIMEIRO da saída.
+-- ============================================================================
 
 BEGIN;
 
+-- Guarda: rodar duas vezes deve dizer o motivo, não despejar erro cru.
+DO $$
+BEGIN
+  IF to_regclass('public.setor') IS NOT NULL THEN
+    RAISE EXCEPTION 'O esquema ja existe neste banco. Este script so roda em banco vazio; para dados iniciais use 02-dados-iniciais.sql.';
+  END IF;
+END $$;
+
+-- ---- migration: 20260823022708_modelo_inicial ----
 -- CreateEnum
 CREATE TYPE "Natureza" AS ENUM ('RECORRENTE', 'PONTUAL', 'CAPEX', 'PESSOAL');
 
@@ -674,6 +680,8 @@ ALTER TABLE "auditoria" ADD CONSTRAINT "auditoria_usuarioId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "importacao" ADD CONSTRAINT "importacao_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- ---- migration: 20260823054102_autenticacao_e_fornecedor_no_item ----
 -- AlterTable
 ALTER TABLE "item_custo" ADD COLUMN     "criadoPorId" TEXT,
 ADD COLUMN     "fornecedorId" TEXT;
@@ -688,7 +696,38 @@ ALTER TABLE "item_custo" ADD CONSTRAINT "item_custo_fornecedorId_fkey" FOREIGN K
 -- AddForeignKey
 ALTER TABLE "item_custo" ADD CONSTRAINT "item_custo_criadoPorId_fkey" FOREIGN KEY ("criadoPorId") REFERENCES "usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Registra as migrations como aplicadas, para o Prisma não tentar reaplicá-las.
+-- ---- migration: 20260823120000_restricoes_de_integridade ----
+-- Restrições que o Prisma não expressa no schema, mas que impedem estados
+-- inválidos de dinheiro e rateio de entrarem por qualquer caminho (UI, SQL
+-- direto, importação com bug).
+
+-- Rateio: percentual dentro de 0-100, sempre ancorado em item OU lançamento,
+-- e com pelo menos uma forma de cálculo quando o método a exige.
+ALTER TABLE "rateio"
+  ADD CONSTRAINT "rateio_percentual_faixa"
+    CHECK (percentual IS NULL OR (percentual >= 0 AND percentual <= 100)),
+  ADD CONSTRAINT "rateio_tem_alvo"
+    CHECK ("itemCustoId" IS NOT NULL OR "lancamentoId" IS NOT NULL);
+
+-- Competência: mês de calendário real.
+ALTER TABLE "competencia"
+  ADD CONSTRAINT "competencia_mes_valido" CHECK (mes >= 1 AND mes <= 12);
+
+-- Dinheiro nunca negativo. Custo negativo não existe neste domínio; um
+-- estorno é um lançamento próprio, não um valor com sinal trocado.
+ALTER TABLE "item_custo"
+  ADD CONSTRAINT "item_valor_periodo_nao_negativo"
+    CHECK ("valorPeriodo" IS NULL OR "valorPeriodo" >= 0),
+  ADD CONSTRAINT "item_valor_mensal_nao_negativo"
+    CHECK ("valorMensalNormalizado" IS NULL OR "valorMensalNormalizado" >= 0);
+
+ALTER TABLE "lancamento_custo"
+  ADD CONSTRAINT "lancamento_previsto_nao_negativo"
+    CHECK ("valorPrevisto" IS NULL OR "valorPrevisto" >= 0),
+  ADD CONSTRAINT "lancamento_realizado_nao_negativo"
+    CHECK ("valorRealizado" IS NULL OR "valorRealizado" >= 0);
+
+-- Registra as migrations como aplicadas, para o Prisma não reaplicá-las.
 CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
     id                      VARCHAR(36) PRIMARY KEY,
     checksum                VARCHAR(64) NOT NULL,
@@ -704,6 +743,9 @@ VALUES ('42251f32-965c-0ec8-80db-1e8f7dd435e7', 'c50cb844fd608a903d3a25f6b6ec825
 ON CONFLICT DO NOTHING;
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
 VALUES ('a5871565-c549-7b1e-fd4a-d3389a805b4f', '6e302ea5f5e7cd83c287a533f40e2f373c3e07800d852efce5b9b4ccb7b014b6', now(), '20260823054102_autenticacao_e_fornecedor_no_item', 1)
+ON CONFLICT DO NOTHING;
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('e695c04f-02d9-bf94-9d99-d11773e6e9fc', '14cb84722e26614e7949801182d273c6f938bcda6fd02c6dedfe2d3999cb552e', now(), '20260823120000_restricoes_de_integridade', 1)
 ON CONFLICT DO NOTHING;
 
 COMMIT;

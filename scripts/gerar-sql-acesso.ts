@@ -13,6 +13,7 @@
  * O arquivo gerado NÃO deve ser versionado com uma senha real.
  */
 import { writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { gerarHashSenha, validarSenha } from "../src/lib/senha";
 
 const aspas = (v: string) => `'${v.replace(/'/g, "''")}'`;
@@ -32,6 +33,11 @@ async function main() {
 
   const email = emailBruto.trim().toLowerCase();
   const hash = await gerarHashSenha(senha);
+  // IDs derivados do e-mail: usar o mesmo id fixo para e-mails diferentes
+  // violaria a PK no segundo uso e o acesso de emergência falharia em silêncio.
+  const sufixo = createHash("sha256").update(email).digest("hex").slice(0, 10);
+  const idColab = `boot_colab_${sufixo}`;
+  const idUsuario = `boot_user_${sufixo}`;
   const destino = "scripts/sql/04-acesso-emergencia.sql";
 
   writeFileSync(
@@ -54,12 +60,12 @@ FROM usuario u JOIN colaborador c ON c.id = u."colaboradorId";
 
 -- 2. Cria o colaborador, se ainda não existir.
 INSERT INTO colaborador (id, nome, email, ativo, "criadoEm", "atualizadoEm")
-VALUES ('boot_colab_admin', 'Administrador', ${aspas(email)}, true, now(), now())
+VALUES (${aspas(idColab)}, 'Administrador', ${aspas(email)}, true, now(), now())
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. Cria o usuário ADMIN, ou redefine a senha se ele já existir.
 INSERT INTO usuario (id, "colaboradorId", papel, ativo, "senhaHash", "precisaTrocarSenha", "criadoEm", "atualizadoEm")
-SELECT 'boot_user_admin', c.id, 'ADMIN', true, ${aspas(hash)}, false, now(), now()
+SELECT ${aspas(idUsuario)}, c.id, 'ADMIN', true, ${aspas(hash)}, false, now(), now()
 FROM colaborador c WHERE c.email = ${aspas(email)}
 ON CONFLICT ("colaboradorId") DO UPDATE
   SET "senhaHash" = EXCLUDED."senhaHash",

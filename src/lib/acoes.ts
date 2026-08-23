@@ -31,26 +31,57 @@ export function textoOpcional(dados: FormData, campo: string): string | null {
 
 /**
  * Lê um valor monetário aceitando os formatos que as pessoas realmente digitam:
- * "1.234,56", "1234,56", "1234.56", "R$ 1.234,56".
+ * "1.234,56", "1234,56", "1234.56", "R$ 1.234,56", "1.234", "1.234.567".
+ *
+ * Retorna a string decimal, ou null quando vazio/ilegível. Nunca aceita
+ * negativo: custo negativo não existe neste domínio, e um sinal de menos
+ * digitado por engano distorceria os totais de toda a organização.
  */
 export function dinheiro(dados: FormData, campo: string): string | null {
-  const bruto = texto(dados, campo).replace(/[^\d.,-]/g, "");
+  const original = texto(dados, campo);
+  // Sinal de menos é rejeitado, não removido: apagar o "-" em silêncio
+  // transformaria um estorno digitado por engano num custo positivo.
+  if (original.includes("-")) return null;
+  const bruto = original.replace(/[^\d.,]/g, "");
   if (bruto === "") return null;
 
-  // Se tem vírgula, ela é o separador decimal e o ponto é de milhar.
-  const normalizado = bruto.includes(",")
-    ? bruto.replace(/\./g, "").replace(",", ".")
-    : bruto;
+  let normalizado: string;
+  if (bruto.includes(",")) {
+    // Vírgula presente: ela é o decimal, ponto é milhar. "1.234,56" -> 1234.56
+    normalizado = bruto.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(bruto)) {
+    // Só pontos, em grupos de 3: é milhar no formato brasileiro.
+    // "1.234" é mil e duzentos e trinta e quatro — não R$ 1,23.
+    normalizado = bruto.replace(/\./g, "");
+  } else {
+    // "1234.56" (decimal com ponto) ou "1234" (inteiro).
+    normalizado = bruto;
+  }
 
   const numero = Number(normalizado);
-  return Number.isFinite(numero) ? numero.toFixed(2) : null;
+  if (!Number.isFinite(numero) || numero < 0 || numero >= 1e12) return null;
+  return numero.toFixed(2);
 }
 
 export function inteiroOpcional(dados: FormData, campo: string): number | null {
   const valor = texto(dados, campo);
   if (valor === "") return null;
   const numero = Number(valor.replace(",", "."));
-  return Number.isFinite(numero) ? numero : null;
+  // Limites do Decimal(14,4) do banco; negativo não faz sentido para quantidade.
+  if (!Number.isFinite(numero) || numero < 0 || numero >= 1e10) return null;
+  return numero;
+}
+
+/** Valida um valor de FormData contra a lista de um enum; null quando inválido. */
+export function opcaoValida<T extends string>(
+  dados: FormData,
+  campo: string,
+  opcoes: readonly T[],
+  padrao?: T,
+): T | null {
+  const valor = texto(dados, campo);
+  if (valor === "" && padrao !== undefined) return padrao;
+  return (opcoes as readonly string[]).includes(valor) ? (valor as T) : null;
 }
 
 export function dataOpcional(dados: FormData, campo: string): Date | null {

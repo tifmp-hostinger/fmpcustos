@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { conferirSenha, gerarHashSenha, validarSenha } from "@/lib/senha";
-import { sessaoAtual } from "@/lib/sessao";
+import { abrirSessao, sessaoAtual } from "@/lib/sessao";
 import { falha, texto, type Resultado } from "@/lib/acoes";
 
 export async function trocarSenha(
@@ -37,6 +37,10 @@ export async function trocarSenha(
     where: { id: sessao.id },
     data: { senhaHash: await gerarHashSenha(nova), precisaTrocarSenha: false },
   });
+
+  // A troca muda a versão de senha e invalida todo cookie antigo — inclusive o
+  // desta sessão. Reabrimos aqui para a própria pessoa continuar logada.
+  await abrirSessao(sessao.id);
 
   redirect("/");
 }

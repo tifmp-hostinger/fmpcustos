@@ -192,7 +192,8 @@ async function semearAdministrador() {
     select: { id: true, usuario: { select: { id: true } } },
   });
 
-  if (colaborador.usuario) {
+  try {
+    if (colaborador.usuario) {
     await prisma.usuario.update({
       where: { id: colaborador.usuario.id },
       data: {
@@ -202,16 +203,25 @@ async function semearAdministrador() {
         precisaTrocarSenha: !definidaPeloOperador,
       },
     });
-  } else {
-    await prisma.usuario.create({
-      data: {
-        colaboradorId: colaborador.id,
-        papel: "ADMIN",
-        ativo: true,
-        senhaHash,
-        precisaTrocarSenha: !definidaPeloOperador,
-      },
-    });
+    } else {
+      await prisma.usuario.create({
+        data: {
+          colaboradorId: colaborador.id,
+          papel: "ADMIN",
+          ativo: true,
+          senhaHash,
+          precisaTrocarSenha: !definidaPeloOperador,
+        },
+      });
+    }
+  } catch (erro) {
+    // Dois seeds em paralelo: o perdedor da corrida encontra o usuário já
+    // criado pelo outro. Não é falha — o administrador existe.
+    if ((erro as { code?: string }).code === "P2002") {
+      console.log("Administrador criado por uma execução concorrente — ok.");
+      return;
+    }
+    throw erro;
   }
 
   console.log("");

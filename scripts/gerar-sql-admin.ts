@@ -59,7 +59,10 @@ SELECT gen_random_uuid()::text, c.id, 'ADMIN', true, ${aspas(hash)}, ${definidaP
 FROM "colaborador" c
 WHERE c.email = ${aspas(email.toLowerCase())}
 ON CONFLICT ("colaboradorId") DO UPDATE
-  SET papel = 'ADMIN', ativo = true;
+  SET papel = 'ADMIN',
+      ativo = true,
+      "senhaHash" = EXCLUDED."senhaHash",
+      "precisaTrocarSenha" = EXCLUDED."precisaTrocarSenha";
 
 COMMIT;
 `;

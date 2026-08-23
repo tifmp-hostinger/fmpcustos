@@ -76,14 +76,19 @@ export async function custoPorFornecedor(filtro: FiltroMetrica): Promise<ValorPo
       valorRealizado: true,
       valorPrevisto: true,
       itemCusto: {
-        select: { contrato: { select: { fornecedor: { select: { id: true, nome: true } } } } },
+        select: {
+          // O fornecedor direto do item é o caminho normal (a UI grava só ele);
+          // o do contrato é fallback para itens que vierem de integração.
+          fornecedor: { select: { id: true, nome: true } },
+          contrato: { select: { fornecedor: { select: { id: true, nome: true } } } },
+        },
       },
     },
   });
 
   const acumulado = new Map<string, { rotulo: string; valor: Decimal }>();
   for (const l of lancamentos) {
-    const f = l.itemCusto.contrato?.fornecedor;
+    const f = l.itemCusto.fornecedor ?? l.itemCusto.contrato?.fornecedor;
     const chave = f?.id ?? "sem-fornecedor";
     const rotulo = f?.nome ?? "Sem fornecedor";
     const atual = acumulado.get(chave) ?? { rotulo, valor: new Decimal(0) };
@@ -137,10 +142,15 @@ export async function custoPorSetor(filtro: FiltroMetrica): Promise<ValorPorChav
     select: {
       valorRealizado: true,
       valorPrevisto: true,
-      rateios: { select: { percentual: true, valor: true, setor: { select: { id: true, nome: true } } } },
+      rateios: {
+        select: { percentual: true, valor: true, setor: { select: { id: true, nome: true } } },
+      },
       itemCusto: {
         select: {
           rateios: {
+            // Só regras vigentes: rateio encerrado somando junto contaria o
+            // mesmo lançamento em dobro após uma transferência de setor.
+            where: { vigenciaFim: null },
             select: { percentual: true, valor: true, setor: { select: { id: true, nome: true } } },
           },
         },
@@ -168,11 +178,15 @@ export async function custoPorSetor(filtro: FiltroMetrica): Promise<ValorPorChav
     for (const r of regras) {
       const percentual = r.percentual as { toString(): string } | null;
       const valorFixo = r.valor as { toString(): string } | null;
+      if (percentual === null && valorFixo === null) {
+        // Métodos ainda sem cálculo implementado (IGUALITARIO, POR_USUARIO):
+        // o dinheiro não pode sumir do gráfico — cai em "Não rateado".
+        somaEm("nao-rateado", "Não rateado", total);
+        continue;
+      }
       const parcela = percentual
         ? total.mul(new Decimal(percentual.toString())).div(100)
-        : valorFixo
-          ? new Decimal(valorFixo.toString())
-          : new Decimal(0);
+        : new Decimal(valorFixo!.toString());
       somaEm(r.setor.id, r.setor.nome, parcela);
     }
   }

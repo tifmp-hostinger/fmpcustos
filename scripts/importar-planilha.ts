@@ -12,6 +12,7 @@
  *   npx tsx scripts/importar-planilha.ts <arquivo.xlsx> [--json]
  */
 
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import ExcelJS from "exceljs";
@@ -85,6 +86,12 @@ function valorBruto(cell: ExcelJS.Cell): unknown {
 function texto(cell: ExcelJS.Cell): string | null {
   const v = valorBruto(cell);
   if (v === null || v === undefined) return null;
+  // Célula com erro (#REF!, #DIV/0!): o ExcelJS entrega { error: "#REF!" }.
+  // Sem este tratamento, String(v) viraria "[object Object]" dentro do banco.
+  if (typeof v === "object") {
+    if ("error" in (v as object)) return null;
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+  }
   const s = String(v).trim();
   return s === "" ? null : s;
 }
@@ -113,6 +120,13 @@ const PERIODICIDADES: Record<string, Periodicidade> = {
   semestral: "SEMESTRAL",
   anual: "ANUAL",
   unico: "UNICO",
+  "único": "UNICO",
+  "pagamento unico": "UNICO",
+  "pagamento único": "UNICO",
+  "sob demanda": "SOB_DEMANDA",
+  "por consumo": "SOB_DEMANDA",
+  variavel: "SOB_DEMANDA",
+  "variável": "SOB_DEMANDA",
   "pagamento 6 meses": "SEMESTRAL",
 };
 
@@ -537,7 +551,10 @@ function detectarDuplaContagem(linhas: LinhaNormalizada[]): void {
 
       const agregado = new Decimal(outra.valorPeriodo);
       const bate = agregado.minus(somaDetalhe).abs().lessThanOrEqualTo("0.05");
-      outra.duplicaAba = aba;
+      // Só marcamos como duplicata quando a soma FECHA. Se diverge, pode ser um
+      // contrato legítimo com o mesmo fornecedor — excluir seria descartar
+      // dinheiro real; fica o achado para decisão humana.
+      if (bate) outra.duplicaAba = aba;
 
       registrar({
         severidade: "critico",
@@ -644,9 +661,34 @@ const sqlOuNulo = (v: string | null | undefined) => (v === null || v === undefin
 const sqlNumero = (v: number | string | null | undefined) =>
   v === null || v === undefined ? "NULL" : String(v);
 
-/** Identificador estável por aba e linha: reimportar atualiza em vez de duplicar. */
-const idItem = (l: LinhaNormalizada) =>
-  `imp_${l.aba.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${String(l.linha).padStart(3, "0")}`;
+const slug = (v: string) =>
+  v
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40);
+
+const hash8 = (v: string) => createHash("sha256").update(v).digest("hex").slice(0, 8);
+
+/**
+ * Identificador estável por CONTEÚDO (aba + fornecedor + descrição), não por
+ * número de linha: inserir ou excluir uma linha na planilha não pode deslocar
+ * os IDs de todas as seguintes — o ON CONFLICT atualizaria cada item com os
+ * dados do vizinho. Linhas de conteúdo idêntico ganham um sufixo sequencial.
+ */
+function criarGeradorDeIds() {
+  const ocorrencias = new Map<string, number>();
+  return (l: LinhaNormalizada) => {
+    const base = `${slug(l.aba)}|${(l.fornecedor ?? "").toLowerCase()}|${(l.descricao ?? "").toLowerCase()}`;
+    const n = ocorrencias.get(base) ?? 0;
+    ocorrencias.set(base, n + 1);
+    return `imp_${hash8(base)}_${n}`;
+  };
+}
+
+const idFornecedor = (nome: string) => `imp_forn_${slug(nome)}_${hash8(nome.toLowerCase())}`;
 
 /**
  * Emite o SQL que carrega os custos no banco.
@@ -665,6 +707,8 @@ const idItem = (l: LinhaNormalizada) =>
 function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string {
   const uteis = linhas.filter((l) => !l.duplicaAba && l.descricao && l.fornecedor);
   const fornecedores = [...new Set(uteis.map((l) => l.fornecedor as string))].sort();
+  const idItem = criarGeradorDeIds();
+  const idsPorLinha = new Map(uteis.map((l) => [l, idItem(l)]));
 
   const out: string[] = [
     "-- ============================================================================",
@@ -685,8 +729,8 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
     'INSERT INTO "fornecedor" (id, nome, "moedaPadrao", criticidade, ativo, "criadoEm", "atualizadoEm") VALUES',
     fornecedores
       .map(
-        (nome, i) =>
-          `  ('imp_forn_${String(i).padStart(3, "0")}', ${sqlTexto(nome)}, 'BRL', 3, true, now(), now())`,
+        (nome) =>
+          `  (${sqlTexto(idFornecedor(nome))}, ${sqlTexto(nome)}, 'BRL', 3, true, now(), now())`,
       )
       .join(",\n") + "\nON CONFLICT (nome) DO NOTHING;",
     "",
@@ -694,7 +738,7 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
   ];
 
   for (const l of uteis) {
-    const id = idItem(l);
+    const id = idsPorLinha.get(l)!;
     out.push(
       'INSERT INTO "item_custo" (id, descricao, natureza, "fornecedorId", "categoriaId",',
       '  "modeloCobranca", comportamento, quantidade, "valorUnitario", moeda, periodicidade,',
@@ -723,7 +767,7 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
     "-- Rateio: 100% no setor responsável --------------------------------------",
   );
   for (const l of uteis) {
-    const id = idItem(l);
+    const id = idsPorLinha.get(l)!;
     out.push(
       'INSERT INTO "rateio" (id, metodo, "itemCustoId", "setorId", percentual, "vigenciaInicio", "criadoEm", "atualizadoEm")',
       `SELECT ${sqlTexto("rat_" + id)}, 'PERCENTUAL', ${sqlTexto(id)}, s.id, 100, CURRENT_DATE, now(), now()`,

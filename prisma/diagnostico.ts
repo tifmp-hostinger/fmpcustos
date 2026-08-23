@@ -15,7 +15,12 @@ const linha = () =>
   console.log("----------------------------------------------------------------------");
 
 function mascarar(url: string): string {
-  return url.replace(/(:\/\/[^:/]+):[^@]*@/, "$1:***@");
+  // Cobre usuário vazio e senha contendo "@": tudo entre "://" e o ÚLTIMO "@"
+  // antes do host é credencial e vira ***.
+  return url.replace(/(:\/\/)([^/]*)@/, (_t, prefixo: string, cred: string) => {
+    const usuario = cred.split(":")[0];
+    return `${prefixo}${usuario}:***@`;
+  });
 }
 
 async function main() {
