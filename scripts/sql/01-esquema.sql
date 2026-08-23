@@ -10,9 +10,23 @@
 -- Você NÃO precisa deste arquivo se usar o container: o entrypoint roda
 -- 'prisma migrate deploy' sozinho no start. Ele existe para quem prefere
 -- aplicar direto no banco.
--- ============================================================================
+--
+-- SE VOCÊ VIR "current transaction is aborted" (SQL state 25P02):
+-- esse NÃO é o erro. Ele apenas informa que alguma instrução ANTERIOR falhou
+-- e que o resto do bloco foi ignorado. Role até o PRIMEIRO erro da saída —
+-- é ele que diz o que aconteceu. Em cliente gráfico o primeiro erro costuma
+-- ficar escondido acima; rodando por psql ele aparece no topo.
+---- ============================================================================
 
 BEGIN;
+
+-- Guarda: rodar duas vezes deve dizer o motivo, não despejar erro cru.
+DO $$
+BEGIN
+  IF to_regclass('public.setor') IS NOT NULL THEN
+    RAISE EXCEPTION 'O esquema ja existe neste banco. Este script so roda em banco vazio; para dados iniciais use 02-dados-iniciais.sql.';
+  END IF;
+END $$;
 
 -- CreateEnum
 CREATE TYPE "Natureza" AS ENUM ('RECORRENTE', 'PONTUAL', 'CAPEX', 'PESSOAL');
@@ -694,10 +708,10 @@ CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
     applied_steps_count     INTEGER NOT NULL DEFAULT 0
 );
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES (gen_random_uuid()::text, 'c50cb844fd608a903d3a25f6b6ec8254282f0a6130f74dbe7aa539d02967c18f', now(), '20260823022708_modelo_inicial', 1)
+VALUES ('42251f32-965c-0ec8-80db-1e8f7dd435e7', 'c50cb844fd608a903d3a25f6b6ec8254282f0a6130f74dbe7aa539d02967c18f', now(), '20260823022708_modelo_inicial', 1)
 ON CONFLICT DO NOTHING;
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES (gen_random_uuid()::text, '6e302ea5f5e7cd83c287a533f40e2f373c3e07800d852efce5b9b4ccb7b014b6', now(), '20260823054102_autenticacao_e_fornecedor_no_item', 1)
+VALUES ('a5871565-c549-7b1e-fd4a-d3389a805b4f', '6e302ea5f5e7cd83c287a533f40e2f373c3e07800d852efce5b9b4ccb7b014b6', now(), '20260823054102_autenticacao_e_fornecedor_no_item', 1)
 ON CONFLICT DO NOTHING;
 
 COMMIT;
