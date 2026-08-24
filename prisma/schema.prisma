@@ -142,6 +142,10 @@ enum TipoAlerta {
   LICENCA_OCIOSA
   DADO_INCOMPLETO
   RATEIO_INCOMPLETO
+  /// Custo em moeda estrangeira sem cotação: existe, tem valor na tela e não é
+  /// somado em lugar nenhum. Separado de DADO_INCOMPLETO porque a consequência é
+  /// outra — não é um item incompleto, é um TOTAL incompleto.
+  CAMBIO_AUSENTE
 }
 
 enum StatusAlerta {
@@ -261,6 +265,13 @@ model Usuario {
   modelosCriados   ModeloRateio[]          @relation("ModelosCriados")
   aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
   cotacoes         CotacaoMoeda[]          @relation("CotacoesRegistradas")
+
+  /// Resumo semanal por e-mail. Sistema de custo depende de alguém lembrar de
+  /// abri-lo; o resumo inverte isso. Quem não quiser, desmarca.
+  receberResumo    Boolean   @default(true)
+  /// Quando o último resumo saiu. É o que impede uma rotina rodada duas vezes
+  /// no mesmo dia de mandar dois e-mails para as mesmas treze pessoas.
+  resumoEnviadoEm  DateTime?
 
   ultimoAcesso DateTime?
   criadoEm     DateTime  @default(now())
@@ -874,9 +885,11 @@ model Alerta {
   resolvidoEm DateTime?
   resolvidoPor String?
 
-  criadoEm DateTime @default(now())
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
   @@index([tipo, status])
+  @@index([itemCustoId, status])
   @@map("alerta")
 }
 

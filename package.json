@@ -22,14 +22,18 @@
     "dev:semear": "tsx scripts/dev/semear-demo.ts",
     "dev:e2e": "node scripts/dev/e2e.mjs",
     "dev:e2e-navegacao": "node scripts/dev/e2e-navegacao.mjs",
-    "testar": "tsx scripts/testar-rateio.ts && tsx scripts/testar-fornecedores.ts && tsx scripts/testar-planilha.ts && tsx scripts/testar-dinheiro.ts",
+    "testar": "tsx scripts/testar-rateio.ts && tsx scripts/testar-fornecedores.ts && tsx scripts/testar-planilha.ts && tsx scripts/testar-dinheiro.ts && tsx scripts/testar-rotinas.ts",
     "testar:fornecedores": "tsx scripts/testar-fornecedores.ts",
     "testar:planilha": "tsx scripts/testar-planilha.ts",
     "dev:e2e-memoria": "node scripts/dev/e2e-memoria.mjs",
     "dev:e2e-lote": "node scripts/dev/e2e-lote.mjs",
-    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs",
+    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs",
     "testar:dinheiro": "tsx scripts/testar-dinheiro.ts",
-    "dev:e2e-moeda": "node scripts/dev/e2e-moeda.mjs"
+    "dev:e2e-moeda": "node scripts/dev/e2e-moeda.mjs",
+    "rotina": "tsx scripts/rotina.ts",
+    "testar:rotinas": "tsx scripts/testar-rotinas.ts",
+    "dev:smtp": "node scripts/dev/smtp-de-mentira.mjs",
+    "dev:e2e-alertas": "node scripts/dev/e2e-alertas.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +44,7 @@
     "decimal.js": "^10.6.0",
     "dotenv": "^17.4.2",
     "next": "^16.3.2",
+    "nodemailer": "^9.0.5",
     "pg": "^8.23.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -48,13 +53,17 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.18.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.2",
     "exceljs": "^4.4.0",
+    "mailparser": "^3.9.15",
+    "playwright": "^1.62.1",
     "prisma": "^7.9.1",
+    "smtp-server": "^3.19.3",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.20.7",
     "typescript": "^5.9.3"

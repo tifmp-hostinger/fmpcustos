@@ -48,6 +48,12 @@ export async function criarUsuario(
             papel,
             senhaHash: await gerarHashSenha(senhaTemporaria),
             precisaTrocarSenha: true,
+            // Leitor consulta, não altera. Mandar a ele uma lista semanal de
+            // decisões que ele não pode tomar é ruído com aparência de cobrança,
+            // e quem recebe cobrança que não consegue resolver acaba criando uma
+            // regra de caixa de entrada — que arquiva também o que importava.
+            // Ele liga sozinho, na tela de alertas, se quiser.
+            receberResumo: papel !== "LEITOR",
           },
         },
       },

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { exigirSessao, ROTULO_PAPEL } from "@/lib/sessao";
+import { exigirSessao, ROTULO_PAPEL, setoresVisiveis } from "@/lib/sessao";
+import { prisma } from "@/lib/db";
 import { Navegacao, type ItemNav } from "@/components/nav";
 import { ProvedorDeAvisos } from "@/components/avisos";
 import { BuscaGlobal } from "@/components/busca";
@@ -8,9 +9,23 @@ import { sair } from "./sair";
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await exigirSessao();
 
+  const setores = setoresVisiveis(usuario);
+  const pendentes = await prisma.alerta.count({
+    where: {
+      status: "ABERTO",
+      itemCusto: {
+        excluidoEm: null,
+        ...(setores === null
+          ? {}
+          : { rateios: { some: { setorId: { in: setores }, vigenciaFim: null } } }),
+      },
+    },
+  });
+
   const itens: ItemNav[] = [
     { href: "/", rotulo: "Início", icone: "painel" },
     { href: "/custos", rotulo: "Custos", icone: "custos" },
+    { href: "/alertas", rotulo: "Alertas", icone: "alertas", contador: pendentes },
   ];
   if (usuario.papel === "ADMIN") {
     itens.push({ href: "/admin", rotulo: "Administração", icone: "admin" });

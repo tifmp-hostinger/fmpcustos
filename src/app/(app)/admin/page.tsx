@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { exigirAdmin } from "@/lib/sessao";
+import { configuracaoSmtp } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +16,17 @@ export const dynamic = "force-dynamic";
 export default async function Admin() {
   await exigirAdmin();
 
-  const [usuarios, semAcesso, semCotacao, cotacoes] = await Promise.all([
+  const [usuarios, semAcesso, semCotacao, cotacoes, alertasAbertos] = await Promise.all([
     prisma.usuario.count({ where: { ativo: true } }),
     prisma.usuario.count({ where: { ativo: true, ultimoAcesso: null } }),
     prisma.itemCusto.count({
       where: { moeda: { not: "BRL" }, cambio: null, excluidoEm: null, valorPeriodo: { not: null } },
     }),
     prisma.cotacaoMoeda.count(),
+    prisma.alerta.count({ where: { status: "ABERTO" } }),
   ]);
+
+  const smtp = configuracaoSmtp() !== null;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -59,6 +63,17 @@ export default async function Admin() {
           }
           atencao={semCotacao > 0}
         />
+        <Cartao
+          href="/admin/notificacoes"
+          titulo="Notificações"
+          descricao="A varredura que gera alertas e o resumo semanal por e-mail."
+          nota={
+            smtp
+              ? `${alertasAbertos} ${alertasAbertos === 1 ? "alerta aberto" : "alertas abertos"} · e-mail configurado`
+              : "E-mail não configurado — ninguém é avisado fora da tela"
+          }
+          atencao={!smtp}
+        />
       </div>
     </main>
   );
@@ -71,7 +86,7 @@ function Cartao({
   nota,
   atencao,
 }: {
-  href: "/admin/usuarios" | "/admin/cambio";
+  href: "/admin/usuarios" | "/admin/cambio" | "/admin/notificacoes";
   titulo: string;
   descricao: string;
   nota: string;

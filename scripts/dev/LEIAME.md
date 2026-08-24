@@ -95,11 +95,49 @@ moeda no CSV exportado.
 E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-moeda
 ```
 
+## `e2e-alertas.mjs` — alertas e resumo semanal
+
+Cobre a pergunta que originou a mudança: o sistema avisa, ou espera alguém
+lembrar de olhar? Verifica o guarda da rota de rotina (sem token, token errado,
+token certo, e que GET não escreve), a varredura que não duplica ao rodar todo
+dia, o alerta que carrega o dinheiro em jogo, o escopo por setor, reconhecer que
+não é resolver, e o alerta que some sozinho quando o dado que faltava é
+preenchido.
+
+```bash
+E2E_ROTINAS_TOKEN=... E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-alertas
+```
+
+O servidor precisa estar rodando com `ROTINAS_TOKEN` igual ao `E2E_ROTINAS_TOKEN`.
+
+## `smtp-de-mentira.mjs` — conferir o e-mail de verdade
+
+Um servidor SMTP falso que aceita qualquer autenticação e guarda o que recebe em
+`dados/emails/`. Sem ele, a única forma de saber se o resumo sai e se ele fica
+legível é apontar o sistema para o SMTP da FMP e mandar mensagem real para
+pessoas reais — o que ninguém faz durante o desenvolvimento, e é por isso que o
+primeiro e-mail de produção costuma chegar quebrado.
+
+```bash
+npm run dev:smtp   # numa aba
+
+# noutra
+export SMTP_HOST=127.0.0.1 SMTP_PORTA=2525 SMTP_USUARIO=teste SMTP_SENHA=teste \
+       SMTP_SEGURO=false SMTP_REMETENTE="Custos FMP <custos@fmp.com.br>" \
+       APP_URL=http://127.0.0.1:3000
+DATABASE_URL="postgresql://…" npm run rotina alertas
+DATABASE_URL="postgresql://…" npm run rotina resumo
+
+ls dados/emails/     # .html, .txt e .json de cada mensagem
+```
+
+Abra o `.html` no navegador para ver o e-mail como ele chega.
+
 ## Rodar tudo de uma vez
 
 ```bash
-npm run dev:e2e-tudo    # as cinco suítes de navegador, em sequência
-npm run testar          # as quatro suítes de unidade
+npm run dev:e2e-tudo    # as seis suítes de navegador, em sequência
+npm run testar          # as cinco suítes de unidade
 ```
 
 Cada suíte espera a base recém-semeada. Entre uma e outra, rode
@@ -108,11 +146,12 @@ Cada suíte espera a base recém-semeada. Entre uma e outra, rode
 ## Testes de unidade — sem banco, sem navegador
 
 ```bash
-npm run testar             # roda os quatro de uma vez
+npm run testar             # roda os cinco de uma vez
 npm run testar:rateio      # aritmética do rateio
 npm run testar:fornecedores # identidade de fornecedor
 npm run testar:planilha    # leitura da colagem
 npm run testar:dinheiro    # periodicidade, moeda e câmbio
+npm run testar:rotinas     # guarda do token e leitura do SMTP
 ```
 
 ## `testar-rateio.ts` — aritmética do rateio

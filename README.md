@@ -26,6 +26,9 @@ o objetivo é que o dado gere indicador, alerta, rateio e recomendação.
 | Cadastro de custos com escopo por setor | ✅ |
 | Dashboards de decisão | ✅ |
 | Scripts SQL para aplicar direto no banco | ✅ |
+| Moeda estrangeira convertida em real, com a taxa gravada no item | ✅ |
+| Alertas gerados por rotina (renovação, dado incompleto, rateio, câmbio) | ✅ |
+| Resumo semanal por e-mail, por setor | ✅ (exige SMTP configurado) |
 | Fechamento mensal por competência | ⛔ próximo |
 | SSO Microsoft Entra ID | ⛔ próximo |
 | CAPEX e custo de pessoal | ⏸ decisão em aberto (integrar × construir) |
@@ -187,8 +190,40 @@ docs/
 | `npm run importar -- <arquivo.xlsx> --sql TI` | O mesmo, e gera o SQL de carga para o setor |
 | `npm run diagnostico` | Estado do ambiente: variáveis, banco, esquema, usuários |
 | `npm run senha -- <email> '<senha>'` | Define a senha de um usuário; cria como ADMIN se não existir |
+| `npm run rotina alertas` | Varre o cadastro e sincroniza os alertas |
+| `npm run rotina resumo` | Manda o resumo semanal para quem deve receber |
+| `npm run rotina smtp` | Testa a conexão de e-mail sem enviar nada |
+| `npm run testar` | As cinco suítes de unidade (sem banco, sem navegador) |
+| `npm run dev:e2e-tudo` | As seis suítes de navegador (exige base semeada e servidor de pé) |
 | `npx tsx scripts/gerar-sql-dados.ts` | Regera o SQL de dados iniciais |
 | `npx tsx scripts/gerar-sql-admin.ts <email> <nome> [senha]` | Gera o SQL do primeiro admin |
+
+---
+
+## Rotinas agendadas
+
+O sistema não agenda a si mesmo. Duas tarefas precisam ser apontadas para ele —
+no EasyPanel, tarefas agendadas; num servidor, `curl` no crontab:
+
+```bash
+# diária, de manhã cedo — gera e resolve alertas
+curl -fsS -X POST https://custos.fmp.com.br/api/rotinas/alertas \
+  -H "Authorization: Bearer $ROTINAS_TOKEN"
+
+# semanal, depois da varredura — manda o resumo
+curl -fsS -X POST https://custos.fmp.com.br/api/rotinas/resumo \
+  -H "Authorization: Bearer $ROTINAS_TOKEN"
+```
+
+Sem `ROTINAS_TOKEN` definido, as rotas recusam **todas** as chamadas, inclusive
+as sem token — liberar por ausência de segredo é como esse tipo de endpoint
+costuma vazar. As mesmas rotinas rodam por `npm run rotina alertas` dentro do
+container.
+
+**Administração › Notificações** mostra o estado de tudo isso: se o SMTP está
+configurado, quantas pessoas recebem, quando saiu o último envio, e botões para
+testar a conexão e mandar um resumo para si mesmo. Sem essa tela, configurar
+e-mail é um ato de fé cuja única prova chega uma semana depois.
 
 ---
 

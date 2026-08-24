@@ -56,7 +56,15 @@ async function main() {
       data: { nome, email, setorId: setor ? setores.get(setor)! : null },
     });
     return prisma.usuario.create({
-      data: { colaboradorId: col.id, papel, senhaHash: hash, precisaTrocarSenha: false },
+      data: {
+        colaboradorId: col.id,
+        papel,
+        senhaHash: hash,
+        precisaTrocarSenha: false,
+        // Mesma regra da criação pela tela: leitor não recebe uma lista semanal
+        // de decisões que não pode tomar.
+        receberResumo: papel !== "LEITOR",
+      },
     });
   }
   await usuario("Ana Administradora", "admin@fmp.com.br", "ADMIN", "TI");

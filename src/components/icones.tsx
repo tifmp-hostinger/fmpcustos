@@ -43,6 +43,13 @@ export const IconeUsuarios = ({ className }: Props) => (
   </svg>
 );
 
+export const IconeSino = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5Z" />
+    <path d="M10.3 18.5a2 2 0 0 0 3.4 0" />
+  </svg>
+);
+
 export const IconeAdmin = ({ className }: Props) => (
   <svg {...base} className={className}>
     <path d="M4 20V9M10 20V4M16 20v-7M4 6.5h6M10 15.5h6M16 10.5h4" />

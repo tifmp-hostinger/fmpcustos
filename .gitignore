@@ -20,5 +20,7 @@ npm-debug.log*
 # Saídas do importador — dados reais não vão para o repositório
 dados/entrada/*.xlsx
 dados/saida/
+# E-mails capturados pelo SMTP de mentira, no desenvolvimento
+dados/emails/
 scripts/sql/03-administrador.sql
 scripts/sql/04-acesso-emergencia.sql
