@@ -1,3 +1,5 @@
+import { lerValorDigitado } from "@/lib/dinheiro";
+
 /**
  * Resultado padrão de uma server action de formulário.
  *
@@ -24,10 +26,21 @@ export type Desfazer = {
   antes?: Record<string, string | null>;
 };
 
+/**
+ * Uma senha temporária recém-gerada.
+ *
+ * Vem separada da mensagem porque precisa de tratamento próprio na tela: fonte
+ * monoespaçada, botão de copiar e permanência até quem gerou dizer que já
+ * repassou. Enfiada no meio de uma frase de aviso que some em oito segundos,
+ * ela se perde — e a pessoa fica sem acesso até alguém gerar outra.
+ */
+export type SenhaTemporaria = { nome: string; email: string; senha: string };
+
 export type Resultado =
   | {
       ok: true;
       mensagem?: string;
+      senhaTemporaria?: SenhaTemporaria;
       /** Segunda linha do aviso: o delta, o total, o motivo. Nunca mais que uma. */
       detalhe?: string;
       /** Linha a destacar na lista depois da gravação — "foi esta que mudou". */
@@ -46,7 +59,13 @@ export const falha = (
 
 export const sucesso = (
   mensagem?: string,
-  extras?: { detalhe?: string; destaqueId?: string; desfazer?: Desfazer; irPara?: string },
+  extras?: {
+    detalhe?: string;
+    destaqueId?: string;
+    desfazer?: Desfazer;
+    irPara?: string;
+    senhaTemporaria?: SenhaTemporaria;
+  },
 ): Resultado => ({ ok: true, mensagem, ...extras });
 
 /**
@@ -75,38 +94,9 @@ export function textoOpcional(dados: FormData, campo: string): string | null {
   return valor === "" ? null : valor;
 }
 
-/**
- * Lê um valor monetário aceitando os formatos que as pessoas realmente digitam:
- * "1.234,56", "1234,56", "1234.56", "R$ 1.234,56", "1.234", "1.234.567".
- *
- * Retorna a string decimal, ou null quando vazio/ilegível. Nunca aceita
- * negativo: custo negativo não existe neste domínio, e um sinal de menos
- * digitado por engano distorceria os totais de toda a organização.
- */
+/** Lê um campo monetário do FormData. A regra de leitura mora em `dinheiro.ts`. */
 export function dinheiro(dados: FormData, campo: string): string | null {
-  const original = texto(dados, campo);
-  // Sinal de menos é rejeitado, não removido: apagar o "-" em silêncio
-  // transformaria um estorno digitado por engano num custo positivo.
-  if (original.includes("-")) return null;
-  const bruto = original.replace(/[^\d.,]/g, "");
-  if (bruto === "") return null;
-
-  let normalizado: string;
-  if (bruto.includes(",")) {
-    // Vírgula presente: ela é o decimal, ponto é milhar. "1.234,56" -> 1234.56
-    normalizado = bruto.replace(/\./g, "").replace(",", ".");
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(bruto)) {
-    // Só pontos, em grupos de 3: é milhar no formato brasileiro.
-    // "1.234" é mil e duzentos e trinta e quatro — não R$ 1,23.
-    normalizado = bruto.replace(/\./g, "");
-  } else {
-    // "1234.56" (decimal com ponto) ou "1234" (inteiro).
-    normalizado = bruto;
-  }
-
-  const numero = Number(normalizado);
-  if (!Number.isFinite(numero) || numero < 0 || numero >= 1e12) return null;
-  return numero.toFixed(2);
+  return lerValorDigitado(texto(dados, campo));
 }
 
 export function inteiroOpcional(dados: FormData, campo: string): number | null {

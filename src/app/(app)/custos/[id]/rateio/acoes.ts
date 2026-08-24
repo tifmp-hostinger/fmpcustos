@@ -375,3 +375,81 @@ export async function cancelarProposta(
     detalhe: "O rateio anterior continua valendo. Você pode propor outro agora.",
   });
 }
+
+/**
+ * Guarda a divisão atual como modelo reutilizável.
+ *
+ * Só o percentual de cada setor é gravado — quem é a âncora não entra. Âncora
+ * é conceito de edição: ao aplicar o modelo noutro custo, quem edita é que
+ * decide qual setor absorve o restante daquela vez.
+ */
+export async function salvarModelo(
+  _anterior: Resultado | null,
+  dados: FormData,
+): Promise<Resultado> {
+  const usuario = await exigirSessao();
+  if (!podeLancar(usuario.papel)) return falha("Seu perfil não permite criar modelos.");
+
+  const nome = texto(dados, "nome").slice(0, 80);
+  if (!nome) return falha("Dê um nome ao modelo.", undefined, "nome");
+
+  const fatias = lerFatias(dados);
+  if (typeof fatias === "string") return falha(fatias);
+  if (fatias.length < 2) {
+    return falha("Um modelo com um setor só não divide nada — some setores antes de salvar.");
+  }
+
+  const existente = await prisma.modeloRateio.count({
+    where: { nome: { equals: nome, mode: "insensitive" } },
+  });
+  if (existente > 0) return falha(`Já existe um modelo chamado “${nome}”.`, undefined, "nome");
+
+  try {
+    await prisma.modeloRateio.create({
+      data: {
+        nome,
+        criadoPorId: usuario.id,
+        parcelas: {
+          create: fatias.map((f) => ({
+            setorId: f.setorId,
+            percentual: percentualParaBanco(f.unidades),
+          })),
+        },
+      },
+    });
+  } catch (erro) {
+    // Corrida entre duas criações do mesmo nome: o unique do banco decide.
+    if ((erro as { code?: string }).code === "P2002") {
+      return falha(`Já existe um modelo chamado “${nome}”.`, undefined, "nome");
+    }
+    throw erro;
+  }
+
+  revalidatePath("/custos");
+  return sucesso(`Modelo “${nome}” salvo.`, {
+    detalhe: "Ele aparece como atalho ao dividir qualquer outro custo.",
+  });
+}
+
+export async function excluirModelo(
+  _anterior: Resultado | null,
+  dados: FormData,
+): Promise<Resultado> {
+  const usuario = await exigirSessao();
+  if (!vePorInteiro(usuario.papel)) {
+    return falha("Só a Controladoria ou o administrador podem apagar modelos.");
+  }
+  const id = texto(dados, "modeloId");
+  if (!id) return falha("Modelo não informado.");
+
+  const modelo = await prisma.modeloRateio.findUnique({ where: { id }, select: { nome: true } });
+  if (!modelo) return falha("Este modelo não existe mais.");
+
+  // Apagar o modelo não mexe em rateio nenhum já aplicado: o modelo é um
+  // atalho de digitação, não a fonte do que está valendo.
+  await prisma.modeloRateio.delete({ where: { id } });
+  revalidatePath("/custos");
+  return sucesso(`Modelo “${modelo.nome}” apagado.`, {
+    detalhe: "Os rateios que usaram este modelo continuam como estão.",
+  });
+}

@@ -157,13 +157,24 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           </p>
         </div>
         {podeLancar(usuario.papel) && (
-          <Link
-            href="/custos/novo"
-            className="flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-[14px] font-semibold text-white no-underline"
-          >
-            <IconeMais />
-            Cadastrar custo
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quem já tem os custos numa planilha não deveria descobrir a
+                colagem por acaso: ela vive ao lado do cadastro avulso, com
+                menos peso visual porque é o caminho menos frequente. */}
+            <Link
+              href="/custos/colar"
+              className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-3.5 py-2.5 text-[13.5px] font-medium no-underline hover:border-[var(--ink-3)]"
+            >
+              Colar da planilha
+            </Link>
+            <Link
+              href="/custos/novo"
+              className="flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-[14px] font-semibold text-white no-underline"
+            >
+              <IconeMais />
+              Cadastrar custo
+            </Link>
+          </div>
         )}
       </div>
 
@@ -448,9 +459,18 @@ function Vazio({
         {filtros.situacao === "ativos" ? "ativo" : `em “${rotuloSituacao.toLowerCase()}”`} por aqui.
       </p>
       <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-        {podeLancar
-          ? "Cadastre o primeiro: comece pelos contratos e assinaturas pagos todo mês."
-          : "Quando o gestor da sua área lançar os custos, eles aparecem aqui."}
+        {podeLancar ? (
+          <>
+            Cadastre o primeiro: comece pelos contratos e assinaturas pagos todo mês. Se já tem tudo
+            numa planilha,{" "}
+            <Link href="/custos/colar" className="text-[var(--accent)]">
+              cole de uma vez
+            </Link>
+            .
+          </>
+        ) : (
+          "Quando o gestor da sua área lançar os custos, eles aparecem aqui."
+        )}
       </p>
     </Caixa>
   );

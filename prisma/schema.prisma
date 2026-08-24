@@ -181,6 +181,7 @@ model Setor {
   orcamentos       Orcamento[]
   acessos          AcessoSetor[]
   parcelasProposta PropostaRateioParcela[]
+  parcelasModelo   ModeloRateioParcela[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -257,6 +258,7 @@ model Usuario {
   itensCriados     ItemCusto[]             @relation("ItensCriados")
   itensExcluidos   ItemCusto[]             @relation("ItensExcluidos")
   propostasCriadas PropostaRateio[]        @relation("PropostasCriadas")
+  modelosCriados   ModeloRateio[]          @relation("ModelosCriados")
   aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
 
   ultimoAcesso DateTime?
@@ -674,6 +676,44 @@ model Rateio {
  * ninguém ganha custo no orçamento sem concordar. Controladoria e admin
  * aplicam direto (a proposta nasce aprovada, como registro).
  */
+/// Um critério de divisão que se repete, guardado com nome.
+///
+/// A Controladoria decide uma vez que a infraestrutura compartilhada é 70% TI
+/// e 30% Infra, e aplica isso a doze contratos. Sem modelo, é digitar a mesma
+/// divisão doze vezes — e basta uma distração para o décimo ficar 70/25 e
+/// ninguém perceber, porque a soma continua fechando pela âncora.
+model ModeloRateio {
+  id   String @id @default(cuid())
+  nome String @unique
+
+  criadoPorId String?
+  criadoPor   Usuario? @relation("ModelosCriados", fields: [criadoPorId], references: [id])
+
+  parcelas ModeloRateioParcela[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("modelo_rateio")
+}
+
+model ModeloRateioParcela {
+  id String @id @default(cuid())
+
+  modeloId String
+  modelo   ModeloRateio @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id])
+
+  /// 0–100 com 4 casas, como em Rateio. A âncora do editor é recalculada na
+  /// aplicação: o modelo guarda percentuais, não quem absorve o resto.
+  percentual Decimal @db.Decimal(7, 4)
+
+  @@unique([modeloId, setorId])
+  @@map("modelo_rateio_parcela")
+}
+
 model PropostaRateio {
   id String @id @default(cuid())
 

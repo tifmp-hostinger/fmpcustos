@@ -15,6 +15,8 @@ export default async function Usuarios() {
         papel: true,
         ativo: true,
         ultimoAcesso: true,
+        precisaTrocarSenha: true,
+        criadoEm: true,
         colaborador: { select: { nome: true, email: true, setorId: true } },
       },
       orderBy: [{ ativo: "desc" }, { colaborador: { nome: "asc" } }],
@@ -35,15 +37,21 @@ export default async function Usuarios() {
 
       <ol className="mt-5 grid gap-2 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4 text-[13px] text-[var(--ink-2)] sm:grid-cols-3">
         <li className="flex gap-2.5">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">1</span>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">
+            1
+          </span>
           Você cria o usuário e escolhe o perfil e o setor.
         </li>
         <li className="flex gap-2.5">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">2</span>
-          O sistema gera uma senha temporária — repasse com segurança.
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">
+            2
+          </span>
+          O sistema mostra a senha temporária uma vez, com botão de copiar.
         </li>
         <li className="flex gap-2.5">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">3</span>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">
+            3
+          </span>
           No primeiro acesso, a pessoa define a própria senha.
         </li>
       </ol>
@@ -67,6 +75,9 @@ export default async function Usuarios() {
               papel: u.papel,
               setorId: u.colaborador.setorId,
               ativo: u.ativo,
+              ultimoAcesso: u.ultimoAcesso?.toISOString() ?? null,
+              precisaTrocarSenha: u.precisaTrocarSenha,
+              criadoEm: u.criadoEm.toISOString(),
             }}
           />
         ))}

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Decimal } from "decimal.js";
-import { salvarRateio } from "./acoes";
+import { salvarModelo, salvarRateio } from "./acoes";
 import { useAviso } from "@/components/avisos";
 import { formatarBRL } from "@/lib/dinheiro";
 import {
@@ -17,6 +17,7 @@ import {
   unidadesDeReais,
   unidadesDeTexto,
   valoresEmReais,
+  unidadesDeBanco,
   type Fatia,
 } from "@/lib/rateio";
 import { IconeAncora, IconeFechar, IconeMais } from "@/components/icones";
@@ -43,6 +44,12 @@ import type { Resultado } from "@/lib/acoes";
 
 type Opcao = { valor: string; rotulo: string };
 
+export type Modelo = {
+  id: string;
+  nome: string;
+  parcelas: Array<{ setorId: string; percentual: string }>;
+};
+
 type Linha = Fatia & {
   /** Chave estável de React: o índice muda quando se remove uma linha do meio. */
   chave: number;
@@ -59,6 +66,7 @@ export function EditorDeRateio({
   setores,
   inicial,
   aplicaDireto,
+  modelos,
   aoConcluir,
 }: {
   itemId: string;
@@ -69,6 +77,8 @@ export function EditorDeRateio({
   inicial: Fatia[];
   /** Controladoria e admin aplicam direto; gestor propõe e espera aceite. */
   aplicaDireto: boolean;
+  /** Divisões já nomeadas, para não redigitar o mesmo critério em doze custos. */
+  modelos: Modelo[];
   aoConcluir?: () => void;
 }) {
   const avisar = useAviso();
@@ -89,6 +99,7 @@ export function EditorDeRateio({
   const [linhas, setLinhas] = useState<Linha[]>(() => inicial.map(paraLinha));
   const [flash, setFlash] = useState(0);
   const [tocado, setTocado] = useState(false);
+  const [nomeando, setNomeando] = useState(false);
   const focarProximo = useRef<{ chave: number; campo: "setor" | "pct" } | null>(null);
 
   const nomes = useMemo(() => new Map(setores.map((s) => [s.valor, s.rotulo])), [setores]);
@@ -217,6 +228,32 @@ export function EditorDeRateio({
     });
   }
 
+  /**
+   * Aplica um modelo salvo.
+   *
+   * A âncora é escolhida na aplicação, não vem no modelo: fica com o setor de
+   * maior fatia, que é quem tem folga para absorver o arredondamento. As
+   * linhas que não estão no modelo somem — aplicar um modelo é dizer "a
+   * divisão é esta", não "some isto ao que já está aí".
+   */
+  function aplicarModelo(modelo: Modelo) {
+    proximaChave.current = modelo.parcelas.length;
+    const maior = modelo.parcelas.reduce(
+      (m, p, i) => (Number(p.percentual) > Number(modelo.parcelas[m].percentual) ? i : m),
+      0,
+    );
+    setTocado(true);
+    setLinhas(
+      modelo.parcelas.map((p, i) => ({
+        setorId: p.setorId,
+        unidades: unidadesDeBanco(p.percentual),
+        ancora: i === maior,
+        chave: i,
+        rascunho: null,
+      })),
+    );
+  }
+
   function descartar() {
     proximaChave.current = inicial.length;
     setLinhas(inicial.map(paraLinha));
@@ -232,225 +269,274 @@ export function EditorDeRateio({
   const setorAncora = balanco.indiceAncora >= 0 ? linhas[balanco.indiceAncora].setorId : "";
 
   return (
-    <form action={acao} className="space-y-5">
-      <input type="hidden" name="itemId" value={itemId} />
-      <input type="hidden" name="ancora" value={setorAncora} />
+    // O painel de nomear modelo é IRMÃO do formulário, nunca filho: form
+    // dentro de form é inválido em HTML, o parser do navegador descarta o de
+    // dentro, e o botão de salvar o modelo acabava sem formulário para enviar.
+    <>
+      <form action={acao} className="space-y-5">
+        <input type="hidden" name="itemId" value={itemId} />
+        <input type="hidden" name="ancora" value={setorAncora} />
 
-      <div className="space-y-2">
-        {linhas.map((linha, i) => {
-          const fatia = balanco.fatias[i];
-          const erro = problemaDaLinha.get(i);
-          const usados = new Set(
-            linhas.filter((l) => l.chave !== linha.chave).map((l) => l.setorId),
-          );
+        <div className="space-y-2">
+          {linhas.map((linha, i) => {
+            const fatia = balanco.fatias[i];
+            const erro = problemaDaLinha.get(i);
+            const usados = new Set(
+              linhas.filter((l) => l.chave !== linha.chave).map((l) => l.setorId),
+            );
 
-          return (
-            <div
-              key={linha.chave}
-              className={`rounded-xl border px-3 py-2.5 ${
-                erro
-                  ? "border-[var(--accent)]/50 bg-[var(--accent)]/5"
-                  : "border-[var(--rule)] bg-[var(--surface)]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <select
-                  name={`setor_${i}`}
-                  data-campo={`setor-${linha.chave}`}
-                  value={linha.setorId}
-                  onChange={(e) => {
-                    const setorId = e.target.value;
-                    mexer((ls) => ls.map((l) => (l.chave === linha.chave ? { ...l, setorId } : l)));
-                    if (setorId && !linha.ancora) {
-                      focarProximo.current = { chave: linha.chave, campo: "pct" };
-                    }
-                  }}
-                  className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2.5 py-1.5 text-[14px] outline-none focus:border-[var(--accent)]"
-                >
-                  <option value="">Escolha o setor…</option>
-                  {setores.map((s) => (
-                    <option key={s.valor} value={s.valor} disabled={usados.has(s.valor)}>
-                      {s.rotulo}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Percentual */}
-                <div className="relative w-[92px] shrink-0">
-                  <input
-                    name={`pct_${i}`}
-                    data-campo={`pct-${linha.chave}`}
-                    // A âncora não se digita: ela é o resultado. Campo somente
-                    // leitura em vez de campo escondido, para a pessoa ver de
-                    // onde saiu o número que fecha a conta.
-                    readOnly={linha.ancora}
-                    value={
-                      linha.ancora
-                        ? textoDeUnidades(fatia.unidades)
-                        : (linha.rascunho ?? textoDeUnidades(linha.unidades))
-                    }
-                    onChange={(e) => definirPct(linha.chave, e.target.value)}
-                    onBlur={() =>
-                      !linha.ancora &&
+            return (
+              <div
+                key={linha.chave}
+                className={`rounded-xl border px-3 py-2.5 ${
+                  erro
+                    ? "border-[var(--accent)]/50 bg-[var(--accent)]/5"
+                    : "border-[var(--rule)] bg-[var(--surface)]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <select
+                    name={`setor_${i}`}
+                    data-campo={`setor-${linha.chave}`}
+                    value={linha.setorId}
+                    onChange={(e) => {
+                      const setorId = e.target.value;
                       mexer((ls) =>
-                        ls.map((l) => (l.chave === linha.chave ? { ...l, rascunho: null } : l)),
-                      )
-                    }
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    aria-label={`Percentual de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
-                    className={`w-full rounded-lg border py-1.5 pr-6 pl-2 text-right text-[14px] tabular-nums outline-none ${
-                      linha.ancora
-                        ? "cursor-default border-transparent bg-[var(--ground)] font-semibold text-[var(--ink-2)]"
-                        : "border-[var(--rule)] bg-[var(--ground)] focus:border-[var(--accent)]"
-                    }`}
-                  />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-[12px] text-[var(--ink-3)]"
+                        ls.map((l) => (l.chave === linha.chave ? { ...l, setorId } : l)),
+                      );
+                      if (setorId && !linha.ancora) {
+                        focarProximo.current = { chave: linha.chave, campo: "pct" };
+                      }
+                    }}
+                    className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2.5 py-1.5 text-[14px] outline-none focus:border-[var(--accent)]"
                   >
-                    %
-                  </span>
-                </div>
+                    <option value="">Escolha o setor…</option>
+                    {setores.map((s) => (
+                      <option key={s.valor} value={s.valor} disabled={usados.has(s.valor)}>
+                        {s.rotulo}
+                      </option>
+                    ))}
+                  </select>
 
-                {/* Reais — a coluna que torna a conversa possível. */}
-                <div className="w-[112px] shrink-0">
-                  {valorMensal === null ? (
-                    <p className="py-1.5 text-right text-[13px] text-[var(--ink-3)]">—</p>
-                  ) : linha.ancora ? (
-                    <p
-                      key={`r${flash}`}
-                      className="py-1.5 text-right text-[13px] font-semibold tabular-nums motion-safe:animate-[destacar_2s_ease-out]"
-                    >
-                      {formatarBRL(reais[i] ?? 0)}
-                    </p>
-                  ) : (
+                  {/* Percentual */}
+                  <div className="relative w-[92px] shrink-0">
                     <input
-                      value={formatarBRL(reais[i] ?? 0)}
-                      onChange={(e) => definirReais(linha.chave, e.target.value)}
+                      name={`pct_${i}`}
+                      data-campo={`pct-${linha.chave}`}
+                      // A âncora não se digita: ela é o resultado. Campo somente
+                      // leitura em vez de campo escondido, para a pessoa ver de
+                      // onde saiu o número que fecha a conta.
+                      readOnly={linha.ancora}
+                      value={
+                        linha.ancora
+                          ? textoDeUnidades(fatia.unidades)
+                          : (linha.rascunho ?? textoDeUnidades(linha.unidades))
+                      }
+                      onChange={(e) => definirPct(linha.chave, e.target.value)}
+                      onBlur={() =>
+                        !linha.ancora &&
+                        mexer((ls) =>
+                          ls.map((l) => (l.chave === linha.chave ? { ...l, rascunho: null } : l)),
+                        )
+                      }
                       inputMode="decimal"
-                      aria-label={`Valor mensal de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
-                      className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2 py-1.5 text-right text-[13px] tabular-nums outline-none focus:border-[var(--accent)]"
+                      placeholder="0,00"
+                      aria-label={`Percentual de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
+                      className={`w-full rounded-lg border py-1.5 pr-6 pl-2 text-right text-[14px] tabular-nums outline-none ${
+                        linha.ancora
+                          ? "cursor-default border-transparent bg-[var(--ground)] font-semibold text-[var(--ink-2)]"
+                          : "border-[var(--rule)] bg-[var(--ground)] focus:border-[var(--accent)]"
+                      }`}
                     />
-                  )}
-                </div>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-[12px] text-[var(--ink-3)]"
+                    >
+                      %
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => remover(linha.chave)}
-                  disabled={linhas.length === 1}
-                  aria-label={`Remover ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
-                  title="Remover linha"
-                  className="shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--ground)] hover:text-[var(--accent)] disabled:opacity-25"
-                >
-                  <IconeFechar className="size-4" />
-                </button>
-              </div>
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-0.5">
-                {linha.ancora ? (
-                  <span
-                    key={`a${flash}`}
-                    className="flex items-center gap-1.5 rounded-md px-1 text-[11.5px] font-medium text-[var(--ink-3)] motion-safe:animate-[destacar_2s_ease-out]"
-                  >
-                    <IconeAncora className="size-3.5" />
-                    absorve o restante
-                    {deltaAncora !== 0 && (
-                      <strong className="tabular-nums text-[var(--ink-2)]">
-                        ({deltaAncora > 0 ? "+" : "−"}
-                        {textoDeUnidades(Math.abs(deltaAncora))})
-                      </strong>
+                  {/* Reais — a coluna que torna a conversa possível. */}
+                  <div className="w-[112px] shrink-0">
+                    {valorMensal === null ? (
+                      <p className="py-1.5 text-right text-[13px] text-[var(--ink-3)]">—</p>
+                    ) : linha.ancora ? (
+                      <p
+                        key={`r${flash}`}
+                        className="py-1.5 text-right text-[13px] font-semibold tabular-nums motion-safe:animate-[destacar_2s_ease-out]"
+                      >
+                        {formatarBRL(reais[i] ?? 0)}
+                      </p>
+                    ) : (
+                      <input
+                        value={formatarBRL(reais[i] ?? 0)}
+                        onChange={(e) => definirReais(linha.chave, e.target.value)}
+                        inputMode="decimal"
+                        aria-label={`Valor mensal de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
+                        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2 py-1.5 text-right text-[13px] tabular-nums outline-none focus:border-[var(--accent)]"
+                      />
                     )}
-                  </span>
-                ) : (
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => trocarAncora(linha.chave)}
-                    disabled={!linha.setorId}
-                    title="Troca qual setor fecha a conta. Nenhum percentual muda agora."
-                    className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-[11.5px] text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+                    onClick={() => remover(linha.chave)}
+                    disabled={linhas.length === 1}
+                    aria-label={`Remover ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
+                    title="Remover linha"
+                    className="shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--ground)] hover:text-[var(--accent)] disabled:opacity-25"
                   >
-                    <IconeAncora className="size-3" />
-                    passar o restante para cá
+                    <IconeFechar className="size-4" />
                   </button>
-                )}
-                {erro && (
-                  <span role="alert" className="text-[11.5px] font-medium text-[var(--accent)]">
-                    {erro}
-                  </span>
-                )}
+                </div>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-0.5">
+                  {linha.ancora ? (
+                    <span
+                      key={`a${flash}`}
+                      className="flex items-center gap-1.5 rounded-md px-1 text-[11.5px] font-medium text-[var(--ink-3)] motion-safe:animate-[destacar_2s_ease-out]"
+                    >
+                      <IconeAncora className="size-3.5" />
+                      absorve o restante
+                      {deltaAncora !== 0 && (
+                        <strong className="tabular-nums text-[var(--ink-2)]">
+                          ({deltaAncora > 0 ? "+" : "−"}
+                          {textoDeUnidades(Math.abs(deltaAncora))})
+                        </strong>
+                      )}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => trocarAncora(linha.chave)}
+                      disabled={!linha.setorId}
+                      title="Troca qual setor fecha a conta. Nenhum percentual muda agora."
+                      className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-[11.5px] text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+                    >
+                      <IconeAncora className="size-3" />
+                      passar o restante para cá
+                    </button>
+                  )}
+                  {erro && (
+                    <span role="alert" className="text-[11.5px] font-medium text-[var(--accent)]">
+                      {erro}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Chip aoClicar={adicionar} desabilitado={!podeAdicionar} destaque>
-          <IconeMais className="size-3.5" />
-          Adicionar setor
-        </Chip>
-        {linhas.length > 1 && <Chip aoClicar={umSetorSo}>Voltar a um setor só</Chip>}
-        {linhas.length > 1 && <Chip aoClicar={igualmente}>Dividir igualmente</Chip>}
-        {podeArredondar(linhas) && (
-          <Chip aoClicar={() => mexer((ls) => arredondar(ls) as Linha[])}>Arredondar</Chip>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip aoClicar={adicionar} desabilitado={!podeAdicionar} destaque>
+            <IconeMais className="size-3.5" />
+            Adicionar setor
+          </Chip>
+          {linhas.length > 1 && <Chip aoClicar={umSetorSo}>Voltar a um setor só</Chip>}
+          {linhas.length > 1 && <Chip aoClicar={igualmente}>Dividir igualmente</Chip>}
+          {podeArredondar(linhas) && (
+            <Chip aoClicar={() => mexer((ls) => arredondar(ls) as Linha[])}>Arredondar</Chip>
+          )}
+          {alterado && <Chip aoClicar={descartar}>Descartar alterações</Chip>}
+        </div>
+
+        {/* Modelos: o mesmo critério de divisão aplicado a muitos custos sem
+          redigitar. Ficam abaixo dos chips de ação porque são atalho, não o
+          caminho principal — quem divide um custo só nunca precisa deles. */}
+        {(modelos.length > 0 || linhas.length > 1) && (
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--rule)] pt-4">
+            {modelos.length > 0 && (
+              <span className="text-[12px] text-[var(--ink-3)]">Modelos:</span>
+            )}
+            {modelos.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => aplicarModelo(m)}
+                title={m.parcelas
+                  .map(
+                    (p) =>
+                      `${nomes.get(p.setorId) ?? "setor"} ${textoDeUnidades(unidadesDeBanco(p.percentual))}%`,
+                  )
+                  .join(" · ")}
+                className="rounded-full border border-[var(--rule)] px-3 py-1.5 text-[12.5px] text-[var(--ink-2)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {m.nome}
+              </button>
+            ))}
+            {linhas.length > 1 && !nomeando && (
+              <button
+                type="button"
+                onClick={() => setNomeando(true)}
+                className="ml-auto text-[12.5px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+              >
+                Salvar esta divisão como modelo
+              </button>
+            )}
+          </div>
         )}
-        {alterado && <Chip aoClicar={descartar}>Descartar alterações</Chip>}
-      </div>
 
-      {/* O centavo do arredondamento tem dono, e a tela diz de quem é. */}
-      {valorMensal !== null && balanco.indiceAncora >= 0 && (
-        <ResiduoDeclarado
-          reais={reais}
-          indiceAncora={balanco.indiceAncora}
-          fatias={balanco.fatias}
-          valorMensal={valorMensal}
-          nomes={nomes}
-        />
-      )}
+        {/* O centavo do arredondamento tem dono, e a tela diz de quem é. */}
+        {valorMensal !== null && balanco.indiceAncora >= 0 && (
+          <ResiduoDeclarado
+            reais={reais}
+            indiceAncora={balanco.indiceAncora}
+            fatias={balanco.fatias}
+            valorMensal={valorMensal}
+            nomes={nomes}
+          />
+        )}
 
-      <label className="block">
-        <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
-          {aplicaDireto ? "Motivo (fica no histórico)" : "Justificativa (ajuda quem vai aceitar)"}
-        </span>
-        <textarea
-          name="justificativa"
-          rows={2}
-          placeholder="Ex.: o CRM é usado pela captação — a operação é do Comercial."
-          className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
-        />
-      </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+            {aplicaDireto ? "Motivo (fica no histórico)" : "Justificativa (ajuda quem vai aceitar)"}
+          </span>
+          <textarea
+            name="justificativa"
+            rows={2}
+            placeholder="Ex.: o CRM é usado pela captação — a operação é do Comercial."
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
+          />
+        </label>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          // Nunca desabilitado. Botão apagado e mudo faz a pessoa clicar três
-          // vezes achando que a tela travou; clicável, ele repete o erro e
-          // aponta a linha culpada — que é a resposta que ela procurava.
-          disabled={enviando}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-white transition-opacity disabled:opacity-50"
-        >
-          {enviando ? "Salvando…" : aplicaDireto ? "Aplicar rateio" : "Enviar proposta"}
-        </button>
-        {aoConcluir && (
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            type="button"
-            onClick={aoConcluir}
-            className="text-[13px] text-[var(--ink-3)] hover:underline"
+            type="submit"
+            // Nunca desabilitado. Botão apagado e mudo faz a pessoa clicar três
+            // vezes achando que a tela travou; clicável, ele repete o erro e
+            // aponta a linha culpada — que é a resposta que ela procurava.
+            disabled={enviando}
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-white transition-opacity disabled:opacity-50"
           >
-            Cancelar
+            {enviando ? "Salvando…" : aplicaDireto ? "Aplicar rateio" : "Enviar proposta"}
           </button>
-        )}
-      </div>
+          {aoConcluir && (
+            <button
+              type="button"
+              onClick={aoConcluir}
+              className="text-[13px] text-[var(--ink-3)] hover:underline"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
 
-      {!aplicaDireto && (
-        <p className="text-[12px] leading-relaxed text-[var(--ink-3)]">
-          Cada setor que recebe uma fatia precisa aceitar. A proposta aparece na tela inicial do
-          gestor da área, e o rateio de <strong>{descricao}</strong> só entra em vigor quando todos
-          aceitarem. Enquanto isso, o rateio atual continua valendo.
-        </p>
+        {!aplicaDireto && (
+          <p className="text-[12px] leading-relaxed text-[var(--ink-3)]">
+            Cada setor que recebe uma fatia precisa aceitar. A proposta aparece na tela inicial do
+            gestor da área, e o rateio de <strong>{descricao}</strong> só entra em vigor quando
+            todos aceitarem. Enquanto isso, o rateio atual continua valendo.
+          </p>
+        )}
+      </form>
+
+      {nomeando && (
+        <div className="mt-4">
+          <NomearModelo linhas={balanco.fatias} aoFechar={() => setNomeando(false)} />
+        </div>
       )}
-    </form>
+    </>
   );
 }
 
@@ -514,5 +600,73 @@ function ResiduoDeclarado({
       <span className="tabular-nums">{formatarBRL(residuo.abs())}</span>, para as fatias somarem
       exatamente {formatarBRL(valorMensal)}.
     </p>
+  );
+}
+
+/**
+ * Dá nome à divisão atual para reusá-la.
+ *
+ * Os mesmos campos `setor_i`/`pct_i` do rateio são reenviados escondidos, para
+ * o servidor reinterpretar a divisão pelo mesmo caminho que usa ao gravar um
+ * rateio de verdade — a leitura das fatias é a mesma função nos dois casos, e
+ * um modelo não pode nascer de uma aritmética diferente.
+ */
+function NomearModelo({ linhas, aoFechar }: { linhas: Fatia[]; aoFechar: () => void }) {
+  const avisar = useAviso();
+  const [, acao, enviando] = useActionState<Resultado | null, FormData>(async (anterior, dados) => {
+    const r = await salvarModelo(anterior, dados);
+    if (r.ok) {
+      avisar({ mensagem: r.mensagem ?? "Modelo salvo.", detalhe: r.detalhe });
+      aoFechar();
+    } else {
+      avisar({ mensagem: r.erro, tom: "erro" });
+    }
+    return r;
+  }, null);
+
+  const ancora = linhas.find((l) => l.ancora)?.setorId ?? "";
+
+  return (
+    <form action={acao} className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+      <input type="hidden" name="ancora" value={ancora} />
+      {linhas.map((l, i) => (
+        <span key={l.setorId || i}>
+          <input type="hidden" name={`setor_${i}`} value={l.setorId} />
+          <input type="hidden" name={`pct_${i}`} value={textoDeUnidades(l.unidades)} />
+        </span>
+      ))}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="mb-1 block text-[12.5px] font-medium text-[var(--ink-2)]">
+            Nome do modelo
+          </span>
+          <input
+            name="nome"
+            autoFocus
+            maxLength={80}
+            placeholder="Ex.: Infraestrutura compartilhada 70/30"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={enviando}
+          className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--ground)] disabled:opacity-50"
+        >
+          {enviando ? "Salvando…" : "Salvar modelo"}
+        </button>
+        <button
+          type="button"
+          onClick={aoFechar}
+          className="px-1 py-2 text-[13px] text-[var(--ink-3)] hover:underline"
+        >
+          Cancelar
+        </button>
+      </div>
+      <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
+        Guarda só os percentuais. Qual setor absorve o restante é decidido a cada uso.
+      </p>
+    </form>
   );
 }

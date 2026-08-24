@@ -47,6 +47,26 @@ E2E_URL=http://127.0.0.1:3000 npm run dev:e2e
 
 Sai com código 1 se qualquer verificação falhar.
 
+## `e2e-memoria.mjs` — memória e prevenção
+
+Cobre o que impede dado sujo de nascer: o aviso de fornecedor duplicado
+("Microsoft Brasil" quando já existe "Microsoft"), a colagem da planilha com
+uma linha estragada de propósito, os modelos de rateio e a entrega da senha
+temporária — inclusive a recusa de resetar a própria senha.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-memoria
+```
+
+## Testes de unidade — sem banco, sem navegador
+
+```bash
+npm run testar             # roda os três de uma vez
+npm run testar:rateio      # aritmética do rateio
+npm run testar:fornecedores # identidade de fornecedor
+npm run testar:planilha    # leitura da colagem
+```
+
 ## `testar-rateio.ts` — aritmética do rateio
 
 Roda sem banco e sem navegador. Cobre o caso que originou o desenho da tela

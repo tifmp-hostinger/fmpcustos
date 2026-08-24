@@ -109,6 +109,12 @@ export function Campo({
   lista?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const idErro = useId();
+  // Com `onChange`, quem chama está controlando o campo e o valor tem de vir
+  // por `value`: em `defaultValue`, mudar o estado do pai não muda o que está
+  // escrito na tela — foi o que fez o botão "Usar «Microsoft»" não fazer nada
+  // visível. Sem `onChange`, o campo segue não controlado, que é o certo para
+  // os outros treze campos do cadastro.
+  const controlado = resto.onChange !== undefined;
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
@@ -129,7 +135,7 @@ export function Campo({
         aria-describedby={erro ? idErro : undefined}
         list={lista}
         placeholder={placeholder}
-        defaultValue={valor ?? undefined}
+        {...(controlado ? { value: valor ?? "" } : { defaultValue: valor ?? undefined })}
         className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none ${
           erro
             ? "border-[var(--accent)] focus:border-[var(--accent)]"

@@ -36,6 +36,13 @@ export default async function NovoCusto() {
         <strong>valor</strong>. Informe o valor de cada cobrança — o equivalente mensal o sistema
         calcula sozinho, e o resto pode vir depois.
       </p>
+      <p className="mt-2 text-[13px] text-[var(--ink-3)]">
+        Tem vários custos já numa planilha?{" "}
+        <Link href="/custos/colar" className="font-medium text-[var(--accent)]">
+          Cole todos de uma vez
+        </Link>{" "}
+        em vez de cadastrar um por um.
+      </p>
 
       <FormularioCusto
         categorias={categorias}

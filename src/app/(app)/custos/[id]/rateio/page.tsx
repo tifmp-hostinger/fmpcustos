@@ -67,7 +67,18 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
       Number(item.rateios[0].percentual) === 100);
   if (!dono) redirect(`/custos/${id}`);
 
-  const setores = await listarSetores();
+  const [setores, modelos] = await Promise.all([
+    listarSetores(),
+    prisma.modeloRateio.findMany({
+      select: {
+        id: true,
+        nome: true,
+        parcelas: { select: { setorId: true, percentual: true }, orderBy: { percentual: "desc" } },
+      },
+      orderBy: { nome: "asc" },
+      take: 20,
+    }),
+  ]);
   const valorMensal = item.valorMensalNormalizado?.toString() ?? null;
   const proposta = item.propostas[0] ?? null;
 
@@ -132,6 +143,14 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
             valorMensal={valorMensal}
             setores={setores}
             aplicaDireto={global}
+            modelos={modelos.map((m) => ({
+              id: m.id,
+              nome: m.nome,
+              parcelas: m.parcelas.map((p) => ({
+                setorId: p.setorId,
+                percentual: p.percentual.toString(),
+              })),
+            }))}
             inicial={fatiasIniciais(item.rateios, usuario.setorId)}
           />
         </div>

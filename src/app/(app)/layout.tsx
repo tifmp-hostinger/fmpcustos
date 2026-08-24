@@ -61,7 +61,13 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                   </span>
                 </span>
               </div>
-              <form action={sair}>
+              <Link
+              href="/trocar-senha"
+              className="rounded-lg px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] no-underline hover:text-[var(--ink)]"
+            >
+              Trocar senha
+            </Link>
+            <form action={sair}>
                 <button
                   type="submit"
                   className="rounded-lg border border-[var(--rule)] px-3 py-1.5 text-[13px] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)] hover:text-[var(--ink)]"

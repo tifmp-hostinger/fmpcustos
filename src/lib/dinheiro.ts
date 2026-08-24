@@ -52,6 +52,44 @@ export function valorAnualNormalizado(
   return arredondar(new Decimal(valorPeriodo).mul(ocorrencias));
 }
 
+/**
+ * Lê um valor monetário como as pessoas realmente digitam:
+ * "1.234,56", "1234,56", "1234.56", "R$ 1.234,56", "1.234", "1.234.567".
+ *
+ * Devolve a string decimal, ou null quando vazio ou ilegível. Nunca aceita
+ * negativo: custo negativo não existe neste domínio, e um sinal de menos
+ * digitado por engano distorceria os totais de toda a organização.
+ *
+ * Mora aqui, e não junto do `FormData`, porque três lugares precisam da MESMA
+ * leitura: a action que grava, a prévia do equivalente mensal que aparece
+ * enquanto se digita e o importador de planilha. Três cópias da regra viram
+ * três interpretações diferentes de "1.234" na primeira divergência.
+ */
+export function lerValorDigitado(entrada: string): string | null {
+  // Sinal de menos é rejeitado, não removido: apagar o "-" em silêncio
+  // transformaria um estorno digitado por engano num custo positivo.
+  if (entrada.includes("-")) return null;
+  const bruto = entrada.replace(/[^\d.,]/g, "");
+  if (bruto === "") return null;
+
+  let normalizado: string;
+  if (bruto.includes(",")) {
+    // Vírgula presente: ela é o decimal, ponto é milhar. "1.234,56" -> 1234.56
+    normalizado = bruto.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(bruto)) {
+    // Só pontos, em grupos de 3: é milhar no formato brasileiro.
+    // "1.234" é mil duzentos e trinta e quatro — não R$ 1,23.
+    normalizado = bruto.replace(/\./g, "");
+  } else {
+    // "1234.56" (decimal com ponto) ou "1234" (inteiro).
+    normalizado = bruto;
+  }
+
+  const numero = Number(normalizado);
+  if (!Number.isFinite(numero) || numero < 0 || numero >= 1e12) return null;
+  return numero.toFixed(2);
+}
+
 /** Arredonda para 2 casas, meio-para-cima — o padrão contábil brasileiro. */
 export function arredondar(valor: Decimal.Value): Decimal {
   return new Decimal(valor).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);

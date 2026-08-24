@@ -72,9 +72,12 @@ export async function criarUsuario(
   });
 
   revalidatePath("/admin/usuarios");
-  return sucesso(
-    `Usuário criado. Senha temporária de ${nome}: ${senhaTemporaria} — repasse com segurança. Ela será trocada no primeiro acesso.`,
-  );
+  // A senha volta em campo próprio, não embutida na frase: a tela precisa
+  // dela isolada para oferecer o botão de copiar e para mantê-la visível até
+  // o admin confirmar que repassou.
+  return sucesso(`${nome} já pode entrar.`, {
+    senhaTemporaria: { nome, email, senha: senhaTemporaria },
+  });
 }
 
 export async function atualizarUsuario(
@@ -154,8 +157,26 @@ export async function resetarSenha(
   const id = texto(dados, "id");
   if (!id) return falha("Usuário não informado.");
 
+  // Resetar a própria senha derruba a própria sessão no mesmo instante: a
+  // versão de senha muda e o cookie deixa de valer. O admin era mandado para
+  // a tela de login antes de conseguir ler a senha nova — e ficava sem as
+  // duas. Aqui a ação é recusada com o caminho certo escrito na recusa.
+  if (id === admin.id) {
+    return falha(
+      "Para trocar a sua própria senha use “Trocar senha”. Resetar a sua derrubaria a sua sessão antes de você conseguir ler a senha nova.",
+    );
+  }
+
+  // A confirmação é digitada, não clicada. Resetar a senha derruba na hora
+  // toda sessão daquela pessoa (a versão de senha muda) e a deixa sem acesso
+  // até alguém repassar a nova — um clique solto num botão ao lado de "Salvar"
+  // é fácil demais para uma ação com esse efeito.
+  if (texto(dados, "confirmacao") !== "RESETAR") {
+    return falha("Digite RESETAR para confirmar.", undefined, "confirmacao");
+  }
+
   const senhaTemporaria = gerarSenhaTemporaria();
-  let usuario: { colaborador: { nome: string } };
+  let usuario: { colaborador: { nome: string; email: string } };
   try {
     usuario = await prisma.usuario.update({
       where: { id },
@@ -163,7 +184,7 @@ export async function resetarSenha(
         senhaHash: await gerarHashSenha(senhaTemporaria),
         precisaTrocarSenha: true,
       },
-      select: { colaborador: { select: { nome: true } } },
+      select: { colaborador: { select: { nome: true, email: true } } },
     });
   } catch (erro) {
     if ((erro as { code?: string }).code === "P2025") return falha("Usuário não encontrado.");
@@ -181,7 +202,11 @@ export async function resetarSenha(
   });
 
   revalidatePath("/admin/usuarios");
-  return sucesso(
-    `Nova senha temporária de ${usuario.colaborador.nome}: ${senhaTemporaria} — repasse com segurança.`,
-  );
+  return sucesso(`Senha de ${usuario.colaborador.nome} resetada.`, {
+    senhaTemporaria: {
+      nome: usuario.colaborador.nome,
+      email: usuario.colaborador.email,
+      senha: senhaTemporaria,
+    },
+  });
 }

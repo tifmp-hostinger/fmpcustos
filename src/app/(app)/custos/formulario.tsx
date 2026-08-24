@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { salvarCusto } from "./acoes";
 import { useAviso } from "@/components/avisos";
 import { AreaTexto, Campo, Selecao } from "@/components/campos";
-import { formatarBRL, valorMensalNormalizado } from "@/lib/dinheiro";
+import { formatarBRL, lerValorDigitado, valorMensalNormalizado } from "@/lib/dinheiro";
+import { explicar, parecidos } from "@/lib/fornecedores";
 import {
   COMPORTAMENTOS,
   MOEDAS,
@@ -138,14 +139,9 @@ export function FormularioCusto({
             erro={erroDe(resultado, "descricao")}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo
-              rotulo="Fornecedor"
-              nome="fornecedor"
-              obrigatorio
-              valor={v.fornecedor}
-              placeholder="Ex.: Microsoft"
-              dica="Comece a digitar: os já cadastrados aparecem. Um nome novo cria o fornecedor."
-              lista="fornecedores-cadastrados"
+            <CampoFornecedor
+              valorInicial={v.fornecedor ?? ""}
+              fornecedores={fornecedores}
               erro={erroDe(resultado, "fornecedor")}
             />
             <Selecao
@@ -321,7 +317,7 @@ function ValorEPeriodicidade({
   const [valor, setValor] = useState(valorInicial);
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>(periodicidadeInicial);
 
-  const numero = lerNumero(valor);
+  const numero = lerValorDigitado(valor);
   const mensal = numero === null ? null : valorMensalNormalizado(numero, periodicidade);
   const vaiConverter = mensal !== null && periodicidade !== "MENSAL";
 
@@ -370,16 +366,82 @@ function ValorEPeriodicidade({
   );
 }
 
-/** Mesma tolerância de leitura do servidor, para a prévia não discordar dele. */
-function lerNumero(entrada: string): string | null {
-  if (entrada.includes("-")) return null;
-  const bruto = entrada.replace(/[^\d.,]/g, "");
-  if (bruto === "") return null;
-  let normalizado: string;
-  if (bruto.includes(",")) normalizado = bruto.replace(/\./g, "").replace(",", ".");
-  else if (/^\d{1,3}(\.\d{3})+$/.test(bruto)) normalizado = bruto.replace(/\./g, "");
-  else normalizado = bruto;
-  const numero = Number(normalizado);
-  if (!Number.isFinite(numero) || numero < 0 || numero >= 1e12) return null;
-  return numero.toFixed(2);
+/**
+ * Campo de fornecedor com detecção de duplicata.
+ *
+ * O aviso nasce no `blur`, não a cada tecla: "Microsof" a caminho de
+ * "Microsoft" não é engano, é digitação em andamento, e acusar no meio dela
+ * ensina a pessoa a ignorar avisos. Depois que o campo errou uma vez, ele
+ * revalida a cada tecla — para o aviso sumir no instante em que for corrigido.
+ *
+ * Adotar a sugestão é um clique. Ignorá-la também é permitido e não custa
+ * nada: "Microsoft" e "Microsoft Brasil" podem mesmo ser dois contratos.
+ */
+function CampoFornecedor({
+  valorInicial,
+  fornecedores,
+  erro,
+}: {
+  valorInicial: string;
+  fornecedores: string[];
+  erro?: string;
+}) {
+  const [valor, setValor] = useState(valorInicial);
+  const [conferir, setConferir] = useState(false);
+  const [ignorados, setIgnorados] = useState<string[]>([]);
+
+  const candidatos = conferir
+    ? parecidos(valor, fornecedores).filter((c) => !ignorados.includes(c.nome))
+    : [];
+
+  return (
+    <div>
+      <Campo
+        rotulo="Fornecedor"
+        nome="fornecedor"
+        obrigatorio
+        valor={valor}
+        onChange={(e) => setValor(e.target.value)}
+        onBlur={() => setConferir(true)}
+        placeholder="Ex.: Microsoft"
+        dica="Comece a digitar: os já cadastrados aparecem. Um nome novo cria o fornecedor."
+        lista="fornecedores-cadastrados"
+        erro={erro}
+      />
+
+      {candidatos.length > 0 && (
+        <div
+          role="status"
+          className="mt-1.5 rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2.5"
+        >
+          {candidatos.map((c) => (
+            <p key={c.nome} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+              <span className="text-[var(--ink-2)]">{explicar(c, valor)}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setValor(c.nome);
+                  setIgnorados([]);
+                }}
+                className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                Usar “{c.nome}”
+              </button>
+              <button
+                type="button"
+                onClick={() => setIgnorados((atuais) => [...atuais, c.nome])}
+                className="text-[var(--ink-3)] underline-offset-2 hover:underline"
+              >
+                é outro fornecedor
+              </button>
+            </p>
+          ))}
+          <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">
+            Fornecedor repetido com nomes diferentes divide o total dele em dois no gráfico de
+            concentração — e a negociação deixa de aparecer onde ela vale.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }

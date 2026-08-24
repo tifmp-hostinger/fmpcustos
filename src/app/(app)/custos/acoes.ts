@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { valorMensalNormalizado } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { NATUREZAS as OPCOES_NATUREZA } from "@/lib/opcoes";
+import { normalizar } from "@/lib/fornecedores";
 import {
   dataOpcional,
   dinheiro,
@@ -35,18 +36,34 @@ async function setorDoLancamento(
   return setorDoUsuario;
 }
 
-/** Reaproveita o fornecedor pelo nome, ou cria — sem obrigar cadastro prévio. */
+/**
+ * Reaproveita o fornecedor pelo nome, ou cria — sem obrigar cadastro prévio.
+ *
+ * Duas passadas antes de criar: nome igual ignorando caixa, e nome igual
+ * depois de normalizado (sem acento, sem pontuação, sem LTDA/S.A.). A segunda
+ * é a rede embaixo do aviso que o formulário dá: importação, requisição
+ * montada à mão e um espaço sobrando no fim não passam por tela nenhuma, e
+ * cada duplicata silenciosa corrói o gráfico de concentração por fornecedor.
+ *
+ * O que não se faz aqui é fundir nomes só parecidos. "Microsoft" e "Microsoft
+ * Brasil" podem ser dois contratos distintos; juntá-los sozinho seria estragar
+ * na direção oposta. A semelhança vira aviso na tela, nunca decisão do servidor.
+ */
 async function acharOuCriarFornecedor(nome: string): Promise<string> {
-  const existente = await prisma.fornecedor.findFirst({
+  const exato = await prisma.fornecedor.findFirst({
     where: { nome: { equals: nome, mode: "insensitive" } },
     select: { id: true },
   });
-  if (existente) return existente.id;
+  if (exato) return exato.id;
 
-  const criado = await prisma.fornecedor.create({
-    data: { nome },
-    select: { id: true },
-  });
+  const alvo = normalizar(nome);
+  if (alvo) {
+    const candidatos = await prisma.fornecedor.findMany({ select: { id: true, nome: true } });
+    const mesmo = candidatos.find((f) => normalizar(f.nome) === alvo);
+    if (mesmo) return mesmo.id;
+  }
+
+  const criado = await prisma.fornecedor.create({ data: { nome }, select: { id: true } });
   return criado.id;
 }
 
