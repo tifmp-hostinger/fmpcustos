@@ -60,7 +60,8 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
         : Promise.resolve(null),
     ]);
 
-  const totalPendencias = pendencias.semValor + pendencias.semVigencia + pendencias.semCategoria;
+  const totalPendencias =
+    pendencias.semValor + pendencias.semVigencia + pendencias.semCategoria + pendencias.semCambio;
   const participacao =
     totalCorporativo && totalCorporativo.greaterThan(0)
       ? mensal.div(totalCorporativo).mul(100)
@@ -137,6 +138,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
             {[
               { n: pendencias.semValor, rotulo: "sem valor", falta: "valor" },
               { n: pendencias.semVigencia, rotulo: "sem data de renovação", falta: "data" },
+              { n: pendencias.semCambio, rotulo: "sem cotação", falta: "cambio" },
               { n: pendencias.semCategoria, rotulo: "sem categoria", falta: "categoria" },
             ]
               .filter((x) => x.n > 0)

@@ -1,4 +1,4 @@
-import { lerValorDigitado } from "@/lib/dinheiro";
+import { lerCambioDigitado, lerValorDigitado } from "@/lib/dinheiro";
 
 /**
  * Resultado padrão de uma server action de formulário.
@@ -103,6 +103,11 @@ export function textoOpcional(dados: FormData, campo: string): string | null {
 /** Lê um campo monetário do FormData. A regra de leitura mora em `dinheiro.ts`. */
 export function dinheiro(dados: FormData, campo: string): string | null {
   return lerValorDigitado(texto(dados, campo));
+}
+
+/** Lê uma taxa de câmbio. Regra própria: seis casas e sem separador de milhar. */
+export function cambio(dados: FormData, campo: string): string | null {
+  return lerCambioDigitado(texto(dados, campo));
 }
 
 export function inteiroOpcional(dados: FormData, campo: string): number | null {

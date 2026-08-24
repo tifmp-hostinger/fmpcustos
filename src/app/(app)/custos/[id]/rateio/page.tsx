@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
-import { escopoDeItens, listarSetores } from "@/lib/consultas";
+import { comEscopo, listarSetores } from "@/lib/consultas";
 import { formatarBRL } from "@/lib/dinheiro";
 import { fatiasIniciais } from "@/lib/rateio";
 import { EditorDeRateio } from "./formulario";
@@ -24,7 +24,7 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
   const usuario = await exigirSessao();
 
   const item = await prisma.itemCusto.findFirst({
-    where: { id, ...escopoDeItens(usuario, "fora", true) },
+    where: comEscopo(usuario, [{ id }], "fora", true),
     select: {
       id: true,
       descricao: true,

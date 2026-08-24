@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { SEMENTE } from "./semente.mjs";
 
 /**
  * Teste de ponta a ponta da Etapa 6 — memória e prevenção.
@@ -67,7 +68,7 @@ ok(
   (await p.locator("form:has(input[name=\"fornecedor\"])").innerText()).includes("engano de digitação"),
 );
 
-await p.fill('input[name="fornecedor"]', "Zoom Video");
+await p.fill('input[name="fornecedor"]', "Kaltura Media");
 await p.locator('input[name="descricao"]').click();
 await p.waitForTimeout(300);
 ok(
@@ -134,7 +135,11 @@ ok(
   p.url().includes("f=analise"),
 );
 const depois = await contarCustos(p);
-ok("os três aparecem na lista de custos", depois === 29, `${depois} custos no total (25 da carga + 1 do teste + 3 colados)`);
+ok(
+  "os três aparecem na lista de custos",
+  depois === SEMENTE.itens + 4,
+  `${depois} custos no total (${SEMENTE.itens} da carga + 1 do teste + 3 colados)`,
+);
 
 console.log("\n═══ MODELO DE RATEIO ═══");
 await p.goto(`${URL}/custos?q=Dynamics&f=todos`);

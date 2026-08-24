@@ -6,7 +6,14 @@ import { useRouter } from "next/navigation";
 import { salvarCusto } from "./acoes";
 import { useAviso } from "@/components/avisos";
 import { AreaTexto, Campo, Selecao } from "@/components/campos";
-import { formatarBRL, lerValorDigitado, valorMensalNormalizado } from "@/lib/dinheiro";
+import {
+  formatarBRL,
+  formatarMoeda,
+  lerCambioDigitado,
+  lerValorDigitado,
+  valorMensalEmReais,
+  valorMensalNaMoeda,
+} from "@/lib/dinheiro";
 import { explicar, parecidos } from "@/lib/fornecedores";
 import {
   COMPORTAMENTOS,
@@ -16,7 +23,7 @@ import {
   ROTULOS_PERIODICIDADE,
   STATUS_ITEM,
 } from "@/lib/opcoes";
-import type { Periodicidade } from "@/generated/prisma/enums";
+import type { Moeda, Periodicidade } from "@/generated/prisma/enums";
 import type { Resultado } from "@/lib/acoes";
 
 export type ValoresCusto = {
@@ -28,6 +35,8 @@ export type ValoresCusto = {
   periodicidade?: string;
   comportamento?: string;
   moeda?: string;
+  cambio?: string | null;
+  cambioEm?: string | null;
   status?: string;
   valorPeriodo?: string | null;
   quantidade?: number | null;
@@ -43,6 +52,7 @@ export function FormularioCusto({
   categorias,
   setores,
   fornecedores,
+  cotacoes,
   podeEscolherSetor,
   setorFixo,
   /** Para onde voltar depois de salvar. Padrão: a lista, de onde quase sempre se veio. */
@@ -53,6 +63,8 @@ export function FormularioCusto({
   setores: Array<{ valor: string; rotulo: string }>;
   /** Fornecedores já cadastrados, para não nascer "Microsoft" e "Microsoft Brasil". */
   fornecedores: string[];
+  /** Cotação mais recente por moeda — sugestão, não imposição. */
+  cotacoes: Cotacoes;
   podeEscolherSetor: boolean;
   setorFixo: string | null;
   voltarPara?: string;
@@ -60,10 +72,6 @@ export function FormularioCusto({
   const avisar = useAviso();
   const router = useRouter();
 
-  // React 19 limpa o formulário depois que a action termina. Num cadastro de
-  // catorze campos, isso significa que um erro de validação apagaria tudo o que
-  // já tinha sido preenchido. A chave remonta os campos com o que a pessoa
-  // digitou, devolvido pela própria action.
   const [chave, setChave] = useState(0);
   const continuar = useRef(false);
   const formulario = useRef<HTMLFormElement>(null);
@@ -78,7 +86,6 @@ export function FormularioCusto({
   const [resultado, acao, enviando] = useActionState<Resultado | null, FormData>(
     async (anterior, dados) => {
       const r = await salvarCusto(anterior, dados);
-      setChave((n) => n + 1);
 
       if (!r.ok) {
         avisar({ mensagem: r.erro, tom: "erro" });
@@ -108,6 +115,30 @@ export function FormularioCusto({
     },
     null,
   );
+
+  /**
+   * React 19 limpa o formulário depois que a action termina. Num cadastro de
+   * catorze campos, isso significa que um erro de validação apagaria tudo o que
+   * já tinha sido preenchido. A chave remonta os campos com o que a pessoa
+   * digitou, devolvido pela própria action.
+   *
+   * A chave muda AQUI, na renderização, e não dentro da action. Foi assim que o
+   * mecanismo nasceu e assim ele não funcionava: `setChave` depois do `await`
+   * produz uma renderização em que a chave já é nova e `resultado` ainda é o
+   * anterior. Os campos remontavam com os valores INICIAIS — vazios — e a
+   * renderização seguinte, já com o resultado em mãos, não remontava mais nada
+   * porque a chave não tinha mudado de novo. O efeito era exatamente o que a
+   * chave existia para evitar: errar o fornecedor apagava os catorze campos.
+   *
+   * Comparar o resultado durante a renderização é o padrão do React para
+   * "derivar de algo que mudou": os dois valores ficam consistentes na mesma
+   * renderização comprometida.
+   */
+  const [ultimoResultado, setUltimoResultado] = useState(resultado);
+  if (ultimoResultado !== resultado) {
+    setUltimoResultado(resultado);
+    setChave((n) => n + 1);
+  }
 
   const digitados = resultado && !resultado.ok ? (resultado.valores ?? {}) : {};
   const v: ValoresCusto = { ...valores, ...digitados };
@@ -173,20 +204,22 @@ export function FormularioCusto({
           <legend className="mb-1 text-sm font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
             Quanto custa
           </legend>
-          <ValorEPeriodicidade
+          <Quanto
             valorInicial={v.valorPeriodo ?? ""}
             periodicidadeInicial={(v.periodicidade as Periodicidade) ?? "MENSAL"}
+            moedaInicial={(v.moeda as Moeda) ?? "BRL"}
+            cambioInicial={v.cambio ?? ""}
+            cambioEmInicial={v.cambioEm ?? ""}
+            cotacoes={cotacoes}
             erro={erroDe(resultado, "valorPeriodo")}
+            erroCambio={erroDe(resultado, "cambio")}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Selecao rotulo="Moeda" nome="moeda" opcoes={MOEDAS} valor={v.moeda ?? "BRL"} />
-            <Selecao
-              rotulo="Situação"
-              nome="status"
-              opcoes={STATUS_ITEM}
-              valor={v.status ?? "ATIVO"}
-            />
-          </div>
+          <Selecao
+            rotulo="Situação"
+            nome="status"
+            opcoes={STATUS_ITEM}
+            valor={v.status ?? "ATIVO"}
+          />
         </fieldset>
 
         {/* Divulgação progressiva: três campos decidem o cadastro, os outros
@@ -293,37 +326,89 @@ function erroDe(resultado: Resultado | null, campo: string): string | undefined 
   return resultado && !resultado.ok && resultado.campo === campo ? resultado.erro : undefined;
 }
 
+export type Cotacoes = Record<string, { taxa: string; data: string; fonte: string | null }>;
+
 /**
- * Valor e periodicidade juntos, com o equivalente mensal ao vivo.
+ * Valor, moeda, periodicidade e câmbio juntos, com o equivalente mensal ao vivo.
+ *
+ * Os quatro campos moram no mesmo componente porque respondem a UMA pergunta —
+ * quanto isso custa por mês, em real — e porque cada um deles muda a resposta
+ * dos outros três. A moeda ficava do outro lado da tela, ao lado da situação,
+ * e essa distância era metade do defeito: escolher dólar não mudava nada
+ * visível, então ninguém percebia que nada mudava mesmo.
  *
  * O problema nº 1 do diagnóstico da planilha era somar mensal com anual na
- * mesma coluna e chamar o resultado de total mensal. Mostrar "R$ 1.490,00 anual
- * = R$ 124,17/mês" no momento da digitação é o que impede o erro de nascer,
+ * mesma coluna e chamar o resultado de total mensal. Mostrar "US$ 500,00 anual
+ * = R$ 226,34/mês" no momento da digitação é o que impede o erro de nascer,
  * em vez de corrigi-lo seis meses depois.
  *
  * Sem máscara durante a digitação: máscara reposiciona o cursor e briga com
  * quem cola da planilha. A leitura é tolerante — "1.234,56", "1234.56" e
  * "R$ 1.234,56" chegam todos ao mesmo número — e a formatação acontece no blur.
  */
-function ValorEPeriodicidade({
+function Quanto({
   valorInicial,
   periodicidadeInicial,
+  moedaInicial,
+  cambioInicial,
+  cambioEmInicial,
+  cotacoes,
   erro,
+  erroCambio,
 }: {
   valorInicial: string;
   periodicidadeInicial: Periodicidade;
+  moedaInicial: Moeda;
+  cambioInicial: string;
+  cambioEmInicial: string;
+  cotacoes: Cotacoes;
   erro?: string;
+  erroCambio?: string;
 }) {
   const [valor, setValor] = useState(valorInicial);
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>(periodicidadeInicial);
+  const [moeda, setMoeda] = useState<Moeda>(moedaInicial);
+  const [cambio, setCambio] = useState(cambioInicial);
+  // A data acompanha a taxa: mudar uma sem a outra produziria "convertido a
+  // 5,90 em 12/03", uma procedência falsa para um número digitado hoje.
+  const [cambioEm, setCambioEm] = useState(cambioEmInicial);
 
   const numero = lerValorDigitado(valor);
-  const mensal = numero === null ? null : valorMensalNormalizado(numero, periodicidade);
-  const vaiConverter = mensal !== null && periodicidade !== "MENSAL";
+  const taxa = moeda === "BRL" ? null : lerCambioDigitado(cambio);
+  const mensalNaMoeda = numero === null ? null : valorMensalNaMoeda(numero, periodicidade);
+  const mensalEmReais = valorMensalEmReais(numero, periodicidade, moeda, taxa);
+
+  const estrangeira = moeda !== "BRL";
+  const sugestao = cotacoes[moeda];
+  const semEquivalente = numero !== null && mensalNaMoeda === null;
+
+  /**
+   * Trocar a moeda já traz a cotação junto.
+   *
+   * A sugestão é aplicada aqui, no evento, e não num efeito que observa a
+   * moeda: no efeito ela sobrescreveria a taxa que a pessoa acabou de digitar
+   * toda vez que o componente re-renderizasse. Aqui ela chega uma vez, no
+   * instante em que a pergunta "qual cotação?" passa a existir — e o campo
+   * continua editável, porque a fatura pode ter fechado a outro câmbio.
+   */
+  function trocarMoeda(nova: Moeda) {
+    setMoeda(nova);
+    if (nova === "BRL") {
+      setCambio("");
+      setCambioEm("");
+      return;
+    }
+    if (cambio.trim() !== "") return;
+    const cotacao = cotacoes[nova];
+    if (cotacao) {
+      setCambio(cotacao.taxa.replace(".", ","));
+      setCambioEm(cotacao.data);
+    }
+  }
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr]">
         <Campo
           rotulo="Valor por período"
           nome="valorPeriodo"
@@ -335,6 +420,13 @@ function ValorEPeriodicidade({
           erro={erro}
         />
         <Selecao
+          rotulo="Moeda"
+          nome="moeda"
+          opcoes={MOEDAS}
+          valor={moeda}
+          onChange={(e) => trocarMoeda(e.target.value as Moeda)}
+        />
+        <Selecao
           rotulo="Periodicidade"
           nome="periodicidade"
           opcoes={PERIODICIDADES}
@@ -344,18 +436,81 @@ function ValorEPeriodicidade({
         />
       </div>
 
+      {estrangeira && (
+        <div className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Campo
+              rotulo={`Cotação — quanto vale 1 ${moeda === "USD" ? "dólar" : "euro"}`}
+              nome="cambio"
+              obrigatorio
+              valor={cambio}
+              onChange={(e) => {
+                setCambio(e.target.value);
+                // Taxa digitada à mão é uma afirmação de hoje. A data da
+                // cotação sugerida deixa de valer no instante em que o número
+                // deixa de ser o dela.
+                setCambioEm("");
+              }}
+              placeholder="5,4321"
+              inputMode="decimal"
+              erro={erroCambio}
+            />
+            <Campo
+              rotulo="Data da cotação"
+              nome="cambioEm"
+              tipo="date"
+              valor={cambioEm}
+              onChange={(e) => setCambioEm(e.target.value)}
+              dica="Em branco: vale hoje."
+            />
+          </div>
+          <p className="mt-2.5 text-[12.5px] text-[var(--ink-3)]">
+            {sugestao ? (
+              <>
+                Cotação registrada: <strong>{sugestao.taxa.replace(".", ",")}</strong> em{" "}
+                {sugestao.data.split("-").reverse().join("/")}
+                {sugestao.fonte ? ` (${sugestao.fonte})` : ""}. Se a fatura fechou a outro câmbio,
+                use o da fatura — é ele que a FMP pagou.
+              </>
+            ) : (
+              <>
+                Nenhuma cotação de {moeda} registrada ainda. Informe a taxa deste custo — um
+                administrador pode registrar a cotação de referência em Administração.
+              </>
+            )}
+          </p>
+          <p className="mt-1.5 text-[12.5px] text-[var(--ink-3)]">
+            A taxa fica gravada neste custo. O total do mês passado não muda quando o{" "}
+            {moeda === "USD" ? "dólar" : "euro"} mexer.
+          </p>
+        </div>
+      )}
+
       <p
         aria-live="polite"
+        data-previa="mensal"
         className="mt-2 min-h-[18px] text-[12.5px] text-[var(--ink-3)] tabular-nums"
       >
-        {vaiConverter && (
+        {mensalEmReais !== null && (estrangeira || periodicidade !== "MENSAL") && (
           <>
-            {formatarBRL(numero)} {ROTULOS_PERIODICIDADE[periodicidade].toLowerCase()} ={" "}
-            <strong className="text-[var(--ink-2)]">{formatarBRL(mensal)}/mês</strong> — é este
-            número que entra nas comparações.
+            {formatarMoeda(numero, moeda)} {ROTULOS_PERIODICIDADE[periodicidade].toLowerCase()} ={" "}
+            <strong className="text-[var(--ink-2)]">{formatarBRL(mensalEmReais)}/mês</strong>
+            {estrangeira && mensalNaMoeda !== null && periodicidade !== "MENSAL" && (
+              <> ({formatarMoeda(mensalNaMoeda, moeda)}/mês)</>
+            )}{" "}
+            — é este número que entra nas comparações.
           </>
         )}
-        {mensal === null && numero !== null && (
+        {/* O aviso mais importante da tela: sem taxa o custo existe e não é
+            contado, e descobrir isso pelo total errado três meses depois é o
+            que este sistema existe para evitar. */}
+        {estrangeira && taxa === null && numero !== null && !semEquivalente && (
+          <span className="text-[var(--accent)]">
+            Sem a cotação, {formatarMoeda(numero, moeda)} não vira real e este custo fica de fora de
+            todos os totais.
+          </span>
+        )}
+        {semEquivalente && (
           <>
             {ROTULOS_PERIODICIDADE[periodicidade]} não tem equivalente mensal fixo. O item entra
             pelo que for lançado a cada competência.

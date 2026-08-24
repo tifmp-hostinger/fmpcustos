@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { formatarBRL, valorMensalNormalizado } from "@/lib/dinheiro";
+import { formatarBRL, valorMensalEmReais } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro, type UsuarioSessao } from "@/lib/sessao";
 import { ROTULOS_STATUS } from "@/lib/opcoes";
 import {
+  cambio,
   dataOpcional,
   dinheiro,
   falha,
@@ -238,6 +239,91 @@ export async function marcarSemPrazo(dados: FormData): Promise<Resultado> {
   });
 }
 
+/**
+ * Informa a cotação de um custo em moeda estrangeira.
+ *
+ * É o atalho que tira o item do limbo: até existir uma taxa, o valor está
+ * preenchido na tela e o custo não entra em soma nenhuma. Informar a taxa
+ * recalcula o mensal em real na mesma transação — não existe um instante em que
+ * o item tenha câmbio e continue fora do total.
+ *
+ * Não muda a moeda. Trocar dólar por euro é reescrever o que o contrato diz, e
+ * isso é edição, com histórico e leitura do valor inteiro.
+ */
+export async function definirCambio(dados: FormData): Promise<Resultado> {
+  const usuario = await exigirSessao();
+  const id = texto(dados, "id");
+  if (!id) return falha("Custo não informado.");
+
+  const bruto = texto(dados, "cambio");
+  const taxa = cambio(dados, "cambio");
+  if (taxa === null) {
+    return falha(
+      bruto
+        ? `Não consegui ler «${bruto}» como cotação. Escreva no formato 5,4321.`
+        : "Informe a cotação.",
+      undefined,
+      "cambio",
+    );
+  }
+
+  const permissao = await itemQuePosseMexer(usuario, id);
+  if (!permissao.ok) return falha(permissao.erro);
+
+  const antes = await prisma.itemCusto.findUnique({
+    where: { id },
+    select: {
+      moeda: true,
+      cambio: true,
+      cambioEm: true,
+      valorPeriodo: true,
+      periodicidade: true,
+    },
+  });
+  if (!antes) return falha("Este custo não existe mais.");
+  if (antes.moeda === "BRL") {
+    return falha("Este custo já está em real — não há o que converter.");
+  }
+
+  const quando = dataOpcional(dados, "cambioEm") ?? hojeUTC();
+  const mensal = valorMensalEmReais(antes.valorPeriodo, antes.periodicidade, antes.moeda, taxa);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.itemCusto.update({
+      where: { id },
+      data: {
+        cambio: taxa,
+        cambioEm: quando,
+        valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+      },
+    });
+    await registrar(
+      usuario.id,
+      id,
+      { cambio: paraTexto(antes.cambio), cambioEm: paraTexto(antes.cambioEm) },
+      { cambio: taxa, cambioEm: quando.toISOString().slice(0, 10) },
+    );
+  });
+
+  atualizarListas(id);
+
+  return sucesso(
+    mensal
+      ? `${permissao.item.descricao}: ${formatarBRL(mensal)}/mês.`
+      : `Cotação de ${permissao.item.descricao} registrada.`,
+    {
+      destaqueId: id,
+      detalhe: mensal ? "Agora entra nos totais." : undefined,
+    },
+  );
+}
+
+function hojeUTC(): Date {
+  const hoje = new Date();
+  hoje.setUTCHours(0, 0, 0, 0);
+  return hoje;
+}
+
 export async function alterarValor(dados: FormData): Promise<Resultado> {
   const usuario = await exigirSessao();
   const id = texto(dados, "id");
@@ -258,11 +344,20 @@ export async function alterarValor(dados: FormData): Promise<Resultado> {
 
   const antes = await prisma.itemCusto.findUnique({
     where: { id },
-    select: { valorPeriodo: true, periodicidade: true, status: true },
+    select: {
+      valorPeriodo: true,
+      periodicidade: true,
+      status: true,
+      moeda: true,
+      cambio: true,
+    },
   });
   if (!antes) return falha("Este custo não existe mais.");
 
-  const mensal = valorMensalNormalizado(valorPeriodo, antes.periodicidade);
+  // O atalho da lista muda o valor, nunca a moeda: a conversão usa a taxa que o
+  // item já tem. Um item em dólar sem câmbio continua fora do total — corrigir
+  // isso é edição, não atalho, porque exige decidir uma cotação.
+  const mensal = valorMensalEmReais(valorPeriodo, antes.periodicidade, antes.moeda, antes.cambio);
 
   await prisma.$transaction(async (tx) => {
     await tx.itemCusto.update({
@@ -409,6 +504,8 @@ export async function reverterCampo(dados: FormData): Promise<Resultado> {
       status: true,
       dataFim: true,
       valorPeriodo: true,
+      moeda: true,
+      cambio: true,
       semPrazoDeterminado: true,
     },
   });
@@ -432,7 +529,7 @@ export async function reverterCampo(dados: FormData): Promise<Resultado> {
         // O valor mensal é sempre derivado, nunca restaurado de um payload:
         // guardá-lo no desfazer permitiria voltar a um par valor/mensal que
         // não fecha entre si.
-        const mensal = valorMensalNormalizado(valor, atual.periodicidade);
+        const mensal = valorMensalEmReais(valor, atual.periodicidade, atual.moeda, atual.cambio);
         data.valorMensalNormalizado = mensal ? mensal.toFixed(2) : null;
         break;
       }
@@ -485,6 +582,8 @@ export async function duplicarItem(dados: FormData): Promise<Resultado> {
       unidade: true,
       valorUnitario: true,
       moeda: true,
+      cambio: true,
+      cambioEm: true,
       periodicidade: true,
       valorPeriodo: true,
       valorMensalNormalizado: true,

@@ -124,7 +124,9 @@ export function Colador({
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">
               {leitura.cabecalho
                 ? "Detectado pelo cabeçalho da planilha. Corrija se alguma coluna caiu no lugar errado."
-                : "Sem cabeçalho na colagem — escolha a que cada coluna corresponde."}
+                : "Sem cabeçalho na colagem — escolha a que cada coluna corresponde."}{" "}
+              Tudo entra em real: custos em dólar ou euro se cadastram um a um, porque cada um
+              carrega a sua própria cotação.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {CAMPOS.map((campo) => (

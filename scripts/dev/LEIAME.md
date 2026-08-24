@@ -6,9 +6,16 @@ descartável, antes de subir qualquer coisa para o EasyPanel.
 ## `semear-demo.ts` — base de demonstração
 
 Apaga tudo e recria 13 setores, 5 usuários (um de cada perfil), 4 categorias e
-25 custos representativos — mensais, anuais, trimestrais, por consumo, com e sem
-data de renovação, alguns já com lançamentos de competência. É a base que o
-teste de ponta a ponta espera encontrar.
+27 custos representativos — mensais, anuais, trimestrais, por consumo, com e sem
+data de renovação, dois em dólar (um convertido, um sem cotação de propósito) e
+alguns já com lançamentos de competência. É a base que o teste de ponta a ponta
+espera encontrar.
+
+Os números que as suítes conferem moram em `semente.mjs`, num lugar só. Mudou a
+carga, muda ali — e não em quatro arquivos, que é como uma asserção frouxa
+("menos que o total") acaba sendo escrita para não precisar mexer, e como um
+gestor de setor enxergando a lista inteira da FMP passou por uma revisão sem ser
+visto.
 
 ```bash
 DATABASE_URL="postgresql://…" npm run dev:semear
@@ -75,11 +82,24 @@ E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-lote
 > existem para quem pode — e um teste que conta `td:nth-child` quebra a cada
 > ajuste sem que nada esteja errado no sistema.
 
+## `e2e-moeda.mjs` — moeda no cálculo
+
+Cobre a pergunta que originou a mudança: um custo em dólar entra no total pelo
+real ou pelo número da fatura? Verifica a conversão na lista, a procedência da
+taxa, o custo sem cotação aparecendo como pendência em vez de sumir, a recusa
+do cadastro sem taxa legível, o formulário que preserva o que foi digitado
+depois de uma recusa, a conversão em lote pela Administração e as colunas de
+moeda no CSV exportado.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-moeda
+```
+
 ## Rodar tudo de uma vez
 
 ```bash
-npm run dev:e2e-tudo    # as quatro suítes de navegador, em sequência
-npm run testar          # as três suítes de unidade
+npm run dev:e2e-tudo    # as cinco suítes de navegador, em sequência
+npm run testar          # as quatro suítes de unidade
 ```
 
 Cada suíte espera a base recém-semeada. Entre uma e outra, rode
@@ -88,10 +108,11 @@ Cada suíte espera a base recém-semeada. Entre uma e outra, rode
 ## Testes de unidade — sem banco, sem navegador
 
 ```bash
-npm run testar             # roda os três de uma vez
+npm run testar             # roda os quatro de uma vez
 npm run testar:rateio      # aritmética do rateio
 npm run testar:fornecedores # identidade de fornecedor
 npm run testar:planilha    # leitura da colagem
+npm run testar:dinheiro    # periodicidade, moeda e câmbio
 ```
 
 ## `testar-rateio.ts` — aritmética do rateio

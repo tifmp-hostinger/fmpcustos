@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { valorMensalNormalizado } from "@/lib/dinheiro";
+import { precisaDeCambio, valorMensalEmReais } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { NATUREZAS as OPCOES_NATUREZA } from "@/lib/opcoes";
 import { normalizar } from "@/lib/fornecedores";
 import {
+  cambio,
   dataOpcional,
   dinheiro,
   falha,
@@ -75,6 +76,7 @@ type Campos = {
   periodicidade: Periodicidade;
   comportamento: ComportamentoCusto;
   moeda: Moeda;
+  cambio: string | null;
   status: StatusItem;
   valorPeriodo: string | null;
   quantidade: number | null;
@@ -142,6 +144,9 @@ function lerCampos(dados: FormData): Campos | null {
     periodicidade,
     comportamento,
     moeda,
+    // Câmbio só existe quando a moeda é estrangeira. Guardar uma taxa junto de
+    // um valor em real deixaria o item com duas verdades sobre o mesmo número.
+    cambio: moeda === "BRL" ? null : cambio(dados, "cambio"),
     status,
     valorPeriodo: dinheiro(dados, "valorPeriodo"),
     quantidade: inteiroOpcional(dados, "quantidade"),
@@ -157,9 +162,25 @@ function lerCampos(dados: FormData): Campos | null {
  * Além da frase, devolve QUAL campo recusou: o formulário foca nele em vez de
  * deixar a pessoa caçar o erro entre catorze campos.
  */
-function validar(campos: Campos, valorDigitado: string): { erro: string; campo: string } | null {
+function validar(
+  campos: Campos,
+  valorDigitado: string,
+  cambioDigitado: string,
+): { erro: string; campo: string } | null {
   if (!campos.descricao) return { erro: "Descreva o custo.", campo: "descricao" };
   if (!campos.fornecedor) return { erro: "Informe o fornecedor.", campo: "fornecedor" };
+
+  // Recusar aqui é o que impede US$ 500 de entrar no total como R$ 500. O item
+  // seria salvo do mesmo jeito — só que fora de toda soma, e ninguém cadastra
+  // um custo para que ele não seja contado.
+  if (precisaDeCambio(campos.moeda, campos.cambio)) {
+    return {
+      erro: cambioDigitado
+        ? `Não consegui ler «${cambioDigitado}» como cotação. Escreva no formato 5,4321.`
+        : `Informe a cotação do ${campos.moeda === "USD" ? "dólar" : "euro"} usada neste custo — sem ela o valor não entra nos totais em real.`,
+      campo: "cambio",
+    };
+  }
 
   if (campos.valorPeriodo === null && campos.status !== "PENDENTE_APURACAO") {
     // Campo em branco e campo ilegível são erros diferentes, e dizer "informe o
@@ -177,6 +198,19 @@ function validar(campos: Campos, valorDigitado: string): { erro: string; campo: 
   return null;
 }
 
+/**
+ * A data da cotação vem escondida do formulário, preenchida pela própria tela
+ * quando ela sugere a taxa. Se a pessoa digitou a taxa à mão, a data é hoje —
+ * é o que ela de fato afirmou ao digitar.
+ */
+function dataDaCotacao(dados: FormData): Date {
+  const informada = dataOpcional(dados, "cambioEm");
+  if (informada) return informada;
+  const hoje = new Date();
+  hoje.setUTCHours(0, 0, 0, 0);
+  return hoje;
+}
+
 export async function salvarCusto(
   _anterior: Resultado | null,
   dados: FormData,
@@ -189,7 +223,7 @@ export async function salvarCusto(
   const campos = lerCampos(dados);
   if (!campos) return falha("Um dos campos de seleção veio com valor inválido.", digitado);
 
-  const problema = validar(campos, texto(dados, "valorPeriodo"));
+  const problema = validar(campos, texto(dados, "valorPeriodo"), texto(dados, "cambio"));
   if (problema) return falha(problema.erro, digitado, problema.campo);
 
   const setorId = await setorDoLancamento(usuario.papel, usuario.setorId, campos.setorId);
@@ -217,7 +251,12 @@ export async function salvarCusto(
   }
 
   const fornecedorId = await acharOuCriarFornecedor(campos.fornecedor);
-  const mensal = valorMensalNormalizado(campos.valorPeriodo, campos.periodicidade);
+  const mensal = valorMensalEmReais(
+    campos.valorPeriodo,
+    campos.periodicidade,
+    campos.moeda,
+    campos.cambio,
+  );
 
   const comuns = {
     descricao: campos.descricao,
@@ -227,6 +266,10 @@ export async function salvarCusto(
     periodicidade: campos.periodicidade,
     comportamento: campos.comportamento,
     moeda: campos.moeda,
+    cambio: campos.cambio,
+    // A data da cotação é o que permite dizer "convertido a 5,4321 de 22/08"
+    // em vez de mostrar um real sem procedência. Quando a taxa sai, ela sai junto.
+    cambioEm: campos.cambio ? dataDaCotacao(dados) : null,
     status: campos.status,
     valorPeriodo: campos.valorPeriodo,
     quantidade: campos.quantidade,

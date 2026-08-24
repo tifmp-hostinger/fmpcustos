@@ -13,11 +13,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
     { href: "/custos", rotulo: "Custos", icone: "custos" },
   ];
   if (usuario.papel === "ADMIN") {
-    itens.push({
-      href: "/admin/usuarios",
-      rotulo: "Usuários",
-      icone: "usuarios",
-    });
+    itens.push({ href: "/admin", rotulo: "Administração", icone: "admin" });
   }
 
   const iniciais = usuario.nome

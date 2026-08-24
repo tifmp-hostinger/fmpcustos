@@ -46,6 +46,10 @@ export const FALTAS = [
   { chave: "data", rotulo: "sem data de renovação" },
   { chave: "categoria", rotulo: "sem categoria" },
   { chave: "fornecedor", rotulo: "sem fornecedor" },
+  // Custo em moeda estrangeira sem cotação existe, tem valor na tela e não é
+  // contado em lugar nenhum. É a pendência mais cara de todas justamente porque
+  // não parece uma: a linha está preenchida.
+  { chave: "cambio", rotulo: "sem cotação" },
 ] as const;
 
 export const ORDENS = [

@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconeCustos, IconePainel, IconeUsuarios } from "./icones";
+import { IconeAdmin, IconeCustos, IconePainel } from "./icones";
 
 const ICONES = {
   painel: IconePainel,
   custos: IconeCustos,
-  usuarios: IconeUsuarios,
+  admin: IconeAdmin,
 } as const;
 
 export type ItemNav = {
-  href: "/" | "/custos" | "/admin/usuarios";
+  href: "/" | "/custos" | "/admin";
   rotulo: string;
   icone: keyof typeof ICONES;
 };

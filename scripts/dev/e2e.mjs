@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { SEMENTE } from "./semente.mjs";
 
 const URL = process.env.E2E_URL ?? "http://127.0.0.1:3312";
 const registro = [];
@@ -45,7 +46,11 @@ ok("login do admin entra no sistema", !p.url().includes("login"), p.url());
 await p.goto(`${URL}/custos`);
 await p.waitForSelector("table tbody tr");
 const linhas = await p.locator("table tbody tr").count();
-ok("lista abre no filtro Ativos (24 dos 25; um está a apurar)", linhas === 24, `${linhas} linhas`);
+ok(
+  "lista abre no filtro Ativos (um item está a apurar)",
+  linhas === SEMENTE.ativos,
+  `${linhas} linhas`,
+);
 
 console.log("\n— Atalho: menu da linha sempre visível —");
 const kebabs = await p.locator('button[aria-haspopup="menu"][aria-label^="Ações de"]').count();
@@ -231,7 +236,17 @@ await entrar("ti@fmp.com.br");
 await p.goto(`${URL}/custos`);
 await p.waitForLoadState("networkidle");
 const meus = await p.locator("table tbody tr").count();
-ok("gestor vê só os custos da própria área", meus > 0 && meus < 25, `${meus} de 25`);
+// Número EXATO, não "menos que o total". A versão frouxa deste teste deixou
+// passar um defeito em que o gestor enxergava a lista inteira da FMP: com 25
+// itens no banco e 24 ativos, "24 < 25" dava verde enquanto o escopo de setor
+// estava sendo apagado por uma chave `AND` sobrescrita.
+ok(
+  "gestor vê SÓ os custos da própria área",
+  meus === SEMENTE.itensDeTI,
+  `${meus}, esperado ${SEMENTE.itensDeTI}`,
+);
+const forasteiro = await p.locator('[data-celula="descricao"]', { hasText: "Energia elétrica" }).count();
+ok("e não vê o custo de outro setor", forasteiro === 0, `${forasteiro} vazamento(s)`);
 
 console.log("\n  → gestor propõe, não aplica");
 await p.goto(`${URL}/custos?q=Antivírus`);

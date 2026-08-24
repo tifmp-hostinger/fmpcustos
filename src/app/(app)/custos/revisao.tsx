@@ -3,13 +3,25 @@
 import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { alterarCategoria, alterarValor, definirDataFim, marcarSemPrazo } from "./acoes-rapidas";
+import {
+  alterarCategoria,
+  alterarValor,
+  definirCambio,
+  definirDataFim,
+  marcarSemPrazo,
+} from "./acoes-rapidas";
 import { useAviso } from "@/components/avisos";
 import { PainelLateral } from "@/components/painel";
-import { formatarBRL, lerValorDigitado, valorMensalNormalizado } from "@/lib/dinheiro";
+import {
+  formatarBRL,
+  formatarMoeda,
+  lerCambioDigitado,
+  lerValorDigitado,
+  valorMensalEmReais,
+} from "@/lib/dinheiro";
 import { ROTULOS_PERIODICIDADE } from "@/lib/opcoes";
 import { IconeCheck } from "@/components/icones";
-import type { Periodicidade } from "@/generated/prisma/enums";
+import type { Moeda, Periodicidade } from "@/generated/prisma/enums";
 import type { LinhaCusto } from "./tabela";
 
 /**
@@ -28,11 +40,14 @@ import type { LinhaCusto } from "./tabela";
  * cobrir a área inteira — e é isso que faz a pessoa voltar da próxima vez.
  */
 
-type Falta = "valor" | "data" | "categoria";
+type Falta = "valor" | "cambio" | "data" | "categoria";
 
 function faltasDe(item: LinhaCusto): Falta[] {
   const faltas: Falta[] = [];
   if (item.valorPeriodo === null) faltas.push("valor");
+  // Antes da data e da categoria porque é a única que mantém o custo fora do
+  // total: as outras deixam o item incompleto, esta deixa a SOMA incompleta.
+  if (item.moeda !== "BRL" && item.cambio === null) faltas.push("cambio");
   if (item.dataFim === null && !item.semPrazo) faltas.push("data");
   if (item.categoria === null) faltas.push("categoria");
   return faltas;
@@ -203,6 +218,7 @@ function FichaDeRevisao({
   aoResolver: () => void;
 }) {
   const [valor, setValor] = useState("");
+  const [taxa, setTaxa] = useState("");
   const [data, setData] = useState("");
   const [categoria, setCategoria] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -210,8 +226,17 @@ function FichaDeRevisao({
 
   const faltas = faltasDe(item);
   const numero = lerValorDigitado(valor);
-  const mensal =
-    numero === null ? null : valorMensalNormalizado(numero, item.periodicidade as Periodicidade);
+  // A conversão usa a moeda e a taxa que o item já tem: a revisão preenche o
+  // que falta, não redefine em que moeda o contrato foi assinado.
+  // A taxa que a pessoa está digitando agora vale mais que a gravada: é ela
+  // que a prévia precisa refletir, senão o número só muda depois de salvar.
+  const taxaEmUso = item.moeda === "BRL" ? null : (lerCambioDigitado(taxa) ?? item.cambio);
+  const mensal = valorMensalEmReais(
+    numero ?? item.valorPeriodo,
+    item.periodicidade as Periodicidade,
+    item.moeda as Moeda,
+    taxaEmUso,
+  );
 
   async function salvarTudo() {
     setSalvando(true);
@@ -222,6 +247,12 @@ function FichaDeRevisao({
       d.set("id", item.id);
       d.set("valorPeriodo", valor);
       algum = (await gravar(alterarValor, d, item.id)) || algum;
+    }
+    if (faltas.includes("cambio") && taxa.trim()) {
+      const d = new FormData();
+      d.set("id", item.id);
+      d.set("cambio", taxa);
+      algum = (await gravar(definirCambio, d, item.id)) || algum;
     }
     if (faltas.includes("data") && data) {
       const d = new FormData();
@@ -258,6 +289,7 @@ function FichaDeRevisao({
 
   const temAlgoParaSalvar =
     (faltas.includes("valor") && valor.trim() !== "") ||
+    (faltas.includes("cambio") && taxa.trim() !== "") ||
     (faltas.includes("data") && data !== "") ||
     (faltas.includes("categoria") && categoria !== "");
 
@@ -295,8 +327,33 @@ function FichaDeRevisao({
           />
           <span className="mt-1 block min-h-[16px] text-[12px] text-[var(--ink-3)] tabular-nums">
             {mensal
-              ? `${formatarBRL(numero)} ${ROTULOS_PERIODICIDADE[item.periodicidade].toLowerCase()} = ${formatarBRL(mensal)}/mês`
+              ? `${formatarMoeda(numero, item.moeda)} ${ROTULOS_PERIODICIDADE[item.periodicidade].toLowerCase()} = ${formatarBRL(mensal)}/mês`
               : `Cobrança ${ROTULOS_PERIODICIDADE[item.periodicidade].toLowerCase()}`}
+          </span>
+        </label>
+      )}
+
+      {faltas.includes("cambio") && (
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+            Cotação — quanto vale 1 {item.moeda === "USD" ? "dólar" : item.moeda}
+          </span>
+          <input
+            ref={faltas[0] === "cambio" ? (primeiro as React.Ref<HTMLInputElement>) : undefined}
+            value={taxa}
+            onChange={(e) => setTaxa(e.target.value)}
+            onKeyDown={aoTeclar}
+            inputMode="decimal"
+            autoFocus={!faltas.includes("valor")}
+            placeholder="5,4321"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] tabular-nums outline-none focus:border-[var(--accent)]"
+          />
+          <span className="mt-1 block min-h-[16px] text-[12px] text-[var(--ink-3)] tabular-nums">
+            {mensal
+              ? `${formatarMoeda(item.valorPeriodo, item.moeda)} ${ROTULOS_PERIODICIDADE[
+                  item.periodicidade
+                ].toLowerCase()} = ${formatarBRL(mensal)}/mês`
+              : `Sem a cotação, este custo fica fora de todos os totais.`}
           </span>
         </label>
       )}
@@ -311,7 +368,7 @@ function FichaDeRevisao({
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              autoFocus={!faltas.includes("valor")}
+              autoFocus={faltas[0] === "data"}
               className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] tabular-nums outline-none focus:border-[var(--accent)]"
             />
           </label>
@@ -335,7 +392,7 @@ function FichaDeRevisao({
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             onKeyDown={aoTeclar}
-            autoFocus={!faltas.includes("valor") && !faltas.includes("data")}
+            autoFocus={faltas[0] === "categoria"}
             className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
           >
             <option value="">Escolha…</option>
@@ -377,6 +434,7 @@ function FichaDeRevisao({
 
 const ROTULO_FALTA: Record<Falta, string> = {
   valor: "o valor",
+  cambio: "a cotação",
   data: "a data de renovação",
   categoria: "a categoria",
 };

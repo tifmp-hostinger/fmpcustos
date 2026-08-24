@@ -16,7 +16,7 @@ import { reverterLote } from "./acoes-lote";
 import { useAviso } from "@/components/avisos";
 import { BarraDeSelecao } from "./selecao";
 import { MenuDeLinha, type ItemMenu } from "@/components/menu";
-import { formatarBRL } from "@/lib/dinheiro";
+import { formatarBRL, formatarCambio, formatarMoeda } from "@/lib/dinheiro";
 import { ROTULOS_PERIODICIDADE, ROTULOS_STATUS, STATUS_ITEM } from "@/lib/opcoes";
 import { ORDENS, urlDaLista, type ChaveOrdem, type Filtros } from "@/lib/filtros";
 import {
@@ -59,7 +59,11 @@ export type LinhaCusto = {
   fornecedor: string | null;
   categoria: string | null;
   periodicidade: string;
+  moeda: string;
+  /** Taxa gravada no item. Nula em real; nula em moeda estrangeira = fora dos totais. */
+  cambio: string | null;
   valorPeriodo: string | null;
+  /** Sempre em real — é a única coluna que se soma. */
   valorMensal: string | null;
   status: StatusItem;
   dataFim: string | null;
@@ -392,6 +396,10 @@ function Linha({
   }, []);
 
   const bloqueado = !podeLancar || !item.podeEditar;
+  // Valor preenchido, moeda estrangeira, taxa faltando: a linha parece completa
+  // e o item não entra em soma nenhuma. É o único caso em que a célula do
+  // mensal precisa dizer o que fazer, e não só o que não tem.
+  const semCotacao = item.moeda !== "BRL" && item.cambio === null && item.valorPeriodo !== null;
   const motivo = !podeLancar
     ? "Seu perfil permite consultar, não alterar."
     : (item.motivoBloqueio ?? undefined);
@@ -528,15 +536,43 @@ function Linha({
         </td>
       )}
 
-      <td className="px-4 py-3 text-right tabular-nums">
-        {item.valorPeriodo ? formatarBRL(item.valorPeriodo) : "—"}
+      {/* A coluna da cobrança fala a moeda do contrato; a do mensal fala real,
+          sempre. Misturar as duas foi o defeito de origem — US$ 500 somava como
+          R$ 500 porque as duas colunas diziam "R$". */}
+      <td data-celula="cobranca" className="px-4 py-3 text-right tabular-nums">
+        {item.valorPeriodo ? formatarMoeda(item.valorPeriodo, item.moeda) : "—"}
         <span className="block text-[11px] text-[var(--ink-3)]">
           {ROTULOS_PERIODICIDADE[item.periodicidade]}
         </span>
       </td>
 
       <td data-celula="mensal" className="px-4 py-3 text-right font-medium tabular-nums">
-        {item.valorMensal ? formatarBRL(item.valorMensal) : "—"}
+        {item.valorMensal ? (
+          <>
+            {formatarBRL(item.valorMensal)}
+            {item.moeda !== "BRL" && (
+              <span
+                className="block text-[11px] font-normal text-[var(--ink-3)]"
+                title={`Convertido de ${item.moeda} a ${item.cambio ? formatarCambio(item.cambio) : "—"}`}
+              >
+                a {formatarCambio(item.cambio)}
+              </span>
+            )}
+          </>
+        ) : semCotacao ? (
+          // Não é "—". Um traço aqui diz "não tem valor", e este item tem: o que
+          // falta é a taxa. Confundir os dois manda a pessoa procurar no lugar
+          // errado — e o link leva direto ao lugar certo.
+          <Link
+            href={`/custos/${item.id}`}
+            data-falta="cambio"
+            className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+          >
+            sem cotação
+          </Link>
+        ) : (
+          "—"
+        )}
       </td>
 
       <td className="px-4 py-2">

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { SEMENTE } from "./semente.mjs";
 
 /**
  * Teste de ponta a ponta da Etapa 5 — lote e fila de pendências.
@@ -42,7 +43,11 @@ console.log("\n═══ SELEÇÃO ═══");
 await entrar("admin@fmp.com.br");
 await p.goto(`${URL}/custos`);
 await p.waitForSelector("table tbody tr");
-ok("cada linha tem caixa de seleção", (await caixas().count()) === 24, `${await caixas().count()}`);
+ok(
+  "cada linha tem caixa de seleção",
+  (await caixas().count()) === SEMENTE.ativos,
+  `${await caixas().count()}`,
+);
 
 await caixas().nth(0).click();
 await p.waitForTimeout(600);
@@ -146,7 +151,7 @@ const caminho = await download.path();
 const conteudo = (await import("node:fs")).readFileSync(caminho, "utf8");
 const linhasCsv = conteudo.trim().split("\r\n");
 ok("o CSV traz TODAS as linhas selecionadas, não só as 5 da prévia",
-   linhasCsv.length === 25, `${linhasCsv.length - 1} linhas + cabeçalho`);
+   linhasCsv.length === SEMENTE.ativos + 1, `${linhasCsv.length - 1} linhas + cabeçalho`);
 ok("com as colunas que a colagem lê de volta",
    linhasCsv[0].includes("Descrição") && linhasCsv[0].includes("Periodicidade"),
    linhasCsv[0].slice(0, 70));

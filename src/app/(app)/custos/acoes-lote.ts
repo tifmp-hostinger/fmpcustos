@@ -441,6 +441,9 @@ export async function exportarSelecao(ids: string[]): Promise<string[][]> {
     select: {
       descricao: true,
       valorPeriodo: true,
+      moeda: true,
+      cambio: true,
+      valorMensalNormalizado: true,
       periodicidade: true,
       dataFim: true,
       quantidade: true,
@@ -465,6 +468,12 @@ export async function exportarSelecao(ids: string[]): Promise<string[][]> {
       "Descrição",
       "Fornecedor",
       "Valor",
+      // A moeda vai junto do valor porque sem ela a planilha exportada repete o
+      // defeito que este sistema corrigiu: uma coluna de números em três moedas
+      // diferentes, somável por qualquer um que abra o arquivo.
+      "Moeda",
+      "Cotação",
+      "Valor mensal em real",
       "Periodicidade",
       "Categoria",
       "Renova em",
@@ -477,6 +486,9 @@ export async function exportarSelecao(ids: string[]): Promise<string[][]> {
       i.descricao,
       i.fornecedor?.nome ?? "",
       dinheiro(i.valorPeriodo),
+      i.moeda,
+      i.cambio ? new Decimal(String(i.cambio)).toFixed(6).replace(".", ",") : "",
+      dinheiro(i.valorMensalNormalizado),
       ROTULOS_PERIODICIDADE[i.periodicidade] ?? i.periodicidade,
       i.categoria?.nome ?? "",
       i.dataFim ? i.dataFim.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "",

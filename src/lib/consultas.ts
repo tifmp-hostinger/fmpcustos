@@ -19,6 +19,11 @@ import {
  * padrão exclui os itens na lixeira de toda consulta do sistema — item que a
  * pessoa acabou de excluir não pode continuar aparecendo em lista nem somando
  * em painel.
+ *
+ * ATENÇÃO: o retorno tem uma chave `AND`. Espalhá-lo num objeto que também
+ * define `AND` apaga o escopo inteiro em silêncio — nenhum erro, nenhum aviso,
+ * só todo mundo enxergando tudo. Use `comEscopo` sempre que houver mais de um
+ * filtro; espalhar só é seguro quando a única outra chave é `id`.
  */
 export function escopoDeItens(
   usuario: UsuarioSessao,
@@ -60,6 +65,28 @@ export function escopoDeItens(
   return { ...exclusao, AND: [{ OR: caminhos }] };
 }
 
+/**
+ * Junta o escopo do usuário com os filtros da consulta.
+ *
+ * Existe por causa de um defeito que passou por uma revisão inteira sem ser
+ * visto: `{ ...escopoDeItens(usuario), AND: partes }` parece combinar as duas
+ * coisas e não combina — a segunda chave `AND` apaga a primeira, e com ela o
+ * escopo de setor. O efeito era um gestor de TI abrindo a lista e enxergando os
+ * contratos e os valores dos treze setores.
+ *
+ * Aqui o escopo entra como mais um elemento do `AND`, e não como um espalhamento
+ * no mesmo nível. Não há chave para colidir: acrescentar um filtro novo não tem
+ * como derrubar a permissão.
+ */
+export function comEscopo(
+  usuario: UsuarioSessao,
+  partes: Prisma.ItemCustoWhereInput[],
+  lixeira: "fora" | "dentro" | "ambos" = "fora",
+  incluirPropostas = false,
+): Prisma.ItemCustoWhereInput {
+  return { AND: [escopoDeItens(usuario, lixeira, incluirPropostas), ...partes] };
+}
+
 export async function listarCategorias() {
   const categorias = await prisma.categoria.findMany({
     select: { id: true, nome: true, categoriaPai: { select: { nome: true } } },
@@ -69,6 +96,37 @@ export async function listarCategorias() {
     valor: c.id,
     rotulo: c.categoriaPai ? `${c.categoriaPai.nome} › ${c.nome}` : c.nome,
   }));
+}
+
+/**
+ * A cotação mais recente de cada moeda estrangeira.
+ *
+ * O formulário usa isto para SUGERIR a taxa — nunca para aplicá-la sozinho num
+ * item já salvo. É a diferença entre "treze setores digitam treze dólares
+ * diferentes" e "o total de junho muda quando o dólar mexe em agosto": a
+ * cotação central resolve o primeiro problema sem criar o segundo.
+ */
+export async function cotacoesMaisRecentes(): Promise<
+  Record<string, { taxa: string; data: string; fonte: string | null }>
+> {
+  const cotacoes = await prisma.cotacaoMoeda.findMany({
+    where: { moeda: { not: "BRL" } },
+    orderBy: [{ moeda: "asc" }, { data: "desc" }],
+    select: { moeda: true, taxa: true, data: true, fonte: true },
+  });
+
+  const recentes: Record<string, { taxa: string; data: string; fonte: string | null }> = {};
+  for (const c of cotacoes) {
+    // A consulta já vem ordenada por data decrescente: a primeira de cada moeda
+    // é a mais nova, e as seguintes são histórico.
+    if (recentes[c.moeda]) continue;
+    recentes[c.moeda] = {
+      taxa: c.taxa.toString(),
+      data: c.data.toISOString().slice(0, 10),
+      fonte: c.fonte,
+    };
+  }
+  return recentes;
 }
 
 /** Fatias de rateio propostas ao setor do usuário, aguardando a decisão dele. */
@@ -150,6 +208,9 @@ function faltando(chave: string): Prisma.ItemCustoWhereInput {
       return { categoriaId: null };
     case "fornecedor":
       return { fornecedorId: null };
+    case "cambio":
+      // Moeda estrangeira sem taxa: o valor está lá, o real não existe.
+      return { moeda: { not: "BRL" }, cambio: null };
     default:
       return {};
   }
@@ -215,8 +276,5 @@ export function whereDaLista(f: Filtros, usuario: UsuarioSessao): Prisma.ItemCus
     });
   }
 
-  return {
-    ...escopoDeItens(usuario, f.situacao === "lixeira" ? "dentro" : "fora"),
-    ...(partes.length > 0 ? { AND: partes } : {}),
-  };
+  return comEscopo(usuario, partes, f.situacao === "lixeira" ? "dentro" : "fora");
 }

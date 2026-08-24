@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { valorMensalNormalizado } from "@/lib/dinheiro";
+import { valorMensalEmReais } from "@/lib/dinheiro";
 import { normalizar } from "@/lib/fornecedores";
 import { MAXIMO_LINHAS, MAPA_VAZIO, lerColagem, type Mapa } from "@/lib/planilha";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
@@ -92,7 +92,12 @@ export async function importarColados(
 
   await prisma.$transaction(async (tx) => {
     for (const linha of validas) {
-      const mensal = valorMensalNormalizado(linha.valorPeriodo, linha.periodicidade);
+      // A colagem lança sempre em real, e é por isso que a moeda não é uma
+      // coluna da planilha: cada custo em moeda estrangeira precisa da SUA
+      // cotação, e uma taxa única aplicada a trinta linhas coladas seria um
+      // número inventado com aparência de conversão. Moeda estrangeira se
+      // cadastra uma a uma — a tela de colagem avisa isso.
+      const mensal = valorMensalEmReais(linha.valorPeriodo, linha.periodicidade, "BRL", null);
       const categoriaId = linha.categoria
         ? (porCategoria.get(normalizar(linha.categoria)) ?? null)
         : null;

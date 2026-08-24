@@ -260,6 +260,7 @@ model Usuario {
   propostasCriadas PropostaRateio[]        @relation("PropostasCriadas")
   modelosCriados   ModeloRateio[]          @relation("ModelosCriados")
   aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
+  cotacoes         CotacaoMoeda[]          @relation("CotacoesRegistradas")
 
   ultimoAcesso DateTime?
   criadoEm     DateTime  @default(now())
@@ -502,11 +503,26 @@ model ItemCusto {
 
   moeda         Moeda         @default(BRL)
   periodicidade Periodicidade @default(MENSAL)
-  /// Valor cobrado a cada ocorrência da periodicidade.
+  /// Valor cobrado a cada ocorrência da periodicidade, NA MOEDA DO ITEM.
   valorPeriodo  Decimal?      @db.Decimal(14, 2)
 
-  /// Derivado de valorPeriodo + periodicidade. NUNCA digitado.
-  /// É o campo que torna comparável o que a planilha somava indevidamente.
+  /// Taxa usada para converter `valorPeriodo` em real. Nula quando a moeda já é BRL.
+  ///
+  /// Mora no item, e não numa tabela consultada na hora de somar, pelo mesmo
+  /// motivo que o câmbio do lançamento mora no lançamento: o total de junho não
+  /// pode se reescrever sozinho porque o dólar mexeu em agosto. A cotação
+  /// central (CotacaoMoeda) só sugere o número; quem decide é o item.
+  cambio        Decimal?      @db.Decimal(14, 6)
+  /// Data da cotação aplicada — é o que permite dizer "convertido a 5,4321 de
+  /// 22/08" em vez de mostrar um real sem procedência.
+  cambioEm      DateTime?     @db.Date
+
+  /// Derivado de valorPeriodo + periodicidade + câmbio. NUNCA digitado.
+  /// SEMPRE EM REAL, qualquer que seja a moeda do item: é o campo que torna
+  /// comparável o que a planilha somava indevidamente. Nulo quando a conversão
+  /// não é possível — item em moeda estrangeira sem câmbio fica FORA do total e
+  /// aparece como pendência, porque somar 500 dólares como 500 reais é pior que
+  /// não somar.
   valorMensalNormalizado Decimal? @db.Decimal(14, 2)
 
   status StatusItem @default(ATIVO)
@@ -862,6 +878,30 @@ model Alerta {
 
   @@index([tipo, status])
   @@map("alerta")
+}
+
+/// Cotação de referência de uma moeda estrangeira.
+///
+/// Existe para que treze setores não digitem treze dólares diferentes. É
+/// SUGESTÃO, nunca fonte da soma: o item guarda a taxa que aplicou. Registrar
+/// uma cotação nova não altera nenhum valor já convertido — atualizar um item
+/// é sempre um ato explícito, e auditado.
+model CotacaoMoeda {
+  id    String   @id @default(cuid())
+  moeda Moeda
+  taxa  Decimal  @db.Decimal(14, 6)
+  data  DateTime @db.Date
+  /// De onde veio o número: "Banco Central (PTAX)", "fatura do fornecedor", …
+  fonte String?
+
+  registradoPorId String?
+  registradoPor   Usuario? @relation("CotacoesRegistradas", fields: [registradoPorId], references: [id])
+
+  criadoEm DateTime @default(now())
+
+  @@unique([moeda, data])
+  @@index([moeda, data(sort: Desc)])
+  @@map("cotacao_moeda")
 }
 
 /// Append-only. Nada aqui é atualizado ou removido pela aplicação.

@@ -66,12 +66,15 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
     custoMensalCorrente(escopo, [...RECORRENTE]),
     maioresItens(escopo, [...RECORRENTE], 5),
     renovacoesProximas(escopo, 90),
-    lanca ? itensComPendencia(escopo, 4) : Promise.resolve({ semValor: [], semVigencia: [] }),
+    lanca
+      ? itensComPendencia(escopo, 4)
+      : Promise.resolve({ semValor: [], semVigencia: [], semCambio: [] }),
     lanca ? aceitesPendentesDoSetor(usuario.setorId) : Promise.resolve([]),
     lanca ? propostasDoUsuario(usuario.id) : Promise.resolve([]),
   ]);
 
-  const totalPendencias = pendencias.semValor.length + pendencias.semVigencia.length;
+  const totalPendencias =
+    pendencias.semValor.length + pendencias.semVigencia.length + pendencias.semCambio.length;
   // O convite de primeiro cadastro só aparece se NÃO existe item nenhum no
   // setor — contado cru, sem filtro de status ou natureza. Um setor cheio de
   // itens "a apurar" importados não pode ser convidado a recadastrar tudo.
@@ -185,6 +188,17 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
                 </Link>
               </div>
               <ul className="mt-3 space-y-2">
+                {/* Primeiro na lista porque é o único que engana: a linha está
+                    preenchida, o valor aparece na tela, e mesmo assim o custo
+                    não é contado em nenhum total. */}
+                {pendencias.semCambio.map((i) => (
+                  <Pendente
+                    key={i.id}
+                    id={i.id}
+                    texto={`${i.descricao} está em ${i.moeda} sem cotação — fica fora dos totais`}
+                    acao="Informar cotação"
+                  />
+                ))}
                 {pendencias.semValor.map((i) => (
                   <Pendente
                     key={i.id}
@@ -453,6 +467,16 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
             detalhe="Não entram em nenhuma soma."
             falta="valor"
           />
+          {/* Renderizado só quando existe: um "0 itens sem cotação" fixo numa
+              fundação que quase não compra em dólar seria ruído permanente. */}
+          {pendencias.semCambio > 0 && (
+            <PendenciaResumo
+              n={pendencias.semCambio}
+              rotulo="itens sem cotação"
+              detalhe="Estão em moeda estrangeira e ficam fora do total."
+              falta="cambio"
+            />
+          )}
           <PendenciaResumo
             n={pendencias.semVigencia}
             rotulo="itens sem data de término"

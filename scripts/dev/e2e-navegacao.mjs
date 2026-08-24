@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { SEMENTE } from "./semente.mjs";
 
 /**
  * Teste de ponta a ponta da navegação por números.
@@ -134,17 +135,19 @@ console.log("\n═══ CHIPS DE FILTRO ═══");
 await p.goto(`${URL}/custos?f=ativos&q=Microsoft`);
 await p.waitForLoadState("networkidle");
 const comBusca = await p.locator("table tbody tr").count();
-ok("busca filtra a lista", comBusca > 0 && comBusca < 24, `${comBusca} de 24`);
+ok("busca filtra a lista", comBusca > 0 && comBusca < SEMENTE.ativos, `${comBusca} de ${SEMENTE.ativos}`);
 const chipBusca = p.locator('main a', { hasText: "Busca:" }).first();
 ok("a busca aparece como chip removível", (await chipBusca.count()) > 0);
 await chipBusca.click();
 await p.waitForURL((u) => !u.searchParams.has("q"), { timeout: 8000 });
-await p.waitForFunction(() => document.querySelectorAll("table tbody tr").length === 24, null, {
-  timeout: 8000,
-}).catch(() => {});
+await p
+  .waitForFunction((n) => document.querySelectorAll("table tbody tr").length === n, SEMENTE.ativos, {
+    timeout: 8000,
+  })
+  .catch(() => {});
 ok(
   "remover o chip devolve a lista inteira",
-  (await p.locator("table tbody tr").count()) === 24,
+  (await p.locator("table tbody tr").count()) === SEMENTE.ativos,
   `${await p.locator("table tbody tr").count()} linhas`,
 );
 
@@ -155,11 +158,11 @@ await p.keyboard.press("/");
 await p.waitForTimeout(200);
 const focoBusca = await p.evaluate(() => document.activeElement?.getAttribute("aria-label"));
 ok("a tecla / foca a busca do cabeçalho", (focoBusca ?? "").includes("Buscar custos"), focoBusca ?? "—");
-await p.keyboard.type("Adobe");
+await p.keyboard.type("Zoom");
 await p.keyboard.press("Enter");
-await p.waitForURL(/q=Adobe/, { timeout: 8000 });
+await p.waitForURL(/q=Zoom/, { timeout: 8000 });
 await p.waitForLoadState("networkidle");
-ok("Enter leva à lista com o termo", p.url().includes("q=Adobe"));
+ok("Enter leva à lista com o termo", p.url().includes("q=Zoom"));
 ok("e busca em todas as situações, não só nos ativos", p.url().includes("f=todos"));
 ok("encontrando o item", (await p.locator("table tbody tr").count()) === 1);
 

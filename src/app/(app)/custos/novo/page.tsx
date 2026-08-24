@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
-import { listarCategorias, listarSetores } from "@/lib/consultas";
+import { cotacoesMaisRecentes, listarCategorias, listarSetores } from "@/lib/consultas";
 import { FormularioCusto } from "../formulario";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +11,11 @@ export default async function NovoCusto() {
   const usuario = await exigirSessao();
   if (!podeLancar(usuario.papel)) redirect("/custos");
 
-  const [categorias, setores, fornecedores] = await Promise.all([
+  const [categorias, setores, fornecedores, cotacoes] = await Promise.all([
     listarCategorias(),
     listarSetores(),
     prisma.fornecedor.findMany({ select: { nome: true }, orderBy: { nome: "asc" }, take: 500 }),
+    cotacoesMaisRecentes(),
   ]);
   const escolheSetor = vePorInteiro(usuario.papel);
 
@@ -48,6 +49,7 @@ export default async function NovoCusto() {
         categorias={categorias}
         setores={setores}
         fornecedores={fornecedores.map((f) => f.nome)}
+        cotacoes={cotacoes}
         podeEscolherSetor={escolheSetor}
         setorFixo={usuario.setorNome}
         valores={{ setorId: usuario.setorId }}

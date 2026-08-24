@@ -2,8 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
-import { escopoDeItens, listarCategorias, listarSetores } from "@/lib/consultas";
-import { formatarBRL } from "@/lib/dinheiro";
+import {
+  cotacoesMaisRecentes,
+  comEscopo,
+  listarCategorias,
+  listarSetores,
+} from "@/lib/consultas";
+import { formatarBRL, formatarCambio } from "@/lib/dinheiro";
 import { FormularioCusto } from "../formulario";
 import { PropostaEmAberto } from "./rateio/proposta";
 import { Historico } from "./historico";
@@ -21,7 +26,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
   const item = await prisma.itemCusto.findFirst({
     // "ambos" para que um item na lixeira ainda abra pelo link direto: o
     // histórico dele continua sendo consultável, e restaurar é possível.
-    where: { id, ...escopoDeItens(usuario, "ambos", true) },
+    where: comEscopo(usuario, [{ id }], "ambos", true),
     include: {
       fornecedor: true,
       rateios: {
@@ -64,10 +69,11 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
   const proposta = item.propostas[0];
   const valorMensal = item.valorMensalNormalizado?.toString() ?? null;
 
-  const [categorias, setores, fornecedores] = await Promise.all([
+  const [categorias, setores, fornecedores, cotacoes] = await Promise.all([
     listarCategorias(),
     listarSetores(),
     prisma.fornecedor.findMany({ select: { nome: true }, orderBy: { nome: "asc" }, take: 500 }),
+    cotacoesMaisRecentes(),
   ]);
 
   return (
@@ -87,11 +93,32 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
       <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
         {valorMensal ? (
           <>
-            <strong className="tabular-nums">{formatarBRL(valorMensal)}/mês</strong> ·{" "}
+            <strong className="tabular-nums">{formatarBRL(valorMensal)}/mês</strong>
+            {/* A procedência anda junto do número convertido. Um real sem
+                dizer de que taxa veio não é conferível contra a fatura. */}
+            {item.moeda !== "BRL" && item.cambio && (
+              <>
+                {" "}
+                <span className="text-[13px] text-[var(--ink-3)]">
+                  (convertido de {item.moeda} a {formatarCambio(item.cambio)}
+                  {item.cambioEm ? ` de ${item.cambioEm.toLocaleDateString("pt-BR")}` : ""})
+                </span>
+              </>
+            )}{" "}
+            ·{" "}
           </>
         ) : null}
         Toda alteração fica no histórico, no fim desta página, com autor e data.
       </p>
+
+      {/* Só aparece quando é verdade, e diz a consequência antes do remédio:
+          "não entra em nenhum total" é o que faz alguém parar e resolver. */}
+      {item.moeda !== "BRL" && item.cambio === null && item.valorPeriodo !== null && (
+        <p className="mt-4 rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--accent)]/8 px-4 py-3 text-sm">
+          Este custo está em {item.moeda} e ainda não tem cotação. Ele não entra em nenhum total até
+          que a taxa seja informada no campo <strong>Cotação</strong>, logo abaixo.
+        </p>
+      )}
 
       {item.excluidoEm && (
         <p className="mt-4 rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--accent)]/8 px-4 py-3 text-sm">
@@ -111,6 +138,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
         categorias={categorias}
         setores={setores}
         fornecedores={fornecedores.map((f) => f.nome)}
+        cotacoes={cotacoes}
         podeEscolherSetor={global}
         setorFixo={usuario.setorNome}
         valores={{
@@ -122,6 +150,8 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
           periodicidade: item.periodicidade,
           comportamento: item.comportamento,
           moeda: item.moeda,
+          cambio: item.cambio?.toString() ?? null,
+          cambioEm: paraInput(item.cambioEm),
           status: item.status,
           valorPeriodo: item.valorPeriodo?.toString() ?? null,
           quantidade: item.quantidade ? Number(item.quantidade) : null,

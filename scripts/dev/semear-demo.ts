@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
-import type { PapelUsuario, Periodicidade } from "../../src/generated/prisma/enums";
+import type { Moeda, PapelUsuario, Periodicidade } from "../../src/generated/prisma/enums";
 import { gerarHashSenha } from "../../src/lib/senha";
 
 const prisma = new PrismaClient({
@@ -28,7 +28,8 @@ async function main() {
   // Idempotente: o script é rodado várias vezes durante o desenvolvimento.
   await prisma.$executeRawUnsafe(
     `TRUNCATE rateio, lancamento_custo, competencia, proposta_rateio_parcela, proposta_rateio,
-     auditoria, item_custo, fornecedor, usuario, colaborador, categoria, setor CASCADE`,
+     auditoria, cotacao_moeda, item_custo, fornecedor, usuario, colaborador, categoria,
+     setor CASCADE`,
   );
 
   const setores = new Map<string, string>();
@@ -65,9 +66,21 @@ async function main() {
   await usuario("Leo Leitor", "leitor@fmp.com.br", "LEITOR", "TI");
 
   const dados: Array<
-    [string, string, string, string, string, string | null, string | null, number]
+    [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string | null,
+      string | null,
+      number,
+      string?,
+      string?,
+    ]
   > = [
-    // descrição, fornecedor, categoria, setor, periodicidade, valor, dataFim, lançamentos
+    // descrição, fornecedor, categoria, setor, periodicidade, valor, dataFim,
+    // lançamentos, [moeda], [câmbio]
     [
       "Microsoft 365 — 120 licenças",
       "Microsoft",
@@ -237,6 +250,33 @@ async function main() {
       null,
       0,
     ],
+    // Moeda estrangeira convertida: entra no total pelo real.
+    [
+      "Adobe Creative Cloud — 12 licenças",
+      "Adobe",
+      "Software",
+      "Comunicação e Marketing",
+      "MENSAL",
+      "599.88",
+      "2027-03-31",
+      0,
+      "USD",
+      "5.432100",
+    ],
+    // Moeda estrangeira SEM cotação: o item existe, tem valor na tela e não é
+    // contado em lugar nenhum. É a pendência que o sistema precisa mostrar.
+    [
+      "Zoom Business — 50 hospedeiros",
+      "Zoom",
+      "Software",
+      "TI",
+      "ANUAL",
+      "9990.00",
+      "2027-01-15",
+      0,
+      "USD",
+      undefined,
+    ],
   ];
 
   const OCORRENCIAS: Record<string, number | null> = {
@@ -249,12 +289,16 @@ async function main() {
     SOB_DEMANDA: null,
   };
 
-  for (const [desc, forn, cat, setor, per, valor, fim, lanc] of dados) {
+  for (const [desc, forn, cat, setor, per, valor, fim, lanc, moeda, cambio] of dados) {
     let f = await prisma.fornecedor.findFirst({ where: { nome: forn } });
     if (!f) f = await prisma.fornecedor.create({ data: { nome: forn } });
 
     const oc = OCORRENCIAS[per];
-    const mensal = valor && oc ? ((Number(valor) * oc) / 12).toFixed(2) : null;
+    // Mesma regra do sistema: converte primeiro, divide depois — e sem taxa o
+    // mensal é nulo, porque somar dólar como real é o defeito que se corrigiu.
+    const taxa = (moeda ?? "BRL") === "BRL" ? 1 : cambio ? Number(cambio) : null;
+    const mensal =
+      valor && oc && taxa !== null ? ((Number(valor) * taxa * oc) / 12).toFixed(2) : null;
 
     const item = await prisma.itemCusto.create({
       data: {
@@ -262,6 +306,9 @@ async function main() {
         fornecedorId: f.id,
         categoriaId: categorias.get(cat)!,
         periodicidade: per as Periodicidade,
+        moeda: (moeda ?? "BRL") as Moeda,
+        cambio: cambio ?? null,
+        cambioEm: cambio ? new Date("2026-08-20") : null,
         valorPeriodo: valor,
         valorMensalNormalizado: mensal,
         status: valor ? "ATIVO" : "PENDENTE_APURACAO",
@@ -296,6 +343,17 @@ async function main() {
       });
     }
   }
+
+  // Uma cotação de referência já registrada: é o que o formulário sugere a
+  // quem cadastrar o próximo custo em dólar.
+  await prisma.cotacaoMoeda.create({
+    data: {
+      moeda: "USD",
+      taxa: "5.432100",
+      data: new Date("2026-08-20"),
+      fonte: "Banco Central (PTAX)",
+    },
+  });
 
   const total = await prisma.itemCusto.aggregate({
     where: { status: "ATIVO" },

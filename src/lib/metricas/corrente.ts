@@ -203,7 +203,7 @@ export async function renovacoesProximas(escopo: Escopo, dias = 90) {
 
 /** Itens cadastrados sem valor — o que impede o total de estar completo. */
 export async function pendenciasDeDado(escopo: Escopo) {
-  const [semValor, semCategoria, semVigencia] = await Promise.all([
+  const [semValor, semCategoria, semVigencia, semCambio] = await Promise.all([
     prisma.itemCusto.count({
       where: {
         excluidoEm: null,
@@ -235,8 +235,24 @@ export async function pendenciasDeDado(escopo: Escopo) {
           : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
       },
     }),
+    // Moeda estrangeira sem cotação. Vem depois das outras na lista porque é
+    // mais rara, e antes delas na gravidade: as outras deixam o item
+    // incompleto, esta deixa o TOTAL incompleto sem que a linha pareça faltar
+    // nada.
+    prisma.itemCusto.count({
+      where: {
+        excluidoEm: null,
+        status: { in: [...STATUS_CORRENTE] },
+        moeda: { not: "BRL" },
+        cambio: null,
+        valorPeriodo: { not: null },
+        ...(escopo.setorIds === null
+          ? {}
+          : { rateios: { some: { setorId: { in: escopo.setorIds }, vigenciaFim: null } } }),
+      },
+    }),
   ]);
-  return { semValor, semCategoria, semVigencia };
+  return { semValor, semCategoria, semVigencia, semCambio };
 }
 
 /**
@@ -254,7 +270,7 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
     fornecedor: { select: { nome: true } },
   } as const;
 
-  const [semValor, semVigencia] = await Promise.all([
+  const [semValor, semVigencia, semCambio] = await Promise.all([
     // "Sem valor" = valorPeriodo vazio. O sistema marca esses itens como
     // PENDENTE_APURACAO, então esse status ENTRA aqui — era o furo que
     // escondia os "CALCULAR" importados. E a base é valorPeriodo, não o
@@ -284,8 +300,23 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
       orderBy: { valorMensalNormalizado: "desc" },
       take: limite,
     }),
+    prisma.itemCusto.findMany({
+      where: {
+        excluidoEm: null,
+        status: { in: [...STATUS_CORRENTE] },
+        moeda: { not: "BRL" },
+        cambio: null,
+        valorPeriodo: { not: null },
+        ...escopoRateio,
+      },
+      // Ordenado pelo valor no período, e não pelo mensal: o mensal destes é
+      // nulo por definição — é exatamente esse o problema.
+      select: { ...selecao, moeda: true, valorPeriodo: true },
+      orderBy: { valorPeriodo: "desc" },
+      take: limite,
+    }),
   ]);
-  return { semValor, semVigencia };
+  return { semValor, semVigencia, semCambio };
 }
 
 /**
