@@ -29,6 +29,7 @@ import { ModoRevisao } from "./revisao";
 import { AplicarAoTrocar } from "./aplicar";
 import { BarraDeVisoes, type VisaoNaTela } from "./barra-visoes";
 import { classesDeBotao } from "@/components/botao";
+import { AcoesFlutuantes } from "./acoes-flutuantes";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,23 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   const recorte = RECORTES.find((r) => r.chave === f.natureza)!;
   const anoAtual = new Date().getUTCFullYear();
   const ano = anoEfetivo(f, anoAtual);
+  /*
+   * Quantos recortes estão ativos, para o distintivo do botão de filtros no
+   * celular. Sem ele a folha esconderia estado: uma lista filtrada e uma lista
+   * inteira teriam exatamente o mesmo botão.
+   *
+   * Agrupar NÃO entra na conta. É uma forma de olhar, não um filtro — nada sai
+   * da lista quando se agrupa, e contá-lo faria o distintivo dizer "1 filtro"
+   * numa tela que mostra tudo.
+   */
+  const filtrosAtivos =
+    (f.setor ? 1 : 0) +
+    (f.categoria ? 1 : 0) +
+    (f.fornecedor ? 1 : 0) +
+    (f.falta ? 1 : 0) +
+    (f.busca ? 1 : 0) +
+    (f.situacao !== "ativos" ? 1 : 0) +
+    (recorte.medida === "periodo" && ano !== String(anoAtual) ? 1 : 0);
   const where = whereDaLista(f, usuario, anoAtual);
 
   const [
@@ -221,7 +239,11 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   }));
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    /* `pb-36` no celular: a barra do rodapé come 68px e os botões flutuantes
+       sobem mais uns 60 em cima dela. Sem esta reserva, o último custo da lista
+       fica atrás do disco vermelho — e quem rola até o fim conclui que a lista
+       acabou uma linha antes. */
+    <main className="mx-auto max-w-6xl px-6 pt-10 pb-36 sm:pb-10">
       <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
         {/* Menor no telefone: com a marca no topo e a aba acesa no rodapé, a
             palavra "Custos" já está escrita duas vezes na tela. O `<h1>` fica —
@@ -229,18 +251,32 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             para de gastar 32px repetindo o óbvio. */}
         <h1 className="titulo-pagina text-xl sm:text-2xl">Custos</h1>
         {podeLancar(usuario.papel) && (
-          <div className="flex flex-wrap items-center gap-2">
+          /*
+           * O grupo inteiro some no celular, e o `hidden` mora AQUI, no
+           * contêiner.
+           *
+           * Duas razões, uma de desenho e uma de mecânica:
+           *
+           * Desenho — o disco vermelho flutuante já é o "cadastrar" da tela, e
+           * embaixo do polegar em vez de a uma rolagem de distância. Repetir o
+           * botão no topo dá dois alvos para a mesma ação, e o de cima é o pior
+           * dos dois. "Colar da planilha" não some por falta de espaço: não
+           * existe como selecionar um intervalo de planilha num celular, e
+           * oferecer um caminho que o aparelho não sabe percorrer é pior do que
+           * não oferecer.
+           *
+           * Mecânica — `hidden` no próprio `<Link>` NÃO funcionava. As classes
+           * de `classesDeBotao` começam com `inline-flex`, e entre duas
+           * utilidades de `display` quem decide é a ordem na folha gerada pelo
+           * Tailwind, não a ordem na string. O botão continuava aparecendo no
+           * telefone; num contêiner que não disputa `display` com ninguém, o
+           * `hidden` vale.
+           */
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
             {/* Quem já tem os custos numa planilha não deveria descobrir a
                 colagem por acaso: ela vive ao lado do cadastro avulso, com
                 menos peso visual porque é o caminho menos frequente. */}
-            {/* Some no telefone, e não por falta de espaço: não existe como
-                selecionar um intervalo de planilha num celular. O botão levaria
-                a uma tela que pede uma colagem que o aparelho não sabe fazer —
-                esconder é mais honesto do que oferecer e frustrar. */}
-            <Link
-              href="/custos/colar"
-              className={`hidden sm:inline-flex ${classesDeBotao("contorno")}`}
-            >
+            <Link href="/custos/colar" className={classesDeBotao("contorno")}>
               Colar da planilha
             </Link>
             <Link href="/custos/novo" className={classesDeBotao("primario")}>
@@ -314,187 +350,192 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
         <p className="mt-1 max-w-2xl text-meta text-[var(--ink-3)]">{recorte.resumo}</p>
       </div>
 
-      {/* O ano só existe onde o total mede período: numa aba de compromisso
+      {/* Do "Exercício" até os chips do recorte, tudo isto é filtro — e é o que
+          o celular manda para dentro da folha. No computador continua exatamente
+          onde estava, no fluxo da página: é UM nó no DOM, com duas aparências. */}
+      <AcoesFlutuantes quantosFiltros={filtrosAtivos} podeLancar={podeLancar(usuario.papel)}>
+        {/* O ano só existe onde o total mede período: numa aba de compromisso
           mensal ele não teria o que recortar. */}
-      {recorte.medida === "periodo" && (
-        <div className="faixa-rolante -mx-6 mt-4 items-center gap-1.5 px-6">
-          <span className="text-meta text-[var(--ink-3)]">Exercício:</span>
-          {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
+        {recorte.medida === "periodo" && (
+          <div className="faixa-rolante -mx-6 mt-4 items-center gap-1.5 px-6">
+            <span className="text-meta text-[var(--ink-3)]">Exercício:</span>
+            {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
+              <Link
+                key={a}
+                href={urlDaLista({ ...f, ano: String(a), destaque: "" })}
+                aria-current={ano === String(a) ? "true" : undefined}
+                className={pilula(ano === String(a))}
+              >
+                {a}
+              </Link>
+            ))}
             <Link
-              key={a}
-              href={urlDaLista({ ...f, ano: String(a), destaque: "" })}
-              aria-current={ano === String(a) ? "true" : undefined}
-              className={pilula(ano === String(a))}
+              href={urlDaLista({ ...f, ano: TODOS_OS_ANOS, destaque: "" })}
+              aria-current={ano === "" ? "true" : undefined}
+              className={pilula(ano === "")}
             >
-              {a}
+              todos os anos
             </Link>
-          ))}
-          <Link
-            href={urlDaLista({ ...f, ano: TODOS_OS_ANOS, destaque: "" })}
-            aria-current={ano === "" ? "true" : undefined}
-            className={pilula(ano === "")}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <nav
+            aria-label="Filtrar por situação"
+            className="faixa-rolante -mx-6 gap-1.5 px-6 sm:mx-0 sm:px-0"
           >
-            todos os anos
-          </Link>
-        </div>
-      )}
+            {situacoesDe(f.natureza).map((x) => (
+              <Link
+                key={x.chave}
+                // Trocar de situação preserva o recorte (setor, busca) e limpa o
+                // que só existe dentro do recorte anterior: "falta: valor" não
+                // significa nada em "Encerrados".
+                href={urlDaLista({
+                  ...f,
+                  situacao: x.chave,
+                  falta: x.chave === "pendencia" ? f.falta : "",
+                  destaque: "",
+                })}
+                aria-current={x.chave === f.situacao ? "true" : undefined}
+                className={pilula(x.chave === f.situacao, "principal")}
+              >
+                {x.rotulo}
+              </Link>
+            ))}
+          </nav>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <nav
-          aria-label="Filtrar por situação"
-          className="faixa-rolante -mx-6 gap-1.5 px-6 sm:mx-0 sm:px-0"
-        >
-          {situacoesDe(f.natureza).map((x) => (
-            <Link
-              key={x.chave}
-              // Trocar de situação preserva o recorte (setor, busca) e limpa o
-              // que só existe dentro do recorte anterior: "falta: valor" não
-              // significa nada em "Encerrados".
-              href={urlDaLista({
-                ...f,
-                situacao: x.chave,
-                falta: x.chave === "pendencia" ? f.falta : "",
-                destaque: "",
-              })}
-              aria-current={x.chave === f.situacao ? "true" : undefined}
-              className={pilula(x.chave === f.situacao, "principal")}
-            >
-              {x.rotulo}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Agrupar é uma forma de OLHAR, não um filtro: nada sai da lista, o
+          {/* Agrupar é uma forma de OLHAR, não um filtro: nada sai da lista, o
             mesmo conjunto se reorganiza. Por isso mora junto da busca e não
             entre os chips, que dizem o que foi tirado de vista. */}
-        <form action="/custos" className="flex items-center gap-1.5">
-          <input type="hidden" name="nat" value={f.natureza} />
-          <input type="hidden" name="f" value={f.situacao} />
-          {f.ano && <input type="hidden" name="ano" value={f.ano} />}
-          {f.busca && <input type="hidden" name="q" value={f.busca} />}
-          {f.setor && <input type="hidden" name="setor" value={f.setor} />}
-          {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
-          {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
-          {f.falta && <input type="hidden" name="falta" value={f.falta} />}
-          <label htmlFor="agrupar" className="text-meta text-[var(--ink-3)]">
-            Agrupar:
-          </label>
-          <select
-            id="agrupar"
-            name="g"
-            defaultValue={f.agrupar}
-            data-controle="agrupar"
-            className="rounded-full border-[1.5px] border-[var(--rule-2)] bg-[var(--surface)] px-3 py-1 text-meta text-[var(--ink-2)] outline-none focus:border-[var(--accent)]"
-          >
-            {AGRUPAMENTOS.map((a) => (
-              <option key={a.chave} value={a.chave}>
-                {a.rotulo}
-              </option>
-            ))}
-          </select>
-          <noscript>
-            <button type="submit" className="text-meta underline">
-              Aplicar
-            </button>
-          </noscript>
-          <AplicarAoTrocar />
-        </form>
+          <form action="/custos" className="flex items-center gap-1.5">
+            <input type="hidden" name="nat" value={f.natureza} />
+            <input type="hidden" name="f" value={f.situacao} />
+            {f.ano && <input type="hidden" name="ano" value={f.ano} />}
+            {f.busca && <input type="hidden" name="q" value={f.busca} />}
+            {f.setor && <input type="hidden" name="setor" value={f.setor} />}
+            {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
+            {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
+            {f.falta && <input type="hidden" name="falta" value={f.falta} />}
+            <label htmlFor="agrupar" className="text-meta text-[var(--ink-3)]">
+              Agrupar:
+            </label>
+            <select
+              id="agrupar"
+              name="g"
+              defaultValue={f.agrupar}
+              data-controle="agrupar"
+              className="rounded-full border-[1.5px] border-[var(--rule-2)] bg-[var(--surface)] px-3 py-1 text-meta text-[var(--ink-2)] outline-none focus:border-[var(--accent)]"
+            >
+              {AGRUPAMENTOS.map((a) => (
+                <option key={a.chave} value={a.chave}>
+                  {a.rotulo}
+                </option>
+              ))}
+            </select>
+            <noscript>
+              <button type="submit" className="text-meta underline">
+                Aplicar
+              </button>
+            </noscript>
+            <AplicarAoTrocar />
+          </form>
 
-        <form action="/custos" className="relative ml-auto min-w-[220px] flex-1 sm:max-w-xs">
-          {/* Os campos escondidos preservam o recorte quando a busca é enviada:
+          <form action="/custos" className="relative ml-auto min-w-[220px] flex-1 sm:max-w-xs">
+            {/* Os campos escondidos preservam o recorte quando a busca é enviada:
               sem eles, buscar dentro de um setor jogaria a pessoa para a lista
               inteira e ela concluiria que o filtro não funciona. */}
-          <input type="hidden" name="nat" value={f.natureza} />
-          <input type="hidden" name="f" value={f.situacao} />
-          {f.ano && <input type="hidden" name="ano" value={f.ano} />}
-          {f.agrupar && <input type="hidden" name="g" value={f.agrupar} />}
-          {f.setor && <input type="hidden" name="setor" value={f.setor} />}
-          {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
-          {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
-          {f.falta && <input type="hidden" name="falta" value={f.falta} />}
-          <IconeBusca className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ink-3)]" />
-          <input
-            type="search"
-            name="q"
-            defaultValue={f.busca}
-            placeholder="Buscar por nome, fornecedor ou observação…"
-            aria-label="Buscar custos"
-            className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-2 pr-4 pl-9 text-sm outline-none focus:border-[var(--accent)]"
-          />
-        </form>
-      </div>
+            <input type="hidden" name="nat" value={f.natureza} />
+            <input type="hidden" name="f" value={f.situacao} />
+            {f.ano && <input type="hidden" name="ano" value={f.ano} />}
+            {f.agrupar && <input type="hidden" name="g" value={f.agrupar} />}
+            {f.setor && <input type="hidden" name="setor" value={f.setor} />}
+            {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
+            {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
+            {f.falta && <input type="hidden" name="falta" value={f.falta} />}
+            <IconeBusca className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ink-3)]" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={f.busca}
+              placeholder="Buscar por nome, fornecedor ou observação…"
+              aria-label="Buscar custos"
+              className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-2 pr-4 pl-9 text-sm outline-none focus:border-[var(--accent)]"
+            />
+          </form>
+        </div>
 
-      {/* Sub-filtros da fila de pendência: cada tipo de falta é um trabalho
+        {/* Sub-filtros da fila de pendência: cada tipo de falta é um trabalho
           diferente, e preencher doze datas seguidas é mais rápido do que
           alternar entre data, valor e categoria a cada linha. */}
-      {f.situacao === "pendencia" && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-meta text-[var(--ink-3)]">O que falta:</span>
-          <Link
-            href={urlDaLista({ ...f, falta: "" })}
-            aria-current={!f.falta ? "true" : undefined}
-            className={pilula(!f.falta, "aninhado")}
-          >
-            qualquer coisa
-          </Link>
-          {faltasDe(f.natureza).map((x) => (
+        {f.situacao === "pendencia" && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-meta text-[var(--ink-3)]">O que falta:</span>
             <Link
-              key={x.chave}
-              href={urlDaLista({ ...f, falta: x.chave })}
-              aria-current={f.falta === x.chave ? "true" : undefined}
-              className={pilula(f.falta === x.chave, "aninhado")}
+              href={urlDaLista({ ...f, falta: "" })}
+              aria-current={!f.falta ? "true" : undefined}
+              className={pilula(!f.falta, "aninhado")}
             >
-              {x.rotulo}
+              qualquer coisa
             </Link>
-          ))}
-          {podeLancar(usuario.papel) && linhas.length > 0 && (
-            <span className="ml-auto">
-              {/* A fila percorrida de uma vez, sem sair da lista: é a diferença
+            {faltasDe(f.natureza).map((x) => (
+              <Link
+                key={x.chave}
+                href={urlDaLista({ ...f, falta: x.chave })}
+                aria-current={f.falta === x.chave ? "true" : undefined}
+                className={pilula(f.falta === x.chave, "aninhado")}
+              >
+                {x.rotulo}
+              </Link>
+            ))}
+            {podeLancar(usuario.papel) && linhas.length > 0 && (
+              <span className="ml-auto">
+                {/* A fila percorrida de uma vez, sem sair da lista: é a diferença
                   entre doze aberturas de item e doze digitações seguidas. */}
-              <ModoRevisao
-                itens={linhas}
-                categorias={categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))}
-              />
-            </span>
-          )}
-        </div>
-      )}
+                <ModoRevisao
+                  itens={linhas}
+                  categorias={categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))}
+                />
+              </span>
+            )}
+          </div>
+        )}
 
-      {/* Recorte ativo, com o X que o remove. */}
-      {chips.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {/* Com um setor filtrado, o panorama dele fica a um clique: a lista
+        {/* Recorte ativo, com o X que o remove. */}
+        {chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {/* Com um setor filtrado, o panorama dele fica a um clique: a lista
               responde "quais custos"; o panorama responde "quanto, comparado
               com quem, e o que vence". São perguntas diferentes. */}
-          {f.setor && f.setor !== SEM_SETOR && nomes.setores.has(f.setor) && (
-            <Link
-              href={`/setores/${f.setor}`}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-meta font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
-            >
-              Panorama de {nomes.setores.get(f.setor)}
-              <IconeSeta className="size-3" />
-            </Link>
-          )}
-          {chips.map((c) => (
-            <Link
-              key={c.rotulo}
-              href={c.url}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-meta text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            >
-              {c.rotulo}
-              <IconeFechar className="size-3" />
-            </Link>
-          ))}
-          {temRecorte(f) && chips.length > 1 && (
-            <Link
-              href={urlDaLista({ situacao: f.situacao, ordem: f.ordem, dir: f.dir })}
-              className="rounded-full px-2.5 py-1 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
-            >
-              Limpar filtros
-            </Link>
-          )}
-        </div>
-      )}
+            {f.setor && f.setor !== SEM_SETOR && nomes.setores.has(f.setor) && (
+              <Link
+                href={`/setores/${f.setor}`}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-meta font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
+              >
+                Panorama de {nomes.setores.get(f.setor)}
+                <IconeSeta className="size-3" />
+              </Link>
+            )}
+            {chips.map((c) => (
+              <Link
+                key={c.rotulo}
+                href={c.url}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-meta text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {c.rotulo}
+                <IconeFechar className="size-3" />
+              </Link>
+            ))}
+            {temRecorte(f) && chips.length > 1 && (
+              <Link
+                href={urlDaLista({ situacao: f.situacao, ordem: f.ordem, dir: f.dir })}
+                className="rounded-full px-2.5 py-1 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+              >
+                Limpar filtros
+              </Link>
+            )}
+          </div>
+        )}
+      </AcoesFlutuantes>
 
       {linhas.length === 0 ? (
         <Vazio

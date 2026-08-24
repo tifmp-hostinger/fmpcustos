@@ -367,6 +367,28 @@ body {
   }
 }
 
+/*
+ * DENTRO DA FOLHA DE FILTROS, A FAIXA QUE ROLA VIRA LISTA QUE QUEBRA.
+ *
+ * Na página, uma fila de pílulas tem 390px de largura e altura de sobra abaixo
+ * dela — então rolar de lado é o certo. Dentro da folha é o inverso: a largura
+ * é a mesma, mas há 80% da tela em altura para gastar, e uma pílula cortada na
+ * borda ("Renova em 90…") esconde opção onde havia espaço para mostrá-la.
+ *
+ * Esta regra está FORA de `@layer`, e isso é deliberado: estilo sem camada
+ * vence qualquer utilitário do Tailwind, e é preciso vencer o `-mx-6 px-6` que
+ * as faixas usam para sangrar até a borda. Dentro da folha esse sangramento
+ * empurraria as pílulas para fora do respiro dela.
+ */
+.folha-de-filtros .faixa-rolante {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* Foco visível forte: a lista inteira é navegável por teclado. */
 :focus-visible {
   outline: 2px solid var(--accent);
