@@ -110,6 +110,19 @@ E2E_ROTINAS_TOKEN=... E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-alertas
 
 O servidor precisa estar rodando com `ROTINAS_TOKEN` igual ao `E2E_ROTINAS_TOKEN`.
 
+## `e2e-organizacao.mjs` — setor e categoria pela interface
+
+Cobre o caminho que antes era um `INSERT`: criar sem inventar código, a recusa
+de nome duplicado (inclusive contra um registro inativo, que é o caso que
+produz duplicata na vida real), o que o sistema deixa apagar e o que só deixa
+inativar, a consequência dita antes do clique, o ciclo de hierarquia recusado,
+e a fusão de duas categorias movendo exatamente o número de custos que
+prometeu.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-organizacao
+```
+
 ## `smtp-de-mentira.mjs` — conferir o e-mail de verdade
 
 Um servidor SMTP falso que aceita qualquer autenticação e guarda o que recebe em
@@ -136,8 +149,8 @@ Abra o `.html` no navegador para ver o e-mail como ele chega.
 ## Rodar tudo de uma vez
 
 ```bash
-npm run dev:e2e-tudo    # as seis suítes de navegador, em sequência
-npm run testar          # as cinco suítes de unidade
+npm run dev:e2e-tudo    # as sete suítes de navegador, em sequência
+npm run testar          # as seis suítes de unidade
 ```
 
 Cada suíte espera a base recém-semeada. Entre uma e outra, rode
@@ -146,12 +159,13 @@ Cada suíte espera a base recém-semeada. Entre uma e outra, rode
 ## Testes de unidade — sem banco, sem navegador
 
 ```bash
-npm run testar             # roda os cinco de uma vez
+npm run testar             # roda os seis de uma vez
 npm run testar:rateio      # aritmética do rateio
 npm run testar:fornecedores # identidade de fornecedor
 npm run testar:planilha    # leitura da colagem
 npm run testar:dinheiro    # periodicidade, moeda e câmbio
 npm run testar:rotinas     # guarda do token e leitura do SMTP
+npm run testar:organizacao # código, nome duplicado, ciclo de hierarquia
 ```
 
 ## `testar-rateio.ts` — aritmética do rateio

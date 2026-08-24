@@ -87,14 +87,31 @@ export function comEscopo(
   return { AND: [escopoDeItens(usuario, lixeira, incluirPropostas), ...partes] };
 }
 
-export async function listarCategorias() {
+/**
+ * As categorias que podem ser escolhidas.
+ *
+ * Só as ativas — inativar uma categoria precisa de fato tirá-la das listas de
+ * escolha, senão a ação promete uma coisa e a tela mostra outra.
+ *
+ * `manter` é o que impede a inativação de reclassificar custos por acidente:
+ * ao editar um custo que está numa categoria inativa, ela precisa continuar no
+ * seletor. Sem isso o `<select>` chega sem o valor atual, marca a primeira
+ * opção, e salvar — mesmo sem tocar no campo — mudaria a classificação em
+ * silêncio.
+ */
+export async function listarCategorias(manter?: string | null) {
   const categorias = await prisma.categoria.findMany({
-    select: { id: true, nome: true, categoriaPai: { select: { nome: true } } },
+    where: manter ? { OR: [{ ativo: true }, { id: manter }] } : { ativo: true },
+    select: { id: true, nome: true, ativo: true, categoriaPai: { select: { nome: true } } },
     orderBy: [{ categoriaPai: { nome: "asc" } }, { nome: "asc" }],
   });
   return categorias.map((c) => ({
     valor: c.id,
-    rotulo: c.categoriaPai ? `${c.categoriaPai.nome} › ${c.nome}` : c.nome,
+    rotulo:
+      (c.categoriaPai ? `${c.categoriaPai.nome} › ${c.nome}` : c.nome) +
+      // A etiqueta é o aviso de que aquela opção não é oferecida a mais
+      // ninguém: quem editar o custo decide se troca ou mantém.
+      (c.ativo ? "" : " (inativa)"),
   }));
 }
 
@@ -184,13 +201,17 @@ export async function propostasDoUsuario(usuarioId: string) {
   }));
 }
 
-export async function listarSetores() {
+/** Os setores que podem ser escolhidos. Mesma regra de `manter` das categorias. */
+export async function listarSetores(manter?: string | null) {
   const setores = await prisma.setor.findMany({
-    where: { ativo: true },
-    select: { id: true, nome: true },
+    where: manter ? { OR: [{ ativo: true }, { id: manter }] } : { ativo: true },
+    select: { id: true, nome: true, ativo: true },
     orderBy: { nome: "asc" },
   });
-  return setores.map((s) => ({ valor: s.id, rotulo: s.nome }));
+  return setores.map((s) => ({
+    valor: s.id,
+    rotulo: s.ativo ? s.nome : `${s.nome} (inativo)`,
+  }));
 }
 
 /** Só entra em "falta dado" o que ainda está em jogo. */

@@ -22,18 +22,20 @@
     "dev:semear": "tsx scripts/dev/semear-demo.ts",
     "dev:e2e": "node scripts/dev/e2e.mjs",
     "dev:e2e-navegacao": "node scripts/dev/e2e-navegacao.mjs",
-    "testar": "tsx scripts/testar-rateio.ts && tsx scripts/testar-fornecedores.ts && tsx scripts/testar-planilha.ts && tsx scripts/testar-dinheiro.ts && tsx scripts/testar-rotinas.ts",
+    "testar": "tsx scripts/testar-rateio.ts && tsx scripts/testar-fornecedores.ts && tsx scripts/testar-planilha.ts && tsx scripts/testar-dinheiro.ts && tsx scripts/testar-rotinas.ts && tsx scripts/testar-organizacao.ts",
     "testar:fornecedores": "tsx scripts/testar-fornecedores.ts",
     "testar:planilha": "tsx scripts/testar-planilha.ts",
     "dev:e2e-memoria": "node scripts/dev/e2e-memoria.mjs",
     "dev:e2e-lote": "node scripts/dev/e2e-lote.mjs",
-    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs",
+    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs && node scripts/dev/e2e-organizacao.mjs",
     "testar:dinheiro": "tsx scripts/testar-dinheiro.ts",
     "dev:e2e-moeda": "node scripts/dev/e2e-moeda.mjs",
     "rotina": "tsx scripts/rotina.ts",
     "testar:rotinas": "tsx scripts/testar-rotinas.ts",
     "dev:smtp": "node scripts/dev/smtp-de-mentira.mjs",
-    "dev:e2e-alertas": "node scripts/dev/e2e-alertas.mjs"
+    "dev:e2e-alertas": "node scripts/dev/e2e-alertas.mjs",
+    "testar:organizacao": "tsx scripts/testar-organizacao.ts",
+    "dev:e2e-organizacao": "node scripts/dev/e2e-organizacao.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

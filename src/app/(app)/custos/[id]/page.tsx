@@ -2,12 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
-import {
-  cotacoesMaisRecentes,
-  comEscopo,
-  listarCategorias,
-  listarSetores,
-} from "@/lib/consultas";
+import { cotacoesMaisRecentes, comEscopo, listarCategorias, listarSetores } from "@/lib/consultas";
 import { formatarBRL, formatarCambio } from "@/lib/dinheiro";
 import { FormularioCusto } from "../formulario";
 import { PropostaEmAberto } from "./rateio/proposta";
@@ -70,8 +65,11 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
   const valorMensal = item.valorMensalNormalizado?.toString() ?? null;
 
   const [categorias, setores, fornecedores, cotacoes] = await Promise.all([
-    listarCategorias(),
-    listarSetores(),
+    // A categoria e o setor atuais entram no seletor mesmo se estiverem
+    // inativos: sem isso, editar um custo classificado numa categoria inativa o
+    // reclassificaria em silêncio ao salvar.
+    listarCategorias(item.categoriaId),
+    listarSetores(item.rateios[0]?.setorId ?? usuario.setorId),
     prisma.fornecedor.findMany({ select: { nome: true }, orderBy: { nome: "asc" }, take: 500 }),
     cotacoesMaisRecentes(),
   ]);

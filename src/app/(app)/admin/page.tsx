@@ -16,7 +16,16 @@ export const dynamic = "force-dynamic";
 export default async function Admin() {
   await exigirAdmin();
 
-  const [usuarios, semAcesso, semCotacao, cotacoes, alertasAbertos] = await Promise.all([
+  const [
+    usuarios,
+    semAcesso,
+    semCotacao,
+    cotacoes,
+    alertasAbertos,
+    setores,
+    categorias,
+    semCategoria,
+  ] = await Promise.all([
     prisma.usuario.count({ where: { ativo: true } }),
     prisma.usuario.count({ where: { ativo: true, ultimoAcesso: null } }),
     prisma.itemCusto.count({
@@ -24,6 +33,15 @@ export default async function Admin() {
     }),
     prisma.cotacaoMoeda.count(),
     prisma.alerta.count({ where: { status: "ABERTO" } }),
+    prisma.setor.count({ where: { ativo: true } }),
+    prisma.categoria.count({ where: { ativo: true } }),
+    prisma.itemCusto.count({
+      where: {
+        excluidoEm: null,
+        status: { in: ["ATIVO", "EM_ANALISE"] },
+        categoriaId: null,
+      },
+    }),
   ]);
 
   const smtp = configuracaoSmtp() !== null;
@@ -74,6 +92,23 @@ export default async function Admin() {
           }
           atencao={!smtp}
         />
+        <Cartao
+          href="/admin/setores"
+          titulo="Setores"
+          descricao="A estrutura pela qual o custo da FMP é dividido."
+          nota={`${setores} ${setores === 1 ? "setor ativo" : "setores ativos"}`}
+        />
+        <Cartao
+          href="/admin/categorias"
+          titulo="Categorias"
+          descricao="Como o custo é agrupado por tipo."
+          nota={
+            semCategoria > 0
+              ? `${categorias} ativas · ${semCategoria} ${semCategoria === 1 ? "custo sem categoria" : "custos sem categoria"}`
+              : `${categorias} ${categorias === 1 ? "categoria ativa" : "categorias ativas"} · nenhum custo solto`
+          }
+          atencao={semCategoria > 0}
+        />
       </div>
     </main>
   );
@@ -86,7 +121,12 @@ function Cartao({
   nota,
   atencao,
 }: {
-  href: "/admin/usuarios" | "/admin/cambio" | "/admin/notificacoes";
+  href:
+    | "/admin/usuarios"
+    | "/admin/cambio"
+    | "/admin/notificacoes"
+    | "/admin/setores"
+    | "/admin/categorias";
   titulo: string;
   descricao: string;
   nota: string;
