@@ -221,14 +221,27 @@ async function dadosIncompletos(): Promise<Proposto[]> {
       status: { in: [...CORRENTES, "PENDENTE_APURACAO"] },
       OR: [
         { valorPeriodo: null },
-        { dataFim: null, semPrazoDeterminado: false },
+        // Só cobra data de renovação de quem RENOVA. Uma compra avulsa não tem
+        // data de término por definição, e exigi-la gerava um alerta que
+        // ninguém conseguiria resolver a não ser inventando uma data — o tipo
+        // de alerta que ensina a ignorar a lista inteira.
+        {
+          natureza: { in: ["RECORRENTE", "PESSOAL"] },
+          dataFim: null,
+          semPrazoDeterminado: false,
+        },
+        // O espelho: o que aconteceu uma vez precisa da data de quando
+        // aconteceu, ou some do total do exercício.
+        { natureza: { in: ["PONTUAL", "CAPEX"] }, dataInicio: null },
         { categoriaId: null },
       ],
     },
     select: {
       id: true,
       descricao: true,
+      natureza: true,
       valorPeriodo: true,
+      dataInicio: true,
       dataFim: true,
       semPrazoDeterminado: true,
       categoriaId: true,
@@ -240,14 +253,19 @@ async function dadosIncompletos(): Promise<Proposto[]> {
     // Três alertas sobre o mesmo contrato ensinam a ignorar os três.
     const faltas: string[] = [];
     const consequencias: string[] = [];
+    const renova = item.natureza === "RECORRENTE" || item.natureza === "PESSOAL";
 
     if (item.valorPeriodo === null) {
       faltas.push("o valor");
       consequencias.push("não entra em nenhuma soma");
     }
-    if (item.dataFim === null && !item.semPrazoDeterminado) {
+    if (renova && item.dataFim === null && !item.semPrazoDeterminado) {
       faltas.push("a data de renovação");
       consequencias.push("nunca vai gerar alerta de renovação");
+    }
+    if (!renova && item.dataInicio === null) {
+      faltas.push("a data de aquisição");
+      consequencias.push("fica de fora do total do exercício");
     }
     if (item.categoriaId === null) {
       faltas.push("a categoria");

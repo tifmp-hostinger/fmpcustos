@@ -533,8 +533,18 @@ model ItemCusto {
   /// comparável o que a planilha somava indevidamente. Nulo quando a conversão
   /// não é possível — item em moeda estrangeira sem câmbio fica FORA do total e
   /// aparece como pendência, porque somar 500 dólares como 500 reais é pior que
-  /// não somar.
+  /// não somar. Nulo também para pagamento único e consumo, que não têm
+  /// equivalente mensal: para esses, quem responde é `valorEmReais`.
   valorMensalNormalizado Decimal? @db.Decimal(14, 2)
+
+  /// O valor da COBRANÇA em real. Companheiro do de cima, e igualmente derivado.
+  ///
+  /// Existe porque uma compra avulsa não tem equivalente mensal — e sem este
+  /// campo o total de "quanto a FMP gastou em compras este ano" só poderia ser
+  /// somado em memória, sobre as linhas carregadas, o que passa a mentir no dia
+  /// em que a lista for maior que o teto. Some no banco, e some em real: somar
+  /// `valorPeriodo` cru repetiria o defeito da moeda numa segunda coluna.
+  valorEmReais           Decimal? @db.Decimal(14, 2)
 
   status StatusItem @default(ATIVO)
 

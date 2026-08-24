@@ -46,14 +46,17 @@ await p.waitForSelector('input[name="fornecedor"]');
 await p.fill('input[name="fornecedor"]', "Microsoft Brasil");
 await p.locator('input[name="descricao"]').click(); // dispara o blur
 await p.waitForTimeout(300);
-const aviso = await p.locator("form:has(input[name=\"fornecedor\"])").innerText();
+const aviso = await p.locator('form:has(input[name="fornecedor"])').innerText();
 ok(
   "digitar “Microsoft Brasil” avisa que já existe “Microsoft”",
   aviso.includes("Já existe “Microsoft”"),
   aviso.split("\n").find((l) => l.includes("Já existe")) ?? "nenhum aviso",
 );
-ok("e oferece adotar o nome existente", (await p.locator("button", { hasText: 'Usar “Microsoft”' }).count()) > 0);
-await p.locator("button", { hasText: 'Usar “Microsoft”' }).click();
+ok(
+  "e oferece adotar o nome existente",
+  (await p.locator("button", { hasText: "Usar “Microsoft”" }).count()) > 0,
+);
+await p.locator("button", { hasText: "Usar “Microsoft”" }).click();
 await p.waitForTimeout(200);
 ok(
   "um clique troca o campo pelo nome cadastrado",
@@ -65,7 +68,9 @@ await p.locator('input[name="descricao"]').click();
 await p.waitForTimeout(300);
 ok(
   "erro de digitação é apontado como engano",
-  (await p.locator("form:has(input[name=\"fornecedor\"])").innerText()).includes("engano de digitação"),
+  (await p.locator('form:has(input[name="fornecedor"])').innerText()).includes(
+    "engano de digitação",
+  ),
 );
 
 await p.fill('input[name="fornecedor"]', "Kaltura Media");
@@ -73,7 +78,7 @@ await p.locator('input[name="descricao"]').click();
 await p.waitForTimeout(300);
 ok(
   "fornecedor genuinamente novo não é alarmado",
-  !(await p.locator("form:has(input[name=\"fornecedor\"])").innerText()).includes("Já existe"),
+  !(await p.locator('form:has(input[name="fornecedor"])').innerText()).includes("Já existe"),
 );
 
 console.log("\n  → a rede embaixo: o servidor também reúne");
@@ -84,7 +89,10 @@ await p.locator('button[type="submit"]', { hasText: "Cadastrar custo" }).click()
 await p.waitForURL(/\/custos(\?|$)/, { timeout: 10000 });
 await p.goto(`${URL}/custos?f=todos&q=Teste de fornecedor`);
 await p.waitForSelector("table tbody tr");
-const fornecedorGravado = await p.locator('table tbody tr [data-celula="descricao"] span').first().innerText();
+const fornecedorGravado = await p
+  .locator('table tbody tr [data-celula="descricao"] span')
+  .first()
+  .innerText();
 ok(
   "“MICROSOFT LTDA” foi gravado no fornecedor Microsoft que já existia",
   fornecedorGravado.startsWith("Microsoft ·") || fornecedorGravado.startsWith("Microsoft"),
@@ -112,14 +120,24 @@ await p.waitForTimeout(500);
 
 const previa = (await p.locator("main").innerText()).replace(/\u00a0/g, " ");
 ok("detecta o cabeçalho e mapeia as colunas", previa.includes("Detectado pelo cabeçalho"));
-ok("conta 3 prontas e 1 com problema", /3\s*\n?prontas/.test(previa.replace(/\s+/g, " ")) || previa.includes("3 prontas"),
-   previa.split("\n").find((l) => l.includes("pronta")) ?? "");
-ok("aponta a célula ilegível com o texto original", previa.includes("«1,2,3»"),
-   previa.split("\n").find((l) => l.includes("1,2,3")) ?? "");
+ok(
+  "conta 3 prontas e 1 com problema",
+  /3\s*\n?prontas/.test(previa.replace(/\s+/g, " ")) || previa.includes("3 prontas"),
+  previa.split("\n").find((l) => l.includes("pronta")) ?? "",
+);
+ok(
+  "aponta a célula ilegível com o texto original",
+  previa.includes("«1,2,3»"),
+  previa.split("\n").find((l) => l.includes("1,2,3")) ?? "",
+);
 ok(
   "trimestral não foi lido como mensal",
   previa.includes("Trimestral"),
-  previa.split("\n").filter((l) => l.includes("Trimestral")).slice(0, 1).join(""),
+  previa
+    .split("\n")
+    .filter((l) => l.includes("Trimestral"))
+    .slice(0, 1)
+    .join(""),
 );
 const valorLido = previa.includes("R$ 2.480,00");
 ok("R$ 2.480,00 é lido corretamente", valorLido);
@@ -127,9 +145,20 @@ ok("R$ 2.480,00 é lido corretamente", valorLido);
 await p.locator('button[type="submit"]', { hasText: "Importar" }).click();
 await p.waitForURL(/f=analise/, { timeout: 12000 });
 await p.waitForTimeout(800);
-const avisoImport = await p.locator('[role="status"]').innerText().catch(() => "");
-ok("o aviso diz quantos entraram", /3 custos importados/.test(avisoImport), avisoImport.replace(/\n/g, " · "));
-ok("e que uma linha ficou de fora", avisoImport.includes("ficou de fora"), avisoImport.replace(/\n/g, " · "));
+const avisoImport = await p
+  .locator('[role="status"]')
+  .innerText()
+  .catch(() => "");
+ok(
+  "o aviso diz quantos entraram",
+  /3 custos importados/.test(avisoImport),
+  avisoImport.replace(/\n/g, " · "),
+);
+ok(
+  "e que uma linha ficou de fora",
+  avisoImport.includes("ficou de fora"),
+  avisoImport.replace(/\n/g, " · "),
+);
 ok(
   "os importados entram como “em análise”, sem somar no total ativo",
   p.url().includes("f=analise"),
@@ -175,7 +204,11 @@ const pcts = await Promise.all([
   p.locator('input[name="pct_0"]').inputValue(),
   p.locator('input[name="pct_1"]').inputValue(),
 ]);
-ok("aplicar o modelo escreve 70 e 30", pcts.includes("70,00") && pcts.includes("30,00"), pcts.join(" / "));
+ok(
+  "aplicar o modelo escreve 70 e 30",
+  pcts.includes("70,00") && pcts.includes("30,00"),
+  pcts.join(" / "),
+);
 
 console.log("\n═══ SENHA TEMPORÁRIA ═══");
 await p.goto(`${URL}/admin/usuarios`);
@@ -192,13 +225,20 @@ await p.selectOption('select[name="setorId"]', { index: 1 });
 await p.locator("button", { hasText: "Criar usuário" }).click();
 await p.waitForSelector("code", { timeout: 10000 });
 const senhaNaTela = (await p.locator("code").first().innerText()).trim();
-ok("a senha aparece isolada, em fonte monoespaçada", senhaNaTela.length >= 8, `${senhaNaTela.length} caracteres`);
+ok(
+  "a senha aparece isolada, em fonte monoespaçada",
+  senhaNaTela.length >= 8,
+  `${senhaNaTela.length} caracteres`,
+);
 ok("com botão de copiar", (await p.locator("button", { hasText: "Copiar" }).count()) > 0);
 await p.locator("button", { hasText: "Copiar" }).first().click();
 await p.waitForTimeout(400);
 const daAreaDeTransferencia = await p.evaluate(() => navigator.clipboard.readText());
-ok("copiar leva a senha para a área de transferência", daAreaDeTransferencia === senhaNaTela,
-   daAreaDeTransferencia === senhaNaTela ? "confere" : `“${daAreaDeTransferencia}”`);
+ok(
+  "copiar leva a senha para a área de transferência",
+  daAreaDeTransferencia === senhaNaTela,
+  daAreaDeTransferencia === senhaNaTela ? "confere" : `“${daAreaDeTransferencia}”`,
+);
 ok("e há um e-mail pronto para enviar", (await p.locator('a[href^="mailto:"]').count()) > 0);
 
 // A senha não pode sumir sozinha como um aviso qualquer.
@@ -238,10 +278,17 @@ await primeiro.locator("button", { hasText: "Resetar senha" }).click();
 await p.waitForSelector("code", { timeout: 8000 });
 ok("confirmação certa gera a senha nova", (await p.locator("code").count()) > 0);
 
+/**
+ * Quantos custos existem, de todas as naturezas.
+ *
+ * Pelo atributo, e não pelo primeiro `<p>` de `main`: a posição mudou no dia em
+ * que o cabeçalho ganhou o total em destaque, e o teste passou a ler o número
+ * errado sem que nada estivesse quebrado no sistema.
+ */
 async function contarCustos(pagina) {
-  await pagina.goto(`${URL}/custos?f=todos`);
-  await pagina.waitForSelector("main p");
-  const texto = await pagina.locator("main p").first().innerText();
+  await pagina.goto(`${URL}/custos?nat=tudo&f=todos`);
+  await pagina.waitForSelector("[data-contagem]");
+  const texto = await pagina.locator("[data-contagem]").first().innerText();
   return Number(texto.match(/(\d+)\s+custos?/)?.[1] ?? "0");
 }
 
@@ -249,7 +296,10 @@ console.log("\n═══ ERROS DE CONSOLE ═══");
 ok("nenhum erro de JavaScript", erros.length === 0, erros.slice(0, 2).join(" | "));
 
 const falhas = registro.filter((r) => !r.condicao);
-console.log(`\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`);
-if (falhas.length) falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
+console.log(
+  `\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`,
+);
+if (falhas.length)
+  falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
 await navegador.close();
 process.exit(falhas.length === 0 ? 0 : 1);

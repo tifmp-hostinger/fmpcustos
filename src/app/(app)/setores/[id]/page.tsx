@@ -125,7 +125,9 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
           valor={String(totalPendencias)}
           alerta={totalPendencias > 0}
           nota={totalPendencias > 0 ? "Deixam o número parcial" : "Nada faltando"}
-          href={totalPendencias > 0 ? daLista({ situacao: "pendencia" }) : undefined}
+          href={
+            totalPendencias > 0 ? daLista({ natureza: "tudo", situacao: "pendencia" }) : undefined
+          }
         />
       </section>
 
@@ -145,7 +147,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
               .map((x) => (
                 <li key={x.falta}>
                   <Link
-                    href={daLista({ situacao: "pendencia", falta: x.falta })}
+                    href={daLista({ natureza: "tudo", situacao: "pendencia", falta: x.falta })}
                     className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--surface)] px-3 py-1.5 text-[13px] no-underline hover:bg-[var(--accent)]/10"
                   >
                     <strong className="tabular-nums">{x.n}</strong>
@@ -209,7 +211,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                 <>
                   Atenção:{" "}
                   <Link
-                    href={daLista({ situacao: "pendencia", falta: "data" })}
+                    href={daLista({ natureza: "tudo", situacao: "pendencia", falta: "data" })}
                     className="text-[var(--accent)]"
                   >
                     {pendencias.semVigencia}{" "}

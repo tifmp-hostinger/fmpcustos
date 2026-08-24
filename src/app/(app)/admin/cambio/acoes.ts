@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { exigirAdmin } from "@/lib/sessao";
-import { formatarCambio, valorMensalEmReais } from "@/lib/dinheiro";
+import { derivados, formatarCambio } from "@/lib/dinheiro";
 import {
   cambio,
   dataOpcional,
@@ -70,9 +70,12 @@ export async function registrarCotacao(
   revalidatePath("/admin/cambio");
   revalidatePath("/custos/novo");
 
-  return sucesso(`1 ${moeda} = ${formatarCambio(taxa)} em ${data.toLocaleDateString("pt-BR", { timeZone: "UTC" })}.`, {
-    detalhe: "Vale como sugestão para novos custos. Nenhum custo já cadastrado mudou.",
-  });
+  return sucesso(
+    `1 ${moeda} = ${formatarCambio(taxa)} em ${data.toLocaleDateString("pt-BR", { timeZone: "UTC" })}.`,
+    {
+      detalhe: "Vale como sugestão para novos custos. Nenhum custo já cadastrado mudou.",
+    },
+  );
 }
 
 /**
@@ -110,13 +113,13 @@ export async function converterPendentes(
 
   await prisma.$transaction(async (tx) => {
     for (const item of pendentes) {
-      const mensal = valorMensalEmReais(item.valorPeriodo, item.periodicidade, moeda, taxa);
+      const valores = derivados(item.valorPeriodo, item.periodicidade, moeda, taxa);
       await tx.itemCusto.update({
         where: { id: item.id },
         data: {
           cambio: taxa,
           cambioEm: cotacao.data,
-          valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+          ...valores,
         },
       });
       await tx.auditoria.create({

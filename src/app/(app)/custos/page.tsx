@@ -4,20 +4,27 @@ import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { formatarBRL } from "@/lib/dinheiro";
 import {
+  AGRUPAMENTOS,
   FALTAS,
+  RECORTES,
   SEM_SETOR,
   SITUACOES,
+  TODOS_OS_ANOS,
+  anoEfetivo,
   chipsAtivos,
+  faltasDe,
+  situacoesDe,
   lerFiltros,
   temRecorte,
   urlDaLista,
   type Filtros,
   type ParamsBrutos,
 } from "@/lib/filtros";
-import { whereDaLista } from "@/lib/consultas";
+import { comEscopo, whereDaLista } from "@/lib/consultas";
 import { IconeBusca, IconeFechar, IconeMais, IconeSeta } from "@/components/icones";
 import { TabelaDeCustos, type LinhaCusto } from "./tabela";
 import { ModoRevisao } from "./revisao";
+import { AplicarAoTrocar } from "./aplicar";
 
 export const dynamic = "force-dynamic";
 
@@ -32,53 +39,92 @@ export const dynamic = "force-dynamic";
  */
 const TETO = 500;
 
+/** Só o que está em jogo entra em total: cancelado é histórico, não compromisso. */
+const CORRENTES = ["ATIVO", "EM_ANALISE"] as const;
+const RENOVAM = ["RECORRENTE", "PESSOAL"] as const;
+const ACONTECEM = ["PONTUAL", "CAPEX"] as const;
+
 export default async function Custos({ searchParams }: { searchParams: Promise<ParamsBrutos> }) {
   const params = await searchParams;
   const usuario = await exigirSessao();
   const f = lerFiltros(params);
   const global = vePorInteiro(usuario.papel);
   const situacao = SITUACOES.find((s) => s.chave === f.situacao)!;
-  const where = whereDaLista(f, usuario);
+  const recorte = RECORTES.find((r) => r.chave === f.natureza)!;
+  const anoAtual = new Date().getUTCFullYear();
+  const ano = anoEfetivo(f, anoAtual);
+  const where = whereDaLista(f, usuario, anoAtual);
 
-  const [itens, total, setores, categorias, fornecedores] = await Promise.all([
-    prisma.itemCusto.findMany({
-      where,
-      select: {
-        id: true,
-        descricao: true,
-        periodicidade: true,
-        moeda: true,
-        cambio: true,
-        valorPeriodo: true,
-        valorMensalNormalizado: true,
-        status: true,
-        dataFim: true,
-        semPrazoDeterminado: true,
-        excluidoEm: true,
-        fornecedor: { select: { nome: true } },
-        categoria: { select: { nome: true } },
-        rateios: {
-          where: { vigenciaFim: null },
-          select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
-          orderBy: { percentual: "desc" },
+  const [itens, total, setores, categorias, fornecedores, porMes, noPeriodo, porNatureza] =
+    await Promise.all([
+      prisma.itemCusto.findMany({
+        where,
+        select: {
+          id: true,
+          descricao: true,
+          natureza: true,
+          periodicidade: true,
+          moeda: true,
+          cambio: true,
+          valorPeriodo: true,
+          valorMensalNormalizado: true,
+          valorEmReais: true,
+          status: true,
+          dataInicio: true,
+          dataFim: true,
+          semPrazoDeterminado: true,
+          excluidoEm: true,
+          fornecedor: { select: { nome: true } },
+          categoria: { select: { nome: true } },
+          rateios: {
+            where: { vigenciaFim: null },
+            select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
+            orderBy: { percentual: "desc" },
+          },
+          _count: { select: { lancamentos: true } },
         },
-        _count: { select: { lancamentos: true } },
-      },
-      orderBy: [
-        { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
-        { atualizadoEm: "desc" },
-      ],
-      take: TETO,
-    }),
-    prisma.itemCusto.count({ where }),
-    prisma.setor.findMany({
-      where: { ativo: true },
-      select: { id: true, nome: true },
-      orderBy: { nome: "asc" },
-    }),
-    prisma.categoria.findMany({ select: { id: true, nome: true } }),
-    prisma.fornecedor.findMany({ select: { id: true, nome: true } }),
-  ]);
+        // Numa aba que mede período, "os 500 maiores" precisa ser pelo valor da
+        // cobrança: ordenar por valor mensal traria os 500 primeiros de uma coluna
+        // que é nula para toda compra avulsa.
+        orderBy:
+          recorte.medida === "periodo"
+            ? [{ valorEmReais: { sort: "desc", nulls: "last" } }, { atualizadoEm: "desc" }]
+            : [
+                { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
+                { atualizadoEm: "desc" },
+              ],
+        take: TETO,
+      }),
+      prisma.itemCusto.count({ where }),
+      prisma.setor.findMany({
+        where: { ativo: true },
+        select: { id: true, nome: true },
+        orderBy: { nome: "asc" },
+      }),
+      prisma.categoria.findMany({ select: { id: true, nome: true } }),
+      prisma.fornecedor.findMany({ select: { id: true, nome: true } }),
+      // Os totais somam NO BANCO, sobre o recorte inteiro — não sobre as linhas
+      // carregadas. Somar em memória dá o mesmo número enquanto a lista couber no
+      // teto e passa a mentir em silêncio no dia em que não couber, que é
+      // justamente o dia em que alguém mais precisa do número.
+      prisma.itemCusto.aggregate({
+        where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...RENOVAM] } },
+        _sum: { valorMensalNormalizado: true },
+        _count: { _all: true },
+      }),
+      prisma.itemCusto.aggregate({
+        where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...ACONTECEM] } },
+        _sum: { valorEmReais: true },
+        _count: { _all: true },
+      }),
+      // Quais abas existem de verdade. Uma aba "Pessoal" permanentemente vazia é
+      // ruído fixo, e o sistema não oferece o que já sabe que vai negar.
+      prisma.itemCusto.groupBy({
+        by: ["natureza"],
+        where: comEscopo(usuario, [{ status: { in: [...CORRENTES, "PENDENTE_APURACAO"] } }]),
+        _count: { _all: true },
+      }),
+    ]);
 
   const nomes = {
     setores: new Map(setores.map((s) => [s.id, s.nome])),
@@ -86,14 +132,18 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
     fornecedores: new Map(fornecedores.map((x) => [x.id, x.nome])),
   };
 
-  // O "/mês" do cabeçalho soma só itens correntes: apresentar um contrato
-  // cancelado como despesa mensal em andamento seria mentira aritmética.
-  const totalMensal = itens.reduce(
-    (soma, i) =>
-      i.valorMensalNormalizado && (i.status === "ATIVO" || i.status === "EM_ANALISE")
-        ? soma.plus(i.valorMensalNormalizado.toString())
-        : soma,
-    new Decimal(0),
+  const totalMensal = new Decimal(String(porMes._sum.valorMensalNormalizado ?? 0));
+  const totalPeriodo = new Decimal(String(noPeriodo._sum.valorEmReais ?? 0));
+
+  // As abas que têm item, mais a corrente e mais "Tudo" — a corrente porque
+  // sumir a aba em que a pessoa está seria trocar a tela debaixo dela.
+  const comItem = new Set(porNatureza.filter((g) => g._count._all > 0).map((g) => g.natureza));
+  const abas = RECORTES.filter(
+    (r) =>
+      r.chave === f.natureza ||
+      r.chave === "tudo" ||
+      r.chave === "recorrente" ||
+      r.naturezas?.some((n) => comItem.has(n)),
   );
 
   const linhas: LinhaCusto[] = itens.map((i) => {
@@ -109,12 +159,15 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       descricao: i.descricao,
       fornecedor: i.fornecedor?.nome ?? null,
       categoria: i.categoria?.nome ?? null,
+      natureza: i.natureza,
       periodicidade: i.periodicidade,
       moeda: i.moeda,
       cambio: i.cambio?.toString() ?? null,
       valorPeriodo: i.valorPeriodo?.toString() ?? null,
       valorMensal: i.valorMensalNormalizado?.toString() ?? null,
+      valorEmReais: i.valorEmReais?.toString() ?? null,
       status: i.status,
+      dataInicio: i.dataInicio ? i.dataInicio.toISOString().slice(0, 10) : null,
       dataFim: i.dataFim ? i.dataFim.toISOString().slice(0, 10) : null,
       semPrazo: i.semPrazoDeterminado,
       setores: i.rateios.map((r) => ({
@@ -137,30 +190,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight">Custos</h1>
-          <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
-            {/* Contador honesto: quando há corte, a lista diz de quantos. */}
-            {itens.length < total ? (
-              <>
-                Exibindo {itens.length} de {total} custos
-              </>
-            ) : (
-              <>
-                {total} {total === 1 ? "custo" : "custos"}
-              </>
-            )}{" "}
-            · {situacao.rotulo.toLowerCase()} ·{" "}
-            {global ? "todos os setores" : (usuario.setorNome ?? "sua área")}
-            {totalMensal.greaterThan(0) && (
-              <>
-                {" "}
-                · <strong className="tabular-nums">{formatarBRL(totalMensal)}/mês</strong> em itens
-                correntes
-              </>
-            )}
-          </p>
-        </div>
+        <h1 className="font-serif text-3xl font-bold tracking-tight">Custos</h1>
         {podeLancar(usuario.papel) && (
           <div className="flex flex-wrap items-center gap-2">
             {/* Quem já tem os custos numa planilha não deveria descobrir a
@@ -183,9 +213,95 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
         )}
       </div>
 
+      {/* A NATUREZA, COMO DIVISÃO DA TELA.
+          Não é um filtro entre outros: trocar de aba troca a pergunta, a
+          unidade do total e as colunas que fazem sentido. Vem antes da situação
+          porque decide o que as outras escolhas significam. */}
+      <nav
+        aria-label="Natureza do custo"
+        data-abas="natureza"
+        className="mt-5 flex flex-wrap gap-1 border-b border-[var(--rule)]"
+      >
+        {abas.map((r) => (
+          <Link
+            key={r.chave}
+            href={urlDaLista({
+              ...f,
+              natureza: r.chave,
+              // O ano e a ordenação pertencem à aba anterior: "ordenar por valor
+              // mensal" não significa nada numa aba que mede período, e um ano
+              // preso ao trocar para recorrente filtraria sem dizer por quê.
+              ano: "",
+              ordem: undefined,
+              dir: undefined,
+              destaque: "",
+            })}
+            aria-current={r.chave === f.natureza ? "page" : undefined}
+            data-aba={r.chave}
+            className={`-mb-px border-b-2 px-3.5 py-2 text-[14px] no-underline transition-colors ${
+              r.chave === f.natureza
+                ? "border-[var(--accent)] font-semibold text-[var(--accent)]"
+                : "border-transparent text-[var(--ink-3)] hover:text-[var(--ink)]"
+            }`}
+          >
+            {r.rotulo}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-5">
+        <Total
+          recorte={recorte}
+          mensal={totalMensal}
+          periodo={totalPeriodo}
+          quantidadeMensal={porMes._count._all}
+          quantidadePeriodo={noPeriodo._count._all}
+          ano={ano}
+        />
+        <p data-contagem="itens" className="mt-1.5 text-[13.5px] text-[var(--ink-2)]">
+          {itens.length < total ? (
+            <>
+              Exibindo {itens.length} de {total}
+            </>
+          ) : (
+            <>
+              {total} {total === 1 ? "custo" : "custos"}
+            </>
+          )}{" "}
+          · {situacao.rotulo.toLowerCase()} ·{" "}
+          {global ? "todos os setores" : (usuario.setorNome ?? "sua área")}
+        </p>
+        <p className="mt-1 max-w-2xl text-[12.5px] text-[var(--ink-3)]">{recorte.resumo}</p>
+      </div>
+
+      {/* O ano só existe onde o total mede período: numa aba de compromisso
+          mensal ele não teria o que recortar. */}
+      {recorte.medida === "periodo" && (
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-[var(--ink-3)]">Exercício:</span>
+          {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
+            <Link
+              key={a}
+              href={urlDaLista({ ...f, ano: String(a), destaque: "" })}
+              aria-current={ano === String(a) ? "true" : undefined}
+              className={chipClasse(ano === String(a))}
+            >
+              {a}
+            </Link>
+          ))}
+          <Link
+            href={urlDaLista({ ...f, ano: TODOS_OS_ANOS, destaque: "" })}
+            aria-current={ano === "" ? "true" : undefined}
+            className={chipClasse(ano === "")}
+          >
+            todos os anos
+          </Link>
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <nav aria-label="Filtrar por situação" className="flex flex-wrap gap-1.5">
-          {SITUACOES.map((x) => (
+          {situacoesDe(f.natureza).map((x) => (
             <Link
               key={x.chave}
               // Trocar de situação preserva o recorte (setor, busca) e limpa o
@@ -209,11 +325,50 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           ))}
         </nav>
 
+        {/* Agrupar é uma forma de OLHAR, não um filtro: nada sai da lista, o
+            mesmo conjunto se reorganiza. Por isso mora junto da busca e não
+            entre os chips, que dizem o que foi tirado de vista. */}
+        <form action="/custos" className="flex items-center gap-1.5">
+          <input type="hidden" name="nat" value={f.natureza} />
+          <input type="hidden" name="f" value={f.situacao} />
+          {f.ano && <input type="hidden" name="ano" value={f.ano} />}
+          {f.busca && <input type="hidden" name="q" value={f.busca} />}
+          {f.setor && <input type="hidden" name="setor" value={f.setor} />}
+          {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
+          {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
+          {f.falta && <input type="hidden" name="falta" value={f.falta} />}
+          <label htmlFor="agrupar" className="text-[12px] text-[var(--ink-3)]">
+            Agrupar:
+          </label>
+          <select
+            id="agrupar"
+            name="g"
+            defaultValue={f.agrupar}
+            data-controle="agrupar"
+            className="rounded-full border border-[var(--rule)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink-2)] outline-none focus:border-[var(--accent)]"
+          >
+            {AGRUPAMENTOS.map((a) => (
+              <option key={a.chave} value={a.chave}>
+                {a.rotulo}
+              </option>
+            ))}
+          </select>
+          <noscript>
+            <button type="submit" className="text-[12px] underline">
+              Aplicar
+            </button>
+          </noscript>
+          <AplicarAoTrocar />
+        </form>
+
         <form action="/custos" className="relative ml-auto min-w-[220px] flex-1 sm:max-w-xs">
           {/* Os campos escondidos preservam o recorte quando a busca é enviada:
               sem eles, buscar dentro de um setor jogaria a pessoa para a lista
               inteira e ela concluiria que o filtro não funciona. */}
+          <input type="hidden" name="nat" value={f.natureza} />
           <input type="hidden" name="f" value={f.situacao} />
+          {f.ano && <input type="hidden" name="ano" value={f.ano} />}
+          {f.agrupar && <input type="hidden" name="g" value={f.agrupar} />}
           {f.setor && <input type="hidden" name="setor" value={f.setor} />}
           {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
           {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
@@ -243,7 +398,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           >
             qualquer coisa
           </Link>
-          {FALTAS.map((x) => (
+          {faltasDe(f.natureza).map((x) => (
             <Link
               key={x.chave}
               href={urlDaLista({ ...f, falta: x.chave })}
@@ -312,6 +467,14 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
         <TabelaDeCustos
           itens={linhas}
           mostrarSetor={global}
+          colunas={{
+            mensal: recorte.medida !== "periodo",
+            renovacao: recorte.medida !== "periodo",
+            aquisicao: recorte.medida === "periodo",
+            // Só em "Tudo": nas outras a natureza é o título da aba, e repeti-la
+            // em cada linha seria dizer a mesma coisa 500 vezes.
+            natureza: recorte.naturezas === null,
+          }}
           podeLancar={podeLancar(usuario.papel)}
           destacar={f.destaque || undefined}
           filtros={f}
@@ -323,20 +486,24 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
 
       {itens.length < total && (
         <p className="mt-3 text-[12px] text-[var(--ink-3)]">
-          Exibindo os {TETO} maiores por valor mensal, de {total}. Filtre por setor ou busque para
-          alcançar o resto.
+          Exibindo os {TETO} maiores de {total}. O total acima conta os {total} —{" "}
+          {/* Dito porque a diferença importa: o corte é de exibição, não de
+              cálculo, e sem essa frase o número grande pareceria não bater com
+              as linhas que dá para contar na tela. */}
+          quem some é a linha, não o dinheiro. Filtre ou busque para alcançar o resto.
         </p>
       )}
 
-      {/* Reconciliação declarada. O total daqui e o do painel medem coisas
-          diferentes e vão divergir; duas telas com duas verdades e nenhuma
-          explicação destroem a confiança nas duas. */}
-      {totalMensal.greaterThan(0) && (
+      {/* A nota de reconciliação encolheu porque o motivo dela encolheu: a
+          lista não soma mais as quatro naturezas na mesma coluna, então o total
+          de "Recorrente" e o do painel passaram a ser o mesmo número. Sobrou uma
+          divergência real e só uma — com escopo de setor, o painel conta a
+          FRAÇÃO rateada e a lista conta o item inteiro. */}
+      {f.setor && f.setor !== SEM_SETOR && totalMensal.greaterThan(0) && (
         <p className="mt-3 max-w-3xl text-[12px] leading-relaxed text-[var(--ink-3)]">
-          O total desta lista soma o <strong>valor cheio</strong> de cada item exibido, de todas as
-          naturezas. O painel inicial soma só os <strong>recorrentes</strong> e conta cada item pela
-          fração rateada a cada setor — por isso os dois números podem divergir sem que nenhum
-          esteja errado.
+          Este total soma o <strong>valor cheio</strong> de cada custo que passa pelo setor. O
+          panorama do setor soma a <strong>fração rateada</strong> a ele — num custo dividido, os
+          dois números diferem sem que nenhum esteja errado.
         </p>
       )}
 
@@ -347,6 +514,97 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
         </p>
       )}
     </main>
+  );
+}
+
+/**
+ * O número da aba, com a unidade que ele de fato tem.
+ *
+ * Este componente é o coração da mudança. Antes existia um "/mês" só, somando
+ * as quatro naturezas — e o rodapé da tela pedia desculpa por ele divergir do
+ * painel. Um compromisso mensal e um gasto do exercício não são a mesma espécie
+ * de número: um se projeta (×12), o outro se compara com o ano anterior. Dar a
+ * cada um a sua unidade é o que torna os dois utilizáveis.
+ *
+ * Em "Tudo" saem DOIS números, nunca um. Somar compromisso mensal com gasto
+ * anual produziria um valor que não responde a pergunta nenhuma, e a tentação
+ * de somá-los é exatamente o defeito que se está corrigindo.
+ */
+function Total({
+  recorte,
+  mensal,
+  periodo,
+  quantidadeMensal,
+  quantidadePeriodo,
+  ano,
+}: {
+  recorte: (typeof RECORTES)[number];
+  mensal: Decimal;
+  periodo: Decimal;
+  quantidadeMensal: number;
+  quantidadePeriodo: number;
+  ano: string;
+}) {
+  const deQuando = ano ? `em ${ano}` : "de todos os anos";
+
+  if (recorte.medida === "mensal") {
+    if (mensal.isZero()) return null;
+    return (
+      <p className="text-[15px]">
+        <strong className="font-serif text-[26px] leading-none font-bold tabular-nums">
+          {formatarBRL(mensal)}
+        </strong>
+        <span className="ml-1 text-[var(--ink-2)]">/mês</span>
+        {/* A projeção não é um segundo total: é o mesmo número na escala em que
+            as decisões de contrato são tomadas. */}
+        <span className="ml-2.5 text-[13px] text-[var(--ink-3)]">
+          · <span className="tabular-nums">{formatarBRL(mensal.mul(12))}</span> em 12 meses, ao
+          ritmo de hoje
+        </span>
+      </p>
+    );
+  }
+
+  if (recorte.medida === "periodo") {
+    if (periodo.isZero()) return null;
+    return (
+      <p className="text-[15px]">
+        <strong className="font-serif text-[26px] leading-none font-bold tabular-nums">
+          {formatarBRL(periodo)}
+        </strong>
+        <span className="ml-1.5 text-[var(--ink-2)]">{deQuando}</span>
+        <span className="ml-2.5 text-[13px] text-[var(--ink-3)]">
+          · {quantidadePeriodo} {quantidadePeriodo === 1 ? "lançamento" : "lançamentos"}
+        </span>
+      </p>
+    );
+  }
+
+  // "Tudo": dois números com rótulos distintos, lado a lado, nunca somados.
+  if (mensal.isZero() && periodo.isZero()) return null;
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[15px]">
+      {mensal.greaterThan(0) && (
+        <span>
+          <strong className="font-serif text-[22px] leading-none font-bold tabular-nums">
+            {formatarBRL(mensal)}
+          </strong>
+          <span className="ml-1 text-[13px] text-[var(--ink-2)]">
+            /mês em {quantidadeMensal} recorrentes
+          </span>
+        </span>
+      )}
+      {periodo.greaterThan(0) && (
+        <span>
+          <strong className="font-serif text-[22px] leading-none font-bold tabular-nums">
+            {formatarBRL(periodo)}
+          </strong>
+          <span className="ml-1 text-[13px] text-[var(--ink-2)]">
+            {deQuando} em {quantidadePeriodo} pontuais e investimentos
+          </span>
+        </span>
+      )}
+    </p>
   );
 }
 

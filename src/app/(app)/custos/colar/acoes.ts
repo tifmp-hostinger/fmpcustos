@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { valorMensalEmReais } from "@/lib/dinheiro";
+import { derivados } from "@/lib/dinheiro";
 import { normalizar } from "@/lib/fornecedores";
 import { MAXIMO_LINHAS, MAPA_VAZIO, lerColagem, type Mapa } from "@/lib/planilha";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
@@ -97,7 +97,7 @@ export async function importarColados(
       // cotação, e uma taxa única aplicada a trinta linhas coladas seria um
       // número inventado com aparência de conversão. Moeda estrangeira se
       // cadastra uma a uma — a tela de colagem avisa isso.
-      const mensal = valorMensalEmReais(linha.valorPeriodo, linha.periodicidade, "BRL", null);
+      const valores = derivados(linha.valorPeriodo, linha.periodicidade, "BRL", null);
       const categoriaId = linha.categoria
         ? (porCategoria.get(normalizar(linha.categoria)) ?? null)
         : null;
@@ -116,7 +116,7 @@ export async function importarColados(
           natureza: "RECORRENTE",
           periodicidade: linha.periodicidade,
           valorPeriodo: linha.valorPeriodo,
-          valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+          ...valores,
           quantidade: linha.quantidade,
           dataFim: linha.dataFim,
           observacoes: linha.observacoes,

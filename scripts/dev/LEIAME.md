@@ -6,9 +6,10 @@ descartável, antes de subir qualquer coisa para o EasyPanel.
 ## `semear-demo.ts` — base de demonstração
 
 Apaga tudo e recria 13 setores, 5 usuários (um de cada perfil), 4 categorias e
-27 custos representativos — mensais, anuais, trimestrais, por consumo, com e sem
-data de renovação, dois em dólar (um convertido, um sem cotação de propósito) e
-alguns já com lançamentos de competência. É a base que o teste de ponta a ponta
+33 custos representativos — mensais, anuais, trimestrais, por consumo, com e sem
+data de renovação, dois em dólar (um convertido, um sem cotação de propósito),
+três compras avulsas e três investimentos (um sem data de aquisição, também de
+propósito) e alguns já com lançamentos de competência. É a base que o teste de ponta a ponta
 espera encontrar.
 
 Os números que as suítes conferem moram em `semente.mjs`, num lugar só. Mudou a
@@ -123,6 +124,19 @@ prometeu.
 E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-organizacao
 ```
 
+## `e2e-naturezas.mjs` — a divisão por natureza e o agrupamento
+
+Cobre o que respondeu à pergunta "a tela de custos não vai poluir com o tempo?".
+Verifica que cada aba mede na sua unidade, que a aba padrão fecha exatamente com
+o número do painel (a divergência que o rodapé explicava por escrito), que
+colunas sem sentido somem em vez de virar coluna de travessão, que filtros
+condenados a voltar vazios não são oferecidos, que o exercício recorta o que se
+mede por período, e que os subtotais dos grupos fecham com o total.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-naturezas
+```
+
 ## `smtp-de-mentira.mjs` — conferir o e-mail de verdade
 
 Um servidor SMTP falso que aceita qualquer autenticação e guarda o que recebe em
@@ -149,7 +163,7 @@ Abra o `.html` no navegador para ver o e-mail como ele chega.
 ## Rodar tudo de uma vez
 
 ```bash
-npm run dev:e2e-tudo    # as sete suítes de navegador, em sequência
+npm run dev:e2e-tudo    # as oito suítes de navegador, em sequência
 npm run testar          # as seis suítes de unidade
 ```
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { formatarBRL, valorMensalEmReais } from "@/lib/dinheiro";
+import { derivados, formatarBRL } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro, type UsuarioSessao } from "@/lib/sessao";
 import { ROTULOS_STATUS } from "@/lib/opcoes";
 import {
@@ -286,7 +286,7 @@ export async function definirCambio(dados: FormData): Promise<Resultado> {
   }
 
   const quando = dataOpcional(dados, "cambioEm") ?? hojeUTC();
-  const mensal = valorMensalEmReais(antes.valorPeriodo, antes.periodicidade, antes.moeda, taxa);
+  const valores = derivados(antes.valorPeriodo, antes.periodicidade, antes.moeda, taxa);
 
   await prisma.$transaction(async (tx) => {
     await tx.itemCusto.update({
@@ -294,7 +294,7 @@ export async function definirCambio(dados: FormData): Promise<Resultado> {
       data: {
         cambio: taxa,
         cambioEm: quando,
-        valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+        ...valores,
       },
     });
     await registrar(
@@ -307,13 +307,18 @@ export async function definirCambio(dados: FormData): Promise<Resultado> {
 
   atualizarListas(id);
 
+  // A frase muda com a natureza do que foi convertido: um contrato mensal ganha
+  // um "/mês", uma compra única ganha o total. Anunciar "/mês" para um pagamento
+  // único seria inventar uma recorrência que não existe.
   return sucesso(
-    mensal
-      ? `${permissao.item.descricao}: ${formatarBRL(mensal)}/mês.`
-      : `Cotação de ${permissao.item.descricao} registrada.`,
+    valores.valorMensalNormalizado
+      ? `${permissao.item.descricao}: ${formatarBRL(valores.valorMensalNormalizado)}/mês.`
+      : valores.valorEmReais
+        ? `${permissao.item.descricao}: ${formatarBRL(valores.valorEmReais)}.`
+        : `Cotação de ${permissao.item.descricao} registrada.`,
     {
       destaqueId: id,
-      detalhe: mensal ? "Agora entra nos totais." : undefined,
+      detalhe: valores.valorEmReais ? "Agora entra nos totais." : undefined,
     },
   );
 }
@@ -357,14 +362,14 @@ export async function alterarValor(dados: FormData): Promise<Resultado> {
   // O atalho da lista muda o valor, nunca a moeda: a conversão usa a taxa que o
   // item já tem. Um item em dólar sem câmbio continua fora do total — corrigir
   // isso é edição, não atalho, porque exige decidir uma cotação.
-  const mensal = valorMensalEmReais(valorPeriodo, antes.periodicidade, antes.moeda, antes.cambio);
+  const valores = derivados(valorPeriodo, antes.periodicidade, antes.moeda, antes.cambio);
 
   await prisma.$transaction(async (tx) => {
     await tx.itemCusto.update({
       where: { id },
       data: {
         valorPeriodo,
-        valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+        ...valores,
         // Informar o valor resolve a pendência de apuração por si só; manter o
         // status "a apurar" com valor preenchido deixa a fila mentindo.
         ...(valorPeriodo !== null && antes.status === "PENDENTE_APURACAO"
@@ -529,8 +534,9 @@ export async function reverterCampo(dados: FormData): Promise<Resultado> {
         // O valor mensal é sempre derivado, nunca restaurado de um payload:
         // guardá-lo no desfazer permitiria voltar a um par valor/mensal que
         // não fecha entre si.
-        const mensal = valorMensalEmReais(valor, atual.periodicidade, atual.moeda, atual.cambio);
-        data.valorMensalNormalizado = mensal ? mensal.toFixed(2) : null;
+        const valores = derivados(valor, atual.periodicidade, atual.moeda, atual.cambio);
+        data.valorMensalNormalizado = valores.valorMensalNormalizado;
+        data.valorEmReais = valores.valorEmReais;
         break;
       }
     }

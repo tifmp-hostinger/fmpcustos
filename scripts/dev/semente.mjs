@@ -12,12 +12,21 @@
  */
 export const SEMENTE = {
   /** Total de itens criados, incluindo o que está a apurar. */
-  itens: 27,
-  /** Os que aparecem no filtro padrão "Ativos". */
+  itens: 33,
+  /** Recorrentes ativos — o que a aba padrão da lista mostra. */
   ativos: 26,
-  /** Itens rateados 100% ao setor de TI — o que o gestor de TI deve enxergar. */
-  itensDeTI: 8,
+  /** Itens rateados 100% ao setor de TI, de todas as naturezas. */
+  itensDeTI: 9,
+  /** Destes, os recorrentes — o que a aba padrão da lista mostra. */
+  recorrentesDeTI: 8,
   /** Em moeda estrangeira: um convertido, um ainda sem cotação. */
   emMoedaEstrangeira: 2,
   semCotacao: 1,
+  /** Compras avulsas: duas em 2026, uma em 2025. */
+  pontuais: 3,
+  pontuaisEm2026: 2,
+  /** Investimentos: dois datados em 2026, um sem data de aquisição. */
+  investimentos: 3,
+  investimentosEm2026: 2,
+  semDataDeAquisicao: 1,
 };

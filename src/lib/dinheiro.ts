@@ -118,6 +118,32 @@ export function valorAnualEmReais(
 }
 
 /**
+ * Os dois campos derivados do item, calculados juntos.
+ *
+ * `valorMensalNormalizado` e `valorEmReais` respondem a perguntas diferentes —
+ * "quanto por mês" e "quanto custou esta cobrança" — e são gravados nos mesmos
+ * sete lugares. Calculá-los separadamente é garantir que um dia alguém atualize
+ * um e esqueça o outro, e aí a lista de recorrentes e a de compras passam a
+ * discordar sobre o mesmo item sem que nenhuma pareça errada.
+ *
+ * Devolve texto pronto para o banco: `Decimal` com duas casas, ou nulo quando a
+ * conversão não é possível.
+ */
+export function derivados(
+  valorPeriodo: Decimal.Value | null | undefined,
+  periodicidade: Periodicidade,
+  moeda: Moeda,
+  cambio: Decimal.Value | null | undefined,
+): { valorMensalNormalizado: string | null; valorEmReais: string | null } {
+  const mensal = valorMensalEmReais(valorPeriodo, periodicidade, moeda, cambio);
+  const cheio = emReais(valorPeriodo, moeda, cambio);
+  return {
+    valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+    valorEmReais: cheio ? cheio.toFixed(2) : null,
+  };
+}
+
+/**
  * Um item em moeda estrangeira precisa de taxa. Esta é a pergunta que a tela,
  * a action e a fila de pendências fazem — as três com a mesma resposta.
  */

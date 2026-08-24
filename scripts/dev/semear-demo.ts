@@ -1,6 +1,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
-import type { Moeda, PapelUsuario, Periodicidade } from "../../src/generated/prisma/enums";
+import type {
+  Moeda,
+  Natureza,
+  PapelUsuario,
+  Periodicidade,
+} from "../../src/generated/prisma/enums";
 import { gerarHashSenha } from "../../src/lib/senha";
 
 const prisma = new PrismaClient({
@@ -73,22 +78,24 @@ async function main() {
   await usuario("Rita Controladoria", "controladoria@fmp.com.br", "CONTROLADORIA", "Financeiro");
   await usuario("Leo Leitor", "leitor@fmp.com.br", "LEITOR", "TI");
 
+  /**
+   * O que sai do padrão. Objeto, e não mais posições no fim da tupla: com dez
+   * campos posicionais, `[..., null, 0, "USD", undefined, "PONTUAL"]` vira um
+   * enigma que só se lê contando vírgulas.
+   */
+  type Extras = {
+    moeda?: string;
+    cambio?: string;
+    natureza?: string;
+    /** Quando o fato aconteceu. Obrigatório no que não se repete. */
+    dataInicio?: string;
+  };
+
   const dados: Array<
-    [
-      string,
-      string,
-      string,
-      string,
-      string,
-      string | null,
-      string | null,
-      number,
-      string?,
-      string?,
-    ]
+    [string, string, string, string, string, string | null, string | null, number, Extras?]
   > = [
     // descrição, fornecedor, categoria, setor, periodicidade, valor, dataFim,
-    // lançamentos, [moeda], [câmbio]
+    // lançamentos, [extras]
     [
       "Microsoft 365 — 120 licenças",
       "Microsoft",
@@ -268,8 +275,7 @@ async function main() {
       "599.88",
       "2027-03-31",
       0,
-      "USD",
-      "5.432100",
+      { moeda: "USD", cambio: "5.432100" },
     ],
     // Moeda estrangeira SEM cotação: o item existe, tem valor na tela e não é
     // contado em lugar nenhum. É a pendência que o sistema precisa mostrar.
@@ -282,8 +288,80 @@ async function main() {
       "9990.00",
       "2027-01-15",
       0,
-      "USD",
-      undefined,
+      { moeda: "USD" },
+    ],
+
+    // ── O que aconteceu uma vez ──────────────────────────────────────────────
+    // Existem para que a lista pare de somar compromisso mensal com gasto do
+    // exercício na mesma coluna. Sem eles o defeito continuaria invisível na
+    // base de demonstração, que é onde ele deveria aparecer primeiro.
+    [
+      "Mobiliário da sala de aula 3",
+      "Marelli",
+      "Infraestrutura",
+      "Acadêmico",
+      "UNICO",
+      "18400.00",
+      null,
+      0,
+      { natureza: "PONTUAL", dataInicio: "2026-03-12" },
+    ],
+    [
+      "Consultoria de acessibilidade do site",
+      "Hand Talk",
+      "Serviços",
+      "Comunicação e Marketing",
+      "UNICO",
+      "7500.00",
+      null,
+      0,
+      { natureza: "PONTUAL", dataInicio: "2026-05-20" },
+    ],
+    [
+      "Impressão do anuário 2025",
+      "Gráfica Pallotti",
+      "Comunicação",
+      "Comunicação e Marketing",
+      "UNICO",
+      "12900.00",
+      null,
+      0,
+      { natureza: "PONTUAL", dataInicio: "2025-11-08" },
+    ],
+    [
+      "Servidor de virtualização",
+      "Dell",
+      "Infraestrutura",
+      "TI",
+      "UNICO",
+      "94800.00",
+      null,
+      0,
+      { natureza: "CAPEX", dataInicio: "2026-02-02" },
+    ],
+    [
+      "Projetores das salas 1 a 6",
+      "Epson",
+      "Infraestrutura",
+      "Acadêmico",
+      "UNICO",
+      "31200.00",
+      null,
+      0,
+      { natureza: "CAPEX", dataInicio: "2026-07-18" },
+    ],
+    // Sem data de aquisição de propósito: é a pendência própria do que
+    // aconteceu uma vez, e sem ela a compra some do total do exercício.
+    [
+      "Cadeiras da biblioteca",
+      "Flexform",
+      "Infraestrutura",
+      "Biblioteca",
+      "UNICO",
+      "8600.00",
+      null,
+      0,
+      { natureza: "CAPEX" },
     ],
   ];
 
@@ -297,7 +375,8 @@ async function main() {
     SOB_DEMANDA: null,
   };
 
-  for (const [desc, forn, cat, setor, per, valor, fim, lanc, moeda, cambio] of dados) {
+  for (const [desc, forn, cat, setor, per, valor, fim, lanc, extras] of dados) {
+    const { moeda, cambio, natureza, dataInicio } = extras ?? {};
     let f = await prisma.fornecedor.findFirst({ where: { nome: forn } });
     if (!f) f = await prisma.fornecedor.create({ data: { nome: forn } });
 
@@ -307,20 +386,27 @@ async function main() {
     const taxa = (moeda ?? "BRL") === "BRL" ? 1 : cambio ? Number(cambio) : null;
     const mensal =
       valor && oc && taxa !== null ? ((Number(valor) * taxa * oc) / 12).toFixed(2) : null;
+    // O companheiro do mensal: o valor da cobrança em real. Existe mesmo quando
+    // não há equivalente mensal — é o que responde por compra avulsa.
+    const cheio = valor && taxa !== null ? (Number(valor) * taxa).toFixed(2) : null;
 
     const item = await prisma.itemCusto.create({
       data: {
         descricao: desc,
         fornecedorId: f.id,
         categoriaId: categorias.get(cat)!,
+        natureza: (natureza ?? "RECORRENTE") as Natureza,
         periodicidade: per as Periodicidade,
         moeda: (moeda ?? "BRL") as Moeda,
         cambio: cambio ?? null,
         cambioEm: cambio ? new Date("2026-08-20") : null,
         valorPeriodo: valor,
         valorMensalNormalizado: mensal,
+        valorEmReais: cheio,
         status: valor ? "ATIVO" : "PENDENTE_APURACAO",
-        dataInicio: new Date("2026-01-01"),
+        // O que se repete começou no início do exercício; o que aconteceu uma
+        // vez tem a data do próprio fato — e um item de propósito sem nenhuma.
+        dataInicio: dataInicio ? new Date(dataInicio) : natureza ? null : new Date("2026-01-01"),
         dataFim: fim ? new Date(fim) : null,
       },
     });

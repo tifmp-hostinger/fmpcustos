@@ -228,6 +228,9 @@ export async function pendenciasDeDado(escopo: Escopo) {
       where: {
         excluidoEm: null,
         status: { in: [...STATUS_CORRENTE] },
+        // Só o que renova. Cobrar data de término de uma compra avulsa marcava
+        // toda compra pontual como incompleta para sempre.
+        natureza: { in: ["RECORRENTE", "PESSOAL"] },
         dataFim: null,
         semPrazoDeterminado: false,
         ...(escopo.setorIds === null
@@ -291,6 +294,9 @@ export async function itensComPendencia(escopo: Escopo, limite = 5) {
       where: {
         excluidoEm: null,
         status: { in: [...STATUS_CORRENTE] },
+        // Só o que renova. Cobrar data de término de uma compra avulsa marcava
+        // toda compra pontual como incompleta para sempre.
+        natureza: { in: ["RECORRENTE", "PESSOAL"] },
         dataFim: null,
         semPrazoDeterminado: false,
         valorMensalNormalizado: { not: null },

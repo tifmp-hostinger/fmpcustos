@@ -27,7 +27,7 @@
     "testar:planilha": "tsx scripts/testar-planilha.ts",
     "dev:e2e-memoria": "node scripts/dev/e2e-memoria.mjs",
     "dev:e2e-lote": "node scripts/dev/e2e-lote.mjs",
-    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs && node scripts/dev/e2e-organizacao.mjs",
+    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs && node scripts/dev/e2e-organizacao.mjs && node scripts/dev/e2e-naturezas.mjs",
     "testar:dinheiro": "tsx scripts/testar-dinheiro.ts",
     "dev:e2e-moeda": "node scripts/dev/e2e-moeda.mjs",
     "rotina": "tsx scripts/rotina.ts",
@@ -35,7 +35,8 @@
     "dev:smtp": "node scripts/dev/smtp-de-mentira.mjs",
     "dev:e2e-alertas": "node scripts/dev/e2e-alertas.mjs",
     "testar:organizacao": "tsx scripts/testar-organizacao.ts",
-    "dev:e2e-organizacao": "node scripts/dev/e2e-organizacao.mjs"
+    "dev:e2e-organizacao": "node scripts/dev/e2e-organizacao.mjs",
+    "dev:e2e-naturezas": "node scripts/dev/e2e-naturezas.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

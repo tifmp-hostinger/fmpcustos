@@ -2,8 +2,10 @@ import { prisma } from "@/lib/db";
 import type { Prisma, StatusItem } from "@/generated/prisma/client";
 import { setoresVisiveis, type UsuarioSessao } from "@/lib/sessao";
 import {
-  FALTAS,
+  RECORTES,
   SITUACOES,
+  anoEfetivo,
+  faltasDe,
   SEM_CATEGORIA,
   SEM_FORNECEDOR,
   SEM_SETOR,
@@ -224,7 +226,21 @@ function faltando(chave: string): Prisma.ItemCustoWhereInput {
     case "data":
       // "Sem prazo determinado" é uma resposta, não uma lacuna: quem marcou
       // isso já resolveu a pendência e não pode continuar sendo cobrado.
-      return { dataFim: null, semPrazoDeterminado: false };
+      //
+      // E a cobrança só vale para o que RENOVA. Uma compra avulsa não tem data
+      // de renovação por definição — exigi-la marcava toda compra pontual como
+      // incompleta para sempre, e gerava um alerta que ninguém conseguiria
+      // resolver a não ser inventando uma data.
+      return {
+        natureza: { in: ["RECORRENTE", "PESSOAL"] },
+        dataFim: null,
+        semPrazoDeterminado: false,
+      };
+    case "aquisicao":
+      // O espelho da regra acima: para o que aconteceu uma vez, a data que
+      // importa é a de quando aconteceu. Sem ela o item não entra em nenhum
+      // recorte de ano e some do total do exercício.
+      return { natureza: { in: ["PONTUAL", "CAPEX"] }, dataInicio: null };
     case "categoria":
       return { categoriaId: null };
     case "fornecedor":
@@ -244,15 +260,41 @@ function faltando(chave: string): Prisma.ItemCustoWhereInput {
  * de setor e a busca usa `OR` para os campos de texto: dois `OR` no mesmo
  * objeto fariam um sobrescrever o outro em silêncio.
  */
-export function whereDaLista(f: Filtros, usuario: UsuarioSessao): Prisma.ItemCustoWhereInput {
+export function whereDaLista(
+  f: Filtros,
+  usuario: UsuarioSessao,
+  /** Ano corrente, para as abas que medem período. Ver `anoEfetivo`. */
+  anoAtual = new Date().getUTCFullYear(),
+): Prisma.ItemCustoWhereInput {
   const partes: Prisma.ItemCustoWhereInput[] = [];
   const situacao = SITUACOES.find((s) => s.chave === f.situacao)!;
+  const recorte = RECORTES.find((r) => r.chave === f.natureza)!;
+
+  // A natureza entra antes de tudo: ela não é um filtro entre outros, é o que a
+  // página é. Somar assinatura mensal com compra avulsa numa coluna só não é
+  // desorganização — é aritmética errada com aparência de relatório.
+  if (recorte.naturezas) partes.push({ natureza: { in: [...recorte.naturezas] } });
+
+  const ano = anoEfetivo(f, anoAtual);
+  if (ano) {
+    // O que aconteceu uma vez se mede por QUANDO aconteceu. `dataInicio` é a
+    // data do fato; o item sem data fica de fora do exercício, e é por isso que
+    // "sem data de aquisição" é uma pendência própria.
+    partes.push({
+      dataInicio: {
+        gte: new Date(Date.UTC(Number(ano), 0, 1)),
+        lt: new Date(Date.UTC(Number(ano) + 1, 0, 1)),
+      },
+    });
+  }
 
   if (situacao.status) partes.push({ status: { in: [...situacao.status] } });
 
   if (f.situacao === "pendencia") {
     partes.push({ status: { in: STATUS_EM_JOGO } });
-    partes.push(f.falta ? faltando(f.falta) : { OR: FALTAS.map((x) => faltando(x.chave)) });
+    partes.push(
+      f.falta ? faltando(f.falta) : { OR: faltasDe(f.natureza).map((x) => faltando(x.chave)) },
+    );
   }
 
   if (f.situacao === "renovacao") {

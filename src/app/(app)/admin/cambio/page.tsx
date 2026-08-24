@@ -65,8 +65,8 @@ export default async function Cambio() {
           </h2>
           <p className="mt-1.5 text-[13.5px] text-[var(--ink-2)]">
             {totalPendente === 1 ? "Ele tem" : "Eles têm"} valor cadastrado e nenhuma cotação. Até
-            que a taxa seja informada, {totalPendente === 1 ? "ele não é somado" : "não são somados"}{" "}
-            em lugar nenhum.
+            que a taxa seja informada,{" "}
+            {totalPendente === 1 ? "ele não é somado" : "não são somados"} em lugar nenhum.
           </p>
           <ul className="mt-3 space-y-3">
             {ESTRANGEIRAS.filter((m) => (pendentes.get(m) ?? 0) > 0).map((moeda) => {
@@ -75,7 +75,7 @@ export default async function Cambio() {
               return (
                 <li key={moeda}>
                   <Link
-                    href={urlDaLista({ situacao: "pendencia", falta: "cambio" })}
+                    href={urlDaLista({ natureza: "tudo", situacao: "pendencia", falta: "cambio" })}
                     className="text-[13.5px] font-medium text-[var(--accent)] no-underline hover:underline"
                   >
                     Ver {n} em {moeda}

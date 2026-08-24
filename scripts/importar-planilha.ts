@@ -53,7 +53,14 @@ type LinhaNormalizada = {
   duplicaAba?: string;
 };
 
-type Periodicidade = "MENSAL" | "BIMESTRAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL" | "UNICO" | "SOB_DEMANDA";
+type Periodicidade =
+  | "MENSAL"
+  | "BIMESTRAL"
+  | "TRIMESTRAL"
+  | "SEMESTRAL"
+  | "ANUAL"
+  | "UNICO"
+  | "SOB_DEMANDA";
 type StatusItem =
   | "ATIVO"
   | "EM_ANALISE"
@@ -120,13 +127,13 @@ const PERIODICIDADES: Record<string, Periodicidade> = {
   semestral: "SEMESTRAL",
   anual: "ANUAL",
   unico: "UNICO",
-  "único": "UNICO",
+  único: "UNICO",
   "pagamento unico": "UNICO",
   "pagamento único": "UNICO",
   "sob demanda": "SOB_DEMANDA",
   "por consumo": "SOB_DEMANDA",
   variavel: "SOB_DEMANDA",
-  "variável": "SOB_DEMANDA",
+  variável: "SOB_DEMANDA",
   "pagamento 6 meses": "SEMESTRAL",
 };
 
@@ -167,7 +174,8 @@ function derivarStatus(
 ): StatusItem {
   const alvo = `${statusTexto ?? ""} ${observacoes ?? ""}`.toLowerCase();
   if (alvo.includes("substituído") || alvo.includes("substituido")) return "SUBSTITUIDO";
-  if (alvo.includes("cancelado") || alvo.includes("valor antes do cancelamento")) return "CANCELADO";
+  if (alvo.includes("cancelado") || alvo.includes("valor antes do cancelamento"))
+    return "CANCELADO";
   if (alvo.includes("solicitado cancelamento") || alvo.includes("cancelamento em"))
     return "CANCELAMENTO_SOLICITADO";
   if (alvo.includes("em análise") || alvo.includes("em analise") || alvo.includes("verificar"))
@@ -182,7 +190,10 @@ function derivarStatus(
 const PISTAS_OBSERVACAO: Array<{ campo: string; regex: RegExp }> = [
   { campo: "localização", regex: /auditório|rede acadêmica|rede administrativa|on premise/i },
   { campo: "quantidade", regex: /x\s*\d+\s*(colaborador|usuário|licen)|(\d+\s+impressoras)/i },
-  { campo: "status/decisão", regex: /remoção|cancelamento|substituído|redução prevista|em análise/i },
+  {
+    campo: "status/decisão",
+    regex: /remoção|cancelamento|substituído|redução prevista|em análise/i,
+  },
   { campo: "responsável/área", regex: /\bDPO\b|NEAD|marketing|jurídico/i },
 ];
 
@@ -324,7 +335,8 @@ function lerAbaPrincipal(ws: ExcelJS.Worksheet): LinhaNormalizada[] {
         aba,
         linha: r,
         referencia,
-        detalhe: "Sem centro de custo e sem setor. Este custo não pode ser rateado nem atribuído a ninguém.",
+        detalhe:
+          "Sem centro de custo e sem setor. Este custo não pode ser rateado nem atribuído a ninguém.",
       });
     }
 
@@ -493,7 +505,10 @@ function lerAbaDetalhe(ws: ExcelJS.Worksheet): LinhaNormalizada[] {
   }
 
   // Mesmo produto com preços unitários diferentes.
-  const porProduto = new Map<string, Array<{ linha: number; unitario: number; proposta: string | null }>>();
+  const porProduto = new Map<
+    string,
+    Array<{ linha: number; unitario: number; proposta: string | null }>
+  >();
   for (const l of saida) {
     if (l.valorUnitario === null || !l.descricao) continue;
     const lista = porProduto.get(l.descricao) ?? [];
@@ -613,18 +628,24 @@ function gerarRelatorio(linhas: LinhaNormalizada[], arquivo: string): string {
   linhasMd.push("| Métrica | Valor |");
   linhasMd.push("| --- | ---: |");
   linhasMd.push(`| Linhas lidas | ${linhas.length} |`);
-  linhasMd.push(`| Linhas descartadas por dupla contagem | ${duplicadas.length} (${fmt(soma(duplicadas, "valorPeriodo"))}) |`);
+  linhasMd.push(
+    `| Linhas descartadas por dupla contagem | ${duplicadas.length} (${fmt(soma(duplicadas, "valorPeriodo"))}) |`,
+  );
   linhasMd.push(`| Soma bruta das linhas úteis | ${fmt(total)} |`);
-  linhasMd.push(`| **Não conversível para mensal** (sem periodicidade) | ${naoNormalizavel.length} linhas · ${fmt(somaNaoNormalizavel)} |`);
+  linhasMd.push(
+    `| **Não conversível para mensal** (sem periodicidade) | ${naoNormalizavel.length} linhas · ${fmt(somaNaoNormalizavel)} |`,
+  );
   linhasMd.push(`| Soma normalizada para mensal | ${fmt(normalizado)} |`);
-  linhasMd.push(`| Itens não ativos ainda somando | ${naoAtivos.length} linhas · ${fmt(somaNaoAtivos)} |`);
+  linhasMd.push(
+    `| Itens não ativos ainda somando | ${naoAtivos.length} linhas · ${fmt(somaNaoAtivos)} |`,
+  );
   linhasMd.push(`| **Mensal comparável de itens ATIVOS** | ${fmt(totalAtivos)} |`);
   linhasMd.push(`| Achados críticos | ${porSeveridade("critico").length} |`);
   linhasMd.push(`| Achados de atenção | ${porSeveridade("atencao").length} |`);
   linhasMd.push(`| Achados informativos | ${porSeveridade("info").length} |`);
   linhasMd.push("");
   linhasMd.push(
-    "> O total normalizado **não** é comparável com o \"Total Geral\" da planilha. " +
+    '> O total normalizado **não** é comparável com o "Total Geral" da planilha. ' +
       "Ele exclui a dupla contagem entre abas, converte periodicidades para o equivalente mensal " +
       "e deixa de fora as linhas sem periodicidade declarada. A diferença é dado faltando, não economia.",
   );
@@ -657,7 +678,8 @@ function gerarRelatorio(linhas: LinhaNormalizada[], arquivo: string): string {
 // ---------------------------------------------------------------------------
 
 const sqlTexto = (v: string) => `'${v.replace(/'/g, "''")}'`;
-const sqlOuNulo = (v: string | null | undefined) => (v === null || v === undefined ? "NULL" : sqlTexto(v));
+const sqlOuNulo = (v: string | null | undefined) =>
+  v === null || v === undefined ? "NULL" : sqlTexto(v);
 const sqlNumero = (v: number | string | null | undefined) =>
   v === null || v === undefined ? "NULL" : String(v);
 
@@ -718,7 +740,7 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
     "--",
     "-- GERADO por scripts/importar-planilha.ts --sql. Não edite à mão.",
     "--",
-    "-- Sem transação: um erro mostra a causa real, não \"25P02\".",
+    '-- Sem transação: um erro mostra a causa real, não "25P02".',
     "-- Idempotente: reimportar atualiza os mesmos itens em vez de duplicar.",
     "--",
     "-- Pré-requisitos: esquema aplicado e setores/categorias carregados",
@@ -742,30 +764,32 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
     out.push(
       'INSERT INTO "item_custo" (id, descricao, natureza, "fornecedorId", "categoriaId",',
       '  "modeloCobranca", comportamento, quantidade, "valorUnitario", moeda, periodicidade,',
-      '  "valorPeriodo", "valorMensalNormalizado", status, "refProposta", observacoes,',
+      '  "valorPeriodo", "valorMensalNormalizado", "valorEmReais", status, "refProposta", observacoes,',
       '  "criadoEm", "atualizadoEm")',
       `SELECT ${sqlTexto(id)}, ${sqlTexto(l.descricao as string)}, 'RECORRENTE', f.id, cat.id,`,
       `  'FIXO', ${sqlTexto(l.comportamento ?? "FIXO")}, ${sqlNumero(l.quantidade)}, ${sqlNumero(l.valorUnitario)}, 'BRL', ${sqlTexto(l.periodicidade ?? "MENSAL")},`,
-      `  ${sqlNumero(l.valorPeriodo)}, ${sqlNumero(l.valorMensalNormalizado)}, ${sqlTexto(l.status)}, ${sqlOuNulo(l.refProposta)}, ${sqlOuNulo(l.observacoes)},`,
+      // A carga é toda em real, então o valor da cobrança em real é o próprio
+      // valorPeriodo. O campo existe para que compra avulsa some no banco; aqui
+      // ele preenche por completude, para nenhuma linha nascer sem ele.
+      `  ${sqlNumero(l.valorPeriodo)}, ${sqlNumero(l.valorMensalNormalizado)}, ${sqlNumero(l.valorPeriodo)}, ${sqlTexto(l.status)}, ${sqlOuNulo(l.refProposta)}, ${sqlOuNulo(l.observacoes)},`,
       "  now(), now()",
       `FROM "fornecedor" f`,
       `  LEFT JOIN "categoria" cat ON cat.codigo = ${sqlOuNulo(l.categoria)}`,
       `WHERE f.nome = ${sqlTexto(l.fornecedor as string)}`,
-      'ON CONFLICT (id) DO UPDATE SET',
-      '  descricao = EXCLUDED.descricao,',
+      "ON CONFLICT (id) DO UPDATE SET",
+      "  descricao = EXCLUDED.descricao,",
       '  "valorPeriodo" = EXCLUDED."valorPeriodo",',
       '  "valorMensalNormalizado" = EXCLUDED."valorMensalNormalizado",',
-      '  periodicidade = EXCLUDED.periodicidade,',
-      '  status = EXCLUDED.status,',
-      '  observacoes = EXCLUDED.observacoes,',
+      '  "valorEmReais" = EXCLUDED."valorEmReais",',
+      "  periodicidade = EXCLUDED.periodicidade,",
+      "  status = EXCLUDED.status,",
+      "  observacoes = EXCLUDED.observacoes,",
       '  "atualizadoEm" = now();',
       "",
     );
   }
 
-  out.push(
-    "-- Rateio: 100% no setor responsável --------------------------------------",
-  );
+  out.push("-- Rateio: 100% no setor responsável --------------------------------------");
   for (const l of uteis) {
     const id = idsPorLinha.get(l)!;
     out.push(
@@ -780,10 +804,10 @@ function gerarSqlCarga(linhas: LinhaNormalizada[], codigoSetor: string): string 
   out.push(
     "-- Conferência ------------------------------------------------------------",
     'SELECT count(*) AS itens, sum("valorMensalNormalizado") AS mensal_normalizado',
-    'FROM "item_custo" WHERE id LIKE \'imp_%\';',
+    "FROM \"item_custo\" WHERE id LIKE 'imp_%';",
     "",
-    "SELECT status, count(*) AS itens, sum(\"valorMensalNormalizado\") AS mensal",
-    'FROM "item_custo" WHERE id LIKE \'imp_%\' GROUP BY status ORDER BY 3 DESC NULLS LAST;',
+    'SELECT status, count(*) AS itens, sum("valorMensalNormalizado") AS mensal',
+    "FROM \"item_custo\" WHERE id LIKE 'imp_%' GROUP BY status ORDER BY 3 DESC NULLS LAST;",
     "",
   );
 

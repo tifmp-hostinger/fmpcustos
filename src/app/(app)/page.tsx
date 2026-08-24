@@ -181,7 +181,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
                 {/* A fila inteira, resolvível na própria lista sem abrir item
                     por item. O cartão mostra os primeiros; o link mostra todos. */}
                 <Link
-                  href={urlDaLista({ situacao: "pendencia" })}
+                  href={urlDaLista({ natureza: "tudo", situacao: "pendencia" })}
                   className="text-[12.5px] font-medium text-[var(--accent)] no-underline hover:underline"
                 >
                   Resolver tudo de uma vez
@@ -357,7 +357,10 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         a meio entre duas áreas entra pela metade em cada uma, e a soma dos setores fecha com o
         total. Naturezas diferentes — pontual, investimento, pessoal — nunca são somadas aqui sem
         pedido explícito, e por isso este número é menor que o da{" "}
-        <Link href={urlDaLista({ situacao: "todos" })} className="text-[var(--accent)]">
+        <Link
+          href={urlDaLista({ natureza: "tudo", situacao: "todos" })}
+          className="text-[var(--accent)]"
+        >
           lista completa de custos
         </Link>
         .
@@ -662,7 +665,7 @@ function PendenciaResumo({
   return (
     <li>
       <Link
-        href={urlDaLista({ situacao: "pendencia", falta })}
+        href={urlDaLista({ natureza: "tudo", situacao: "pendencia", falta })}
         className="-m-2 block rounded-lg p-2 no-underline transition-colors hover:bg-[var(--ground)]"
       >
         {corpo}

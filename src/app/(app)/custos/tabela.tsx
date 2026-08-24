@@ -58,14 +58,18 @@ export type LinhaCusto = {
   descricao: string;
   fornecedor: string | null;
   categoria: string | null;
+  natureza: string;
   periodicidade: string;
   moeda: string;
   /** Taxa gravada no item. Nula em real; nula em moeda estrangeira = fora dos totais. */
   cambio: string | null;
   valorPeriodo: string | null;
-  /** Sempre em real — é a única coluna que se soma. */
+  /** Sempre em real — o compromisso por mês. Nulo para o que não se repete. */
   valorMensal: string | null;
+  /** O valor da cobrança em real. É o que se soma no que aconteceu uma vez. */
+  valorEmReais: string | null;
   status: StatusItem;
+  dataInicio: string | null;
   dataFim: string | null;
   semPrazo: boolean;
   setores: Array<{ nome: string; percentual: string }>;
@@ -77,9 +81,25 @@ export type LinhaCusto = {
   naLixeira: boolean;
 };
 
+/**
+ * Quais colunas fazem sentido nesta aba.
+ *
+ * "Por mês" numa lista de compras avulsas é uma coluna inteira de travessões, e
+ * "Renova em" numa compra que aconteceu uma vez é uma pergunta sem resposta
+ * possível. Tirar a coluna é mais honesto — e mais limpo — que preenchê-la com
+ * nada.
+ */
+export type Colunas = {
+  mensal: boolean;
+  renovacao: boolean;
+  aquisicao: boolean;
+  natureza: boolean;
+};
+
 export function TabelaDeCustos({
   itens,
   mostrarSetor,
+  colunas,
   podeLancar,
   destacar,
   filtros,
@@ -87,6 +107,7 @@ export function TabelaDeCustos({
 }: {
   itens: LinhaCusto[];
   mostrarSetor: boolean;
+  colunas: Colunas;
   podeLancar: boolean;
   /** Item recém-alterado noutra tela: chega pela URL e pisca ao carregar. */
   destacar?: string;
@@ -132,6 +153,23 @@ export function TabelaDeCustos({
     () => itens.map((i) => ({ ...i, ...(otimista[i.id] ?? {}) })),
     [itens, otimista],
   );
+
+  const grupos = useMemo(
+    () => agrupar(linhas, filtros.agrupar, colunas.mensal),
+    [linhas, filtros.agrupar, colunas.mensal],
+  );
+
+  // Recolher é estado de tela, não de dado: não vai para a URL. Um agrupamento
+  // com metade dos grupos fechados não é um recorte que alguém queira colar num
+  // e-mail — é o jeito de olhar de agora.
+  const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
+  const alternarGrupo = useCallback((chave: string) => {
+    setRecolhidos((r) => {
+      const proximo = new Set(r);
+      if (!proximo.delete(chave)) proximo.add(chave);
+      return proximo;
+    });
+  }, []);
 
   // O destaque some depois da animação; mantê-lo faria a linha reacender a
   // cada re-render da lista, o que vira ruído em vez de sinal.
@@ -271,6 +309,15 @@ export function TabelaDeCustos({
   const algunsMarcados = selecionaveis.some((l) => selecionados.has(l.id));
   const emLote = podeLancar && selecionaveis.length > 0;
 
+  const quantidadeDeColunas =
+    // seleção + descrição + cobrança + valor + situação + menu
+    (emLote ? 1 : 0) +
+    5 +
+    (mostrarSetor ? 1 : 0) +
+    (colunas.natureza ? 1 : 0) +
+    (colunas.aquisicao ? 1 : 0) +
+    (colunas.renovacao ? 1 : 0);
+
   if (linhas.length === 0) return null;
 
   return (
@@ -315,15 +362,22 @@ export function TabelaDeCustos({
                 Setor
               </Cabecalho>
             )}
+            {colunas.natureza && <th className="px-4 py-3 font-medium">Natureza</th>}
             <Cabecalho campo="cobranca" filtros={filtros} direita>
               Cobrança
             </Cabecalho>
             <Cabecalho campo="mensal" filtros={filtros} direita>
-              Por mês
+              {/* O rótulo diz o que a coluna mede nesta aba. "Por mês" em cima
+                  de uma lista de compras avulsas seria uma coluna inteira
+                  respondendo à pergunta errada. */}
+              {colunas.mensal ? "Por mês" : "Total"}
             </Cabecalho>
-            <Cabecalho campo="renovacao" filtros={filtros}>
-              Renova em
-            </Cabecalho>
+            {colunas.aquisicao && <th className="px-4 py-3 font-medium">Aquisição</th>}
+            {colunas.renovacao && (
+              <Cabecalho campo="renovacao" filtros={filtros}>
+                Renova em
+              </Cabecalho>
+            )}
             <Cabecalho campo="situacao" filtros={filtros}>
               Situação
             </Cabecalho>
@@ -332,22 +386,82 @@ export function TabelaDeCustos({
             </th>
           </tr>
         </thead>
-        <tbody>
-          {linhas.map((item) => (
-            <Linha
-              key={item.id}
-              item={item}
-              mostrarSetor={mostrarSetor}
-              podeLancar={podeLancar}
-              gravando={gravando.has(item.id)}
-              aceso={aceso === item.id}
-              executar={executar}
-              emLote={emLote}
-              marcado={selecionados.has(item.id)}
-              aoMarcar={marcar}
-            />
-          ))}
-        </tbody>
+        {grupos ? (
+          grupos.map((grupo) => {
+            const fechado = recolhidos.has(grupo.chave);
+            return (
+              <tbody key={grupo.chave} data-grupo={grupo.rotulo}>
+                <tr className="border-b border-[var(--rule)] bg-[var(--surface)]">
+                  <th
+                    scope="colgroup"
+                    colSpan={quantidadeDeColunas}
+                    className="px-3 py-2 text-left font-normal"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => alternarGrupo(grupo.chave)}
+                      aria-expanded={!fechado}
+                      className="flex w-full items-center gap-2 text-left"
+                    >
+                      <IconeSeta
+                        aria-hidden
+                        className={`size-3 shrink-0 text-[var(--ink-3)] transition-transform ${
+                          fechado ? "" : "rotate-90"
+                        }`}
+                      />
+                      <span className="text-[13.5px] font-semibold">{grupo.rotulo}</span>
+                      <span className="text-[12px] text-[var(--ink-3)]">
+                        {grupo.itens.length} {grupo.itens.length === 1 ? "custo" : "custos"}
+                      </span>
+                      {grupo.subtotal && (
+                        <span className="ml-auto text-[13px] font-medium tabular-nums">
+                          {formatarBRL(grupo.subtotal)}
+                          {colunas.mensal && (
+                            <span className="font-normal text-[var(--ink-3)]">/mês</span>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  </th>
+                </tr>
+                {!fechado &&
+                  grupo.itens.map((item) => (
+                    <Linha
+                      key={item.id}
+                      item={item}
+                      mostrarSetor={mostrarSetor}
+                      colunas={colunas}
+                      podeLancar={podeLancar}
+                      gravando={gravando.has(item.id)}
+                      aceso={aceso === item.id}
+                      executar={executar}
+                      emLote={emLote}
+                      marcado={selecionados.has(item.id)}
+                      aoMarcar={marcar}
+                    />
+                  ))}
+              </tbody>
+            );
+          })
+        ) : (
+          <tbody>
+            {linhas.map((item) => (
+              <Linha
+                key={item.id}
+                item={item}
+                mostrarSetor={mostrarSetor}
+                colunas={colunas}
+                podeLancar={podeLancar}
+                gravando={gravando.has(item.id)}
+                aceso={aceso === item.id}
+                executar={executar}
+                emLote={emLote}
+                marcado={selecionados.has(item.id)}
+                aoMarcar={marcar}
+              />
+            ))}
+          </tbody>
+        )}
       </table>
 
       <BarraDeSelecao
@@ -367,6 +481,7 @@ export function TabelaDeCustos({
 function Linha({
   item,
   mostrarSetor,
+  colunas,
   podeLancar,
   gravando,
   aceso,
@@ -377,6 +492,7 @@ function Linha({
 }: {
   item: LinhaCusto;
   mostrarSetor: boolean;
+  colunas: Colunas;
   podeLancar: boolean;
   gravando: boolean;
   aceso: boolean;
@@ -546,23 +662,52 @@ function Linha({
         </span>
       </td>
 
+      {colunas.natureza && (
+        <td data-celula="natureza" className="px-4 py-3 text-[12.5px] text-[var(--ink-2)]">
+          {ROTULO_CURTO_NATUREZA[item.natureza] ?? item.natureza}
+        </td>
+      )}
+
       <td data-celula="mensal" className="px-4 py-3 text-right font-medium tabular-nums">
-        {item.valorMensal ? (
+        {colunas.mensal ? (
+          item.valorMensal ? (
+            <>
+              {formatarBRL(item.valorMensal)}
+              {item.moeda !== "BRL" && (
+                <span
+                  className="block text-[11px] font-normal text-[var(--ink-3)]"
+                  title={`Convertido de ${item.moeda} a ${item.cambio ? formatarCambio(item.cambio) : "—"}`}
+                >
+                  a {formatarCambio(item.cambio)}
+                </span>
+              )}
+            </>
+          ) : semCotacao ? (
+            // Não é "—". Um traço aqui diz "não tem valor", e este item tem: o que
+            // falta é a taxa. Confundir os dois manda a pessoa procurar no lugar
+            // errado — e o link leva direto ao lugar certo.
+            <Link
+              href={`/custos/${item.id}`}
+              data-falta="cambio"
+              className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+            >
+              sem cotação
+            </Link>
+          ) : (
+            "—"
+          )
+        ) : // Numa aba de período, esta coluna passa a mostrar o total em real —
+        // o número que de fato se soma quando o custo aconteceu uma vez.
+        item.valorEmReais ? (
           <>
-            {formatarBRL(item.valorMensal)}
+            {formatarBRL(item.valorEmReais)}
             {item.moeda !== "BRL" && (
-              <span
-                className="block text-[11px] font-normal text-[var(--ink-3)]"
-                title={`Convertido de ${item.moeda} a ${item.cambio ? formatarCambio(item.cambio) : "—"}`}
-              >
+              <span className="block text-[11px] font-normal text-[var(--ink-3)]">
                 a {formatarCambio(item.cambio)}
               </span>
             )}
           </>
         ) : semCotacao ? (
-          // Não é "—". Um traço aqui diz "não tem valor", e este item tem: o que
-          // falta é a taxa. Confundir os dois manda a pessoa procurar no lugar
-          // errado — e o link leva direto ao lugar certo.
           <Link
             href={`/custos/${item.id}`}
             data-falta="cambio"
@@ -575,9 +720,29 @@ function Linha({
         )}
       </td>
 
-      <td className="px-4 py-2">
-        <CelulaData item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
-      </td>
+      {colunas.aquisicao && (
+        <td data-celula="aquisicao" className="px-4 py-3 text-[13px] tabular-nums">
+          {item.dataInicio ? (
+            formatarData(item.dataInicio)
+          ) : (
+            // Sem a data do fato, a compra não entra em nenhum exercício e some
+            // do total do ano. É pendência, e o link leva ao lugar de resolvê-la.
+            <Link
+              href={`/custos/${item.id}`}
+              data-falta="aquisicao"
+              className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+            >
+              sem data
+            </Link>
+          )}
+        </td>
+      )}
+
+      {colunas.renovacao && (
+        <td className="px-4 py-2">
+          <CelulaData item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
+        </td>
+      )}
 
       <td data-celula="situacao" className="px-4 py-2">
         <CelulaSituacao item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
@@ -592,6 +757,73 @@ function Linha({
       </td>
     </tr>
   );
+}
+
+/**
+ * A natureza em uma palavra.
+ *
+ * `ROTULOS_NATUREZA` traz a frase inteira do formulário — "Investimento / CAPEX
+ * (bem que vira patrimônio)" — que é a explicação certa na hora de escolher e a
+ * errada dentro de uma célula de tabela.
+ */
+const ROTULO_CURTO_NATUREZA: Record<string, string> = {
+  RECORRENTE: "Recorrente",
+  PONTUAL: "Pontual",
+  CAPEX: "Investimento",
+  PESSOAL: "Pessoal",
+};
+
+/** dd/mm/aaaa a partir de "aaaa-mm-dd", sem passar por Date e sem fuso. */
+function formatarData(iso: string): string {
+  const [ano, mes, dia] = iso.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * A LISTA AGRUPADA
+ *
+ * É a resposta ao pedido de "pasta", sem o problema da pasta: o grupo é
+ * DERIVADO do dado, não arquivado à mão. Ninguém decide onde um custo mora,
+ * nada desatualiza, e trocar o agrupamento reorganiza a tela inteira sem mover
+ * um único registro.
+ *
+ * Cada grupo carrega o seu subtotal, e os subtotais fecham com o total do
+ * cabeçalho — é o que faz o agrupamento servir para conferir, e não só para
+ * enxugar a tela. Por isso só se agrupa por campo de valor único: ver a nota em
+ * `AGRUPAMENTOS`.
+ */
+type Grupo = { chave: string; rotulo: string; itens: LinhaCusto[]; subtotal: string | null };
+
+function agrupar(linhas: LinhaCusto[], por: string, porMes: boolean): Grupo[] | null {
+  if (por !== "fornecedor" && por !== "categoria") return null;
+
+  const vazio = por === "fornecedor" ? "Sem fornecedor" : "Sem categoria";
+  const mapa = new Map<string, LinhaCusto[]>();
+  for (const l of linhas) {
+    const rotulo = (por === "fornecedor" ? l.fornecedor : l.categoria) ?? vazio;
+    const atual = mapa.get(rotulo) ?? [];
+    atual.push(l);
+    mapa.set(rotulo, atual);
+  }
+
+  return [...mapa]
+    .map(([rotulo, itens]) => {
+      // Soma o que a aba mede. Num recorte de período, o mensal é nulo para todo
+      // item — subtotalizar por ele daria uma coluna de zeros.
+      const soma = itens.reduce((s, i) => {
+        const valor = porMes ? i.valorMensal : i.valorEmReais;
+        return valor && (i.status === "ATIVO" || i.status === "EM_ANALISE") ? s + Number(valor) : s;
+      }, 0);
+      return { chave: rotulo, rotulo, itens, subtotal: soma > 0 ? soma.toFixed(2) : null };
+    })
+    .sort((a, b) => {
+      // O grupo sem dono vai para o fim, sempre: ele é uma pendência, não um
+      // fornecedor chamado "Sem fornecedor" que por acaso começa com S.
+      if (a.rotulo === vazio) return 1;
+      if (b.rotulo === vazio) return -1;
+      const diferenca = Number(b.subtotal ?? 0) - Number(a.subtotal ?? 0);
+      return diferenca !== 0 ? diferenca : a.rotulo.localeCompare(b.rotulo, "pt-BR");
+    });
 }
 
 /** Barra 100% empilhada: reconhecer 60/40 de relance vale mais que ler dois números. */

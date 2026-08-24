@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { precisaDeCambio, valorMensalEmReais } from "@/lib/dinheiro";
+import { derivados, precisaDeCambio } from "@/lib/dinheiro";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
 import { NATUREZAS as OPCOES_NATUREZA } from "@/lib/opcoes";
 import { normalizar } from "@/lib/fornecedores";
@@ -251,12 +251,7 @@ export async function salvarCusto(
   }
 
   const fornecedorId = await acharOuCriarFornecedor(campos.fornecedor);
-  const mensal = valorMensalEmReais(
-    campos.valorPeriodo,
-    campos.periodicidade,
-    campos.moeda,
-    campos.cambio,
-  );
+  const valores = derivados(campos.valorPeriodo, campos.periodicidade, campos.moeda, campos.cambio);
 
   const comuns = {
     descricao: campos.descricao,
@@ -274,7 +269,7 @@ export async function salvarCusto(
     valorPeriodo: campos.valorPeriodo,
     quantidade: campos.quantidade,
     valorUnitario: campos.valorUnitario,
-    valorMensalNormalizado: mensal ? mensal.toFixed(2) : null,
+    ...valores,
     dataInicio: campos.dataInicio,
     dataFim: campos.dataFim,
     observacoes: campos.observacoes,
