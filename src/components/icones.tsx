@@ -194,3 +194,19 @@ export const IconeFiltro = ({ className }: Props) => (
     <path d="M3.5 5h17l-6.5 7.5V19l-4 2v-8.5z" />
   </svg>
 );
+
+export const IconeChave = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <circle cx="7.5" cy="15.5" r="4.5" />
+    <path d="m10.7 12.3 9.3-9.3" />
+    <path d="m15.5 7.5 3 3 2.5-2.5-3-3" />
+  </svg>
+);
+
+export const IconeSair = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);

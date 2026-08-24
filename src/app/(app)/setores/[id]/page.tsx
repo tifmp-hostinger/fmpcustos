@@ -101,7 +101,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
         </Link>
       </div>
 
-      <section className="mt-7 grid gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-7 grid grid-cols-1 gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
         <Indicador
           rotulo="Custo por mês"
           valor={formatarBRL(mensal)}
@@ -160,7 +160,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
         </section>
       )}
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
           <h2 className="rotulo-secao">Maiores custos</h2>
           <p className="mt-1 text-meta text-[var(--ink-3)]">

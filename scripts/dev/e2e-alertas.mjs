@@ -81,7 +81,11 @@ ok(
   typeof varredura.detalhe?.criados === "number",
   JSON.stringify(varredura.detalhe),
 );
-ok("criou alertas na base recém-semeada", varredura.detalhe.criados > 0, `${varredura.detalhe.criados}`);
+ok(
+  "criou alertas na base recém-semeada",
+  varredura.detalhe.criados > 0,
+  `${varredura.detalhe.criados}`,
+);
 
 console.log("\n  → rodar de novo não duplica");
 const segunda = await fetch(`${URL}/api/rotinas/alertas`, {
@@ -91,7 +95,11 @@ const segunda = await fetch(`${URL}/api/rotinas/alertas`, {
 const repetida = await segunda.json();
 // A rotina roda todo dia. Trinta dias de execução não podem virar trinta
 // alertas iguais para o mesmo contrato.
-ok("segunda varredura não cria nada", repetida.detalhe.criados === 0, `${repetida.detalhe.criados}`);
+ok(
+  "segunda varredura não cria nada",
+  repetida.detalhe.criados === 0,
+  `${repetida.detalhe.criados}`,
+);
 
 console.log("\n═══ A LISTA DE ALERTAS ═══");
 await entrar("admin@fmp.com.br");
@@ -101,7 +109,13 @@ await p.waitForSelector("[data-alerta]");
 const total = await p.locator("[data-alerta]").count();
 ok("os alertas aparecem na tela", total > 0, `${total} alertas`);
 
-const contador = await p.locator('nav a[href="/alertas"] span[aria-label$="pendentes"]').innerText();
+// `:visible` e não `.first()`: a navegação existe duas vezes no HTML — a
+// barra do topo e a do rodapé do telefone — e o CSS mostra uma de cada vez.
+// Contar posições aqui daria certo hoje e quebraria no dia em que a ordem
+// mudasse; o que se quer afirmar é sobre o contador que a pessoa ENXERGA.
+const contador = await p
+  .locator('nav a[href="/alertas"] span[aria-label$="pendentes"]:visible')
+  .innerText();
 ok("o menu mostra quantos esperam decisão", Number(contador) > 0, contador);
 
 const renovacao = p.locator('[data-alerta="RENOVACAO_PROXIMA"]').first();
@@ -142,7 +156,11 @@ ok(
 
 console.log("\n═══ RECONHECER NÃO É RESOLVER ═══");
 const antes = await p.locator('[data-status="ABERTO"]').count();
-await p.locator('[data-status="ABERTO"]').first().locator('button:has-text("Marcar como visto")').click();
+await p
+  .locator('[data-status="ABERTO"]')
+  .first()
+  .locator('button:has-text("Marcar como visto")')
+  .click();
 const avisoVisto = await proximoAviso();
 ok("marcar como visto avisa", /visto/i.test(avisoVisto), avisoVisto.replace(/\n/g, " · "));
 
@@ -153,15 +171,27 @@ ok("saiu da fila do dia", depois === antes - 1, `${antes} → ${depois}`);
 ok("mas continua visível, marcado", (await p.locator('[data-status="RECONHECIDO"]').count()) >= 1);
 ok(
   "e diz que está em andamento, não resolvido",
-  texto(await p.locator('[data-status="RECONHECIDO"]').first().innerText()).includes("visto, em andamento"),
+  texto(await p.locator('[data-status="RECONHECIDO"]').first().innerText()).includes(
+    "visto, em andamento",
+  ),
 );
 
 console.log("\n  → e não existe botão de “resolvido”");
-const botoes = (await p.locator("[data-alerta] button").allInnerTexts()).map((t) => t.toLowerCase());
-ok("nenhum botão diz resolver", !botoes.some((b) => b.includes("resolv")), botoes.slice(0, 4).join(" | "));
+const botoes = (await p.locator("[data-alerta] button").allInnerTexts()).map((t) =>
+  t.toLowerCase(),
+);
+ok(
+  "nenhum botão diz resolver",
+  !botoes.some((b) => b.includes("resolv")),
+  botoes.slice(0, 4).join(" | "),
+);
 
 console.log("\n═══ IGNORAR SAI DA LISTA, MAS NÃO SOME ═══");
-await p.locator('[data-status="ABERTO"]').first().locator('button:has-text("Não se aplica")').click();
+await p
+  .locator('[data-status="ABERTO"]')
+  .first()
+  .locator('button:has-text("Não se aplica")')
+  .click();
 await proximoAviso();
 await p.waitForTimeout(900);
 const linkIgnorados = p.locator('a[href*="v=ignorados"]');
@@ -179,7 +209,10 @@ const alvo = p.locator('[data-alerta="CAMBIO_AUSENTE"]').first();
 await alvo.locator("a").first().click();
 await p.waitForURL(/\/custos\//, { timeout: 10000 });
 await p.waitForSelector('input[name="cambio"]');
-ok("o alerta leva direto ao custo que o causou", (await p.locator('input[name="cambio"]').count()) === 1);
+ok(
+  "o alerta leva direto ao custo que o causou",
+  (await p.locator('input[name="cambio"]').count()) === 1,
+);
 
 await p.fill('input[name="cambio"]', "5,4321");
 await p.click('button:has-text("Salvar alterações")');
@@ -192,11 +225,18 @@ const revarrer = await fetch(`${URL}/api/rotinas/alertas`, {
 const apos = await revarrer.json();
 // Sem isto a lista vira cemitério: acumula o que já foi resolvido, as pessoas
 // param de ler, e o alerta que importava passa junto com o lixo.
-ok("a varredura resolve o que deixou de ser verdade", apos.detalhe.resolvidos >= 1, `${apos.detalhe.resolvidos}`);
+ok(
+  "a varredura resolve o que deixou de ser verdade",
+  apos.detalhe.resolvidos >= 1,
+  `${apos.detalhe.resolvidos}`,
+);
 
 await p.goto(`${URL}/alertas`);
 await p.waitForTimeout(700);
-ok("e o alerta sumiu da lista sozinho", (await p.locator('[data-alerta="CAMBIO_AUSENTE"]').count()) === 0);
+ok(
+  "e o alerta sumiu da lista sozinho",
+  (await p.locator('[data-alerta="CAMBIO_AUSENTE"]').count()) === 0,
+);
 
 console.log("\n═══ CADA UM VÊ OS SEUS ═══");
 await entrar("ti@fmp.com.br");
@@ -206,7 +246,11 @@ const setoresVistos = await p.evaluate(() =>
   [...document.querySelectorAll("[data-alerta]")].map((e) => e.innerText.split("\n")[0]),
 );
 const vazou = setoresVistos.filter((t) => t.includes("Financeiro") || t.includes("Jurídico"));
-ok("o gestor de TI não vê alerta de outro setor", vazou.length === 0, vazou.slice(0, 2).join(" | "));
+ok(
+  "o gestor de TI não vê alerta de outro setor",
+  vazou.length === 0,
+  vazou.slice(0, 2).join(" | "),
+);
 ok("mas vê os da própria área", setoresVistos.length > 0, `${setoresVistos.length} alertas`);
 
 console.log("\n═══ O RESUMO SEMANAL PODE SER DESLIGADO ═══");
@@ -225,7 +269,10 @@ console.log("\n═══ ERROS DE CONSOLE ═══");
 ok("nenhum erro de JavaScript", erros.length === 0, erros.slice(0, 2).join(" | "));
 
 const falhas = registro.filter((r) => !r.condicao);
-console.log(`\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`);
-if (falhas.length) falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
+console.log(
+  `\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`,
+);
+if (falhas.length)
+  falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
 await navegador.close();
 process.exit(falhas.length === 0 ? 0 : 1);

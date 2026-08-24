@@ -22,6 +22,7 @@ import {
 } from "@/lib/rateio";
 import { IconeAncora, IconeFechar, IconeMais } from "@/components/icones";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 /**
  * EDITOR DE RATEIO
@@ -505,7 +506,7 @@ export function EditorDeRateio({
             // vezes achando que a tela travou; clicável, ele repete o erro e
             // aponta a linha culpada — que é a resposta que ela procurava.
             disabled={enviando}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+            className={classesDeBotao("primario")}
           >
             {enviando ? "Salvando…" : aplicaDireto ? "Aplicar rateio" : "Enviar proposta"}
           </button>

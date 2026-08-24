@@ -5,8 +5,7 @@ import { Navegacao, type ItemNav } from "@/components/nav";
 import { ProvedorDeAvisos } from "@/components/avisos";
 import { BuscaGlobal } from "@/components/busca";
 import { Marca, NomeDoProduto } from "@/components/marca";
-import { sair } from "./sair";
-import { classesDeBotao } from "@/components/botao";
+import { MenuDoUsuario } from "./usuario";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await exigirSessao();
@@ -54,39 +53,24 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
 
             <BuscaGlobal />
 
-            <div className="ml-auto flex items-center gap-3">
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden
-                  className="flex size-8 items-center justify-center rounded-full bg-[var(--accent)]/12 text-meta font-bold text-[var(--accent)]"
-                >
-                  {iniciais}
-                </span>
-                <span className="hidden text-right leading-tight sm:block">
-                  <span className="block max-w-[180px] truncate text-dado font-semibold">
-                    {usuario.nome}
-                  </span>
-                  <span className="block text-micro text-[var(--ink-3)]">
-                    {ROTULO_PAPEL[usuario.papel]}
-                    {usuario.setorNome ? ` · ${usuario.setorNome}` : ""}
-                  </span>
-                </span>
-              </div>
-              <Link href="/trocar-senha" className={classesDeBotao("texto", "sm")}>
-                Trocar senha
-              </Link>
-              <form action={sair}>
-                <button type="submit" className={classesDeBotao("contorno", "sm")}>
-                  Sair
-                </button>
-              </form>
+            <div className="ml-auto flex items-center">
+              <MenuDoUsuario
+                nome={usuario.nome}
+                papel={`${ROTULO_PAPEL[usuario.papel]}${usuario.setorNome ? ` · ${usuario.setorNome}` : ""}`}
+                iniciais={iniciais}
+              />
             </div>
           </div>
         </header>
 
-        <div className="flex-1">{children}</div>
+        {/* O respiro no pé é a altura da barra de navegação do telefone. Sem
+            ele o último custo da lista fica embaixo da barra, e a pessoa pensa
+            que a lista acabou uma linha antes. */}
+        <div className="flex-1 pb-20 sm:pb-0">{children}</div>
 
-        <footer className="border-t border-[var(--rule)] py-4">
+        <Navegacao itens={itens} variante="rodape" />
+
+        <footer className="border-t border-[var(--rule)] py-4 pb-20 sm:pb-4">
           <p className="mx-auto max-w-6xl px-6 text-micro text-[var(--ink-3)]">
             FMP · Fundação Escola Superior do Ministério Público — plataforma de inteligência de
             custos

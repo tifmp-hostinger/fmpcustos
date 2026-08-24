@@ -22,12 +22,17 @@
 import { randomUUID, randomBytes, scrypt } from "node:crypto";
 import pg from "pg";
 
-const [ , , email, senha ] = process.argv;
+const [, , email, senha] = process.argv;
 const url = process.env.DATABASE_URL;
-if (!url) { console.error("DATABASE_URL não definida."); process.exit(1); }
+if (!url) {
+  console.error("DATABASE_URL não definida.");
+  process.exit(1);
+}
 
-const derivar = (s, salt, n) => new Promise((ok, err) =>
-  scrypt(s, salt, n, { N: 16384, r: 8, p: 1 }, (e, k) => e ? err(e) : ok(k)));
+const derivar = (s, salt, n) =>
+  new Promise((ok, err) =>
+    scrypt(s, salt, n, { N: 16384, r: 8, p: 1 }, (e, k) => (e ? err(e) : ok(k))),
+  );
 
 const cliente = new pg.Client({ connectionString: url });
 await cliente.connect();
@@ -42,8 +47,10 @@ console.log("");
 console.log("======================================================================");
 console.log(`USUÁRIOS NO BANCO: ${usuarios.length}`);
 for (const u of usuarios) {
-  console.log(`  ${u.email} | ${u.papel} | ativo=${u.ativo} | tem_senha=${u.tem_senha}` +
-              ` | troca_no_1o=${u.precisaTrocarSenha} | ultimo_acesso=${u.ultimoAcesso ?? "nunca"}`);
+  console.log(
+    `  ${u.email} | ${u.papel} | ativo=${u.ativo} | tem_senha=${u.tem_senha}` +
+      ` | troca_no_1o=${u.precisaTrocarSenha} | ultimo_acesso=${u.ultimoAcesso ?? "nunca"}`,
+  );
 }
 if (usuarios.length === 0) {
   console.log("  Nenhum. É por isso que o login recusa qualquer senha.");
@@ -68,34 +75,44 @@ if (senha.length < 10 || !/[a-zA-Z]/.test(senha) || !/[0-9]/.test(senha)) {
 const alvo = email.trim().toLowerCase();
 const salt = randomBytes(16);
 const chave = await derivar(senha.normalize("NFKC"), salt, 64);
-const hash = ["scrypt", 16384, 8, 1, salt.toString("base64url"), chave.toString("base64url")].join("$");
+const hash = ["scrypt", 16384, 8, 1, salt.toString("base64url"), chave.toString("base64url")].join(
+  "$",
+);
 
 const { rows: existentes } = await cliente.query(
   `SELECT c.id AS colaborador_id, u.id AS usuario_id
    FROM colaborador c LEFT JOIN usuario u ON u."colaboradorId" = c.id
-   WHERE c.email = $1`, [alvo]);
+   WHERE c.email = $1`,
+  [alvo],
+);
 
 let acao;
 if (existentes[0]?.usuario_id) {
   await cliente.query(
     `UPDATE usuario SET "senhaHash"=$1, "precisaTrocarSenha"=false, ativo=true,
             papel='ADMIN', "atualizadoEm"=now() WHERE id=$2`,
-    [hash, existentes[0].usuario_id]);
+    [hash, existentes[0].usuario_id],
+  );
   acao = "Senha redefinida (perfil ADMIN garantido).";
 } else if (existentes[0]) {
   await cliente.query(
     `INSERT INTO usuario (id,"colaboradorId",papel,ativo,"senhaHash","precisaTrocarSenha","criadoEm","atualizadoEm")
      VALUES ($1,$2,'ADMIN',true,$3,false,now(),now())`,
-    [randomUUID(), existentes[0].colaborador_id, hash]);
+    [randomUUID(), existentes[0].colaborador_id, hash],
+  );
   acao = "Colaborador existia sem acesso; usuário ADMIN criado.";
 } else {
   const idCol = randomUUID();
   await cliente.query(
     `INSERT INTO colaborador (id,nome,email,ativo,"criadoEm","atualizadoEm")
-     VALUES ($1,$2,$3,true,now(),now())`, [idCol, alvo.split("@")[0], alvo]);
+     VALUES ($1,$2,$3,true,now(),now())`,
+    [idCol, alvo.split("@")[0], alvo],
+  );
   await cliente.query(
     `INSERT INTO usuario (id,"colaboradorId",papel,ativo,"senhaHash","precisaTrocarSenha","criadoEm","atualizadoEm")
-     VALUES ($1,$2,'ADMIN',true,$3,false,now(),now())`, [randomUUID(), idCol, hash]);
+     VALUES ($1,$2,'ADMIN',true,$3,false,now(),now())`,
+    [randomUUID(), idCol, hash],
+  );
   acao = "Usuário ADMIN criado do zero.";
 }
 

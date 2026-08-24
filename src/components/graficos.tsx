@@ -39,7 +39,12 @@ export function BarrasRanqueadas({
   const largura = (v: Decimal) => (maior.isZero() ? 0 : Number(v.div(maior).mul(100).toFixed(2)));
 
   return (
-    <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
+    // `min-w-0` não é detalhe: item de grade nasce com `min-width: auto` e se
+    // recusa a encolher abaixo do próprio conteúdo mínimo. Sem ele, a grade
+    // calculava uma coluna de 337px dentro de um contêiner de 312px — a seção
+    // vazava um pixel para fora da janela num telefone de 360px, e a página
+    // inteira ganhava rolagem horizontal por causa disso.
+    <section className="min-w-0 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
       <h3 className="rotulo-secao">{titulo}</h3>
       {descricao && <p className="mt-1 text-meta text-[var(--ink-3)]">{descricao}</p>}
 

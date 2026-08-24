@@ -10,6 +10,7 @@ import { ROTULOS_PERIODICIDADE } from "@/lib/opcoes";
 import { CAMPOS, MAXIMO_LINHAS, lerColagem, type ChaveCampo, type Mapa } from "@/lib/planilha";
 import { IconeAlerta, IconeCheck } from "@/components/icones";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 const EXEMPLO = [
   "Descrição\tFornecedor\tValor\tPeriodicidade\tRenova em",
@@ -126,7 +127,7 @@ export function Colador({
               Tudo entra em real: custos em dólar ou euro se cadastram um a um, porque cada um
               carrega a sua própria cotação.
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {CAMPOS.map((campo) => (
                 <Selecao
                   key={campo.chave}
@@ -165,7 +166,7 @@ export function Colador({
               </p>
             </div>
 
-            <div className="mt-3 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
+            <div className="relative mt-3 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
               <table className="w-full min-w-[720px] text-dado">
                 <thead>
                   <tr className="border-b border-[var(--rule)] rotulo-coluna">
@@ -255,7 +256,7 @@ export function Colador({
               <button
                 type="submit"
                 disabled={enviando || prontas.length === 0}
-                className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                className={classesDeBotao("primario")}
               >
                 <IconeCheck className="size-4" />
                 {enviando

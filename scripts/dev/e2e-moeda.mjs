@@ -56,18 +56,30 @@ await p.goto(`${URL}/custos?q=Adobe Creative Cloud — 12&f=todos`);
 await p.waitForSelector("table tbody tr");
 
 const cobranca = texto(await p.locator('[data-celula="cobranca"]').first().innerText());
-ok("a coluna da cobrança fala a moeda do contrato", cobranca.includes("US$ 599,88"), cobranca.replace(/\n/g, " · "));
+ok(
+  "a coluna da cobrança fala a moeda do contrato",
+  cobranca.includes("US$ 599,88"),
+  cobranca.replace(/\n/g, " · "),
+);
 
 const mensal = texto(await p.locator('[data-celula="mensal"]').first().innerText());
 // US$ 599,88 × 5,4321 = R$ 3.258,61.
-ok("a coluna do mensal fala real, convertido", mensal.includes("R$ 3.258,61"), mensal.replace(/\n/g, " · "));
+ok(
+  "a coluna do mensal fala real, convertido",
+  mensal.includes("R$ 3.258,61"),
+  mensal.replace(/\n/g, " · "),
+);
 ok("e diz por qual taxa converteu", mensal.includes("5,4321"), mensal.replace(/\n/g, " · "));
 
 console.log("\n═══ SEM COTAÇÃO, O CUSTO NÃO SOME EM SILÊNCIO ═══");
 await p.goto(`${URL}/custos?q=Zoom Business&f=todos`);
 await p.waitForSelector("table tbody tr");
 const zoomCobranca = texto(await p.locator('[data-celula="cobranca"]').first().innerText());
-ok("o valor em dólar continua visível", zoomCobranca.includes("US$ 9.990,00"), zoomCobranca.replace(/\n/g, " · "));
+ok(
+  "o valor em dólar continua visível",
+  zoomCobranca.includes("US$ 9.990,00"),
+  zoomCobranca.replace(/\n/g, " · "),
+);
 
 const semCotacao = p.locator('[data-falta="cambio"]').first();
 ok("o mensal não é um travessão: é um link que diz o que falta", (await semCotacao.count()) === 1);
@@ -102,11 +114,17 @@ await p.fill('input[name="descricao"]', "Figma Organization — teste de moeda")
 await p.fill('input[name="fornecedor"]', "Figma");
 await p.fill('input[name="valorPeriodo"]', "450,00");
 
-ok("o campo de cotação só existe quando a moeda é estrangeira", (await p.locator('input[name="cambio"]').count()) === 0);
+ok(
+  "o campo de cotação só existe quando a moeda é estrangeira",
+  (await p.locator('input[name="cambio"]').count()) === 0,
+);
 
 await p.selectOption('select[name="moeda"]', "USD");
 await p.waitForTimeout(400);
-ok("escolher dólar revela o campo de cotação", (await p.locator('input[name="cambio"]').count()) === 1);
+ok(
+  "escolher dólar revela o campo de cotação",
+  (await p.locator('input[name="cambio"]').count()) === 1,
+);
 
 const sugerida = await p.inputValue('input[name="cambio"]');
 ok("e já vem com a cotação registrada", sugerida === "5,4321", sugerida);
@@ -123,7 +141,11 @@ console.log("\n  → e recusa salvar com taxa ilegível, em vez de somar errado"
 await p.fill('input[name="cambio"]', "cinco reais");
 await p.click('button:has-text("Cadastrar custo")');
 const recusa = await proximoAviso();
-ok("cotação ilegível é recusada, e a frase repete o que foi digitado", /cinco reais/.test(recusa), recusa.replace(/\n/g, " · "));
+ok(
+  "cotação ilegível é recusada, e a frase repete o que foi digitado",
+  /cinco reais/.test(recusa),
+  recusa.replace(/\n/g, " · "),
+);
 const focado = await p.evaluate(() => document.activeElement?.getAttribute("name"));
 ok("e o foco vai para o campo que falta", focado === "cambio", focado ?? "—");
 
@@ -131,9 +153,21 @@ ok("e o foco vai para o campo que falta", focado === "cambio", focado ?? "—");
 // mecanismo que devolve o que foi digitado estava quebrado desde que nasceu:
 // remontava os campos uma renderização ANTES de o resultado chegar, e por isso
 // os remontava vazios. Errar um campo apagava os catorze.
-ok("o que foi digitado continua na tela", (await p.inputValue('input[name="valorPeriodo"]')) === "450,00", await p.inputValue('input[name="valorPeriodo"]'));
-ok("inclusive a moeda escolhida", (await p.inputValue('select[name="moeda"]')) === "USD", await p.inputValue('select[name="moeda"]'));
-ok("e a descrição", (await p.inputValue('input[name="descricao"]')).includes("Figma"), await p.inputValue('input[name="descricao"]'));
+ok(
+  "o que foi digitado continua na tela",
+  (await p.inputValue('input[name="valorPeriodo"]')) === "450,00",
+  await p.inputValue('input[name="valorPeriodo"]'),
+);
+ok(
+  "inclusive a moeda escolhida",
+  (await p.inputValue('select[name="moeda"]')) === "USD",
+  await p.inputValue('select[name="moeda"]'),
+);
+ok(
+  "e a descrição",
+  (await p.inputValue('input[name="descricao"]')).includes("Figma"),
+  await p.inputValue('input[name="descricao"]'),
+);
 
 await p.fill('input[name="cambio"]', "5,50");
 await p.click('button:has-text("Cadastrar custo")');
@@ -144,7 +178,11 @@ await p.goto(`${URL}/custos?q=Figma Organization&f=todos`);
 await p.waitForSelector("table tbody tr");
 const figma = texto(await p.locator('[data-celula="mensal"]').first().innerText());
 // US$ 450,00 × 5,50 = R$ 2.475,00.
-ok("salvo, ele entra no total pelo real", figma.includes("R$ 2.475,00"), figma.replace(/\n/g, " · "));
+ok(
+  "salvo, ele entra no total pelo real",
+  figma.includes("R$ 2.475,00"),
+  figma.replace(/\n/g, " · "),
+);
 ok("com a taxa digitada, não a sugerida", figma.includes("5,5"), figma.replace(/\n/g, " · "));
 
 console.log("\n═══ REGISTRAR COTAÇÃO NÃO REESCREVE O PASSADO ═══");
@@ -174,7 +212,11 @@ console.log("\n  → mas o que está SEM taxa pode ser resolvido em lote");
 await p.goto(`${URL}/admin/cambio`);
 await p.waitForLoadState("networkidle");
 const botaoLote = p.locator("button", { hasText: /^Converter \d+ custos? a / }).first();
-ok("o botão diz quantos vai tocar, e a que taxa", (await botaoLote.count()) === 1, texto(await botaoLote.innerText().catch(() => "—")));
+ok(
+  "o botão diz quantos vai tocar, e a que taxa",
+  (await botaoLote.count()) === 1,
+  texto(await botaoLote.innerText().catch(() => "—")),
+);
 await botaoLote.click();
 const avisoLote = await proximoAviso(12000);
 ok(
@@ -187,7 +229,11 @@ await p.goto(`${URL}/custos?q=Zoom Business&f=todos`);
 await p.waitForSelector("table tbody tr");
 const zoomDepois = texto(await p.locator('[data-celula="mensal"]').first().innerText());
 // US$ 9.990,00/ano × 6,1234 = R$ 61.172,77 no ano = R$ 5.097,73/mês.
-ok("o Zoom entrou no total, convertido e anualizado", zoomDepois.includes("R$ 5.097,73"), zoomDepois.replace(/\n/g, " · "));
+ok(
+  "o Zoom entrou no total, convertido e anualizado",
+  zoomDepois.includes("R$ 5.097,73"),
+  zoomDepois.replace(/\n/g, " · "),
+);
 ok("não sobrou ninguém sem cotação", (await p.locator('[data-falta="cambio"]').count()) === 0);
 
 console.log("\n═══ A EXPORTAÇÃO NÃO REPETE O DEFEITO ═══");
@@ -211,7 +257,11 @@ const conteudo = (await import("node:fs")).readFileSync(caminho, "utf8");
 const [cabecalho, primeira] = conteudo.split("\r\n");
 ok("o CSV traz a moeda junto do valor", cabecalho.includes('"Moeda"'), cabecalho);
 ok("e a cotação aplicada", cabecalho.includes('"Cotação"'), cabecalho);
-ok("e o valor mensal em real, já convertido", cabecalho.includes('"Valor mensal em real"'), cabecalho);
+ok(
+  "e o valor mensal em real, já convertido",
+  cabecalho.includes('"Valor mensal em real"'),
+  cabecalho,
+);
 ok(
   "a linha exportada casa com a tela",
   primeira.includes('"USD"') && primeira.includes('"3258,61"'),
@@ -222,7 +272,10 @@ console.log("\n═══ ERROS DE CONSOLE ═══");
 ok("nenhum erro de JavaScript", erros.length === 0, erros.slice(0, 2).join(" | "));
 
 const falhas = registro.filter((r) => !r.condicao);
-console.log(`\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`);
-if (falhas.length) falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
+console.log(
+  `\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`,
+);
+if (falhas.length)
+  falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
 await navegador.close();
 process.exit(falhas.length === 0 ? 0 : 1);

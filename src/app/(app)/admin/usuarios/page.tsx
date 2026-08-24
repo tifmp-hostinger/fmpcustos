@@ -33,7 +33,7 @@ export default async function Usuarios() {
         Administrador e Controladoria enxergam todos.
       </p>
 
-      <ol className="mt-5 grid gap-2 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4 text-dado text-[var(--ink-2)] sm:grid-cols-3">
+      <ol className="mt-5 grid grid-cols-1 gap-2 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4 text-dado text-[var(--ink-2)] sm:grid-cols-3">
         <li className="flex gap-2.5">
           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-micro font-bold text-white">
             1

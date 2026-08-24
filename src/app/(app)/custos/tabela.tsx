@@ -321,8 +321,19 @@ export function TabelaDeCustos({
   if (linhas.length === 0) return null;
 
   return (
-    <div className="mt-5 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
-      <table className="w-full min-w-[860px] text-sm">
+    <div
+      // `relative` não é enfeite: sem ele, o bloco de contenção de um
+      // descendente absoluto é o viewport, e não esta faixa. O
+      // `<span class="sr-only">Ações</span>` do último cabeçalho — 1px,
+      // invisível — ia parar em x=861 e esticava o DOCUMENTO para 862px.
+      // Num telefone de 390px isso fazia a página inteira rolar 472px de lado:
+      // o cabeçalho saía da tela e a lista virava aquilo que não dá para usar.
+      className="relative mt-5 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]"
+    >
+      {/* A largura mínima só vale onde as sete colunas existem. Num telefone
+          restam três, e exigir 860px ali era o que obrigava a arrastar a lista
+          de lado para ler uma linha. */}
+      <table className="w-full text-sm md:min-w-[860px]">
         <caption className="sr-only">
           Custos cadastrados. Use o menu de cada linha para editar, duplicar, dividir entre setores
           ou encerrar.
@@ -358,12 +369,14 @@ export function TabelaDeCustos({
               Custo
             </Cabecalho>
             {mostrarSetor && (
-              <Cabecalho campo="setor" filtros={filtros}>
+              <Cabecalho campo="setor" filtros={filtros} secundaria>
                 Setor
               </Cabecalho>
             )}
-            {colunas.natureza && <th className="px-4 py-3 font-medium">Natureza</th>}
-            <Cabecalho campo="cobranca" filtros={filtros} direita>
+            {colunas.natureza && (
+              <th className="hidden px-4 py-3 font-medium md:table-cell">Natureza</th>
+            )}
+            <Cabecalho campo="cobranca" filtros={filtros} direita secundaria>
               Cobrança
             </Cabecalho>
             <Cabecalho campo="mensal" filtros={filtros} direita>
@@ -372,13 +385,15 @@ export function TabelaDeCustos({
                   respondendo à pergunta errada. */}
               {colunas.mensal ? "Por mês" : "Total"}
             </Cabecalho>
-            {colunas.aquisicao && <th className="px-4 py-3 font-medium">Aquisição</th>}
+            {colunas.aquisicao && (
+              <th className="hidden px-4 py-3 font-medium md:table-cell">Aquisição</th>
+            )}
             {colunas.renovacao && (
-              <Cabecalho campo="renovacao" filtros={filtros}>
+              <Cabecalho campo="renovacao" filtros={filtros} secundaria>
                 Renova em
               </Cabecalho>
             )}
-            <Cabecalho campo="situacao" filtros={filtros}>
+            <Cabecalho campo="situacao" filtros={filtros} secundaria>
               Situação
             </Cabecalho>
             <th className="w-11 px-2 py-3">
@@ -643,11 +658,21 @@ function Linha({
         <span className="block text-micro text-[var(--ink-3)]">
           {item.fornecedor ?? "sem fornecedor"}
           {item.categoria ? ` · ${item.categoria}` : ""}
+          {/* No telefone a coluna Setor não existe, e "de quem é este custo" é
+              a segunda pergunta que alguém faz olhando a lista. Ela não some:
+              desce para cá, onde não custa uma coluna. A partir de `md` a
+              coluna volta e esta repetição sairia sobrando. */}
+          {item.setores.length > 0 && (
+            <span className="md:hidden">
+              {" · "}
+              {item.setores.length === 1 ? item.setores[0]!.nome : `${item.setores.length} setores`}
+            </span>
+          )}
         </span>
       </td>
 
       {mostrarSetor && (
-        <td className="px-4 py-3 text-[var(--ink-2)]">
+        <td className="hidden px-4 py-3 text-[var(--ink-2)] md:table-cell">
           <Setores setores={item.setores} />
         </td>
       )}
@@ -655,7 +680,7 @@ function Linha({
       {/* A coluna da cobrança fala a moeda do contrato; a do mensal fala real,
           sempre. Misturar as duas foi o defeito de origem — US$ 500 somava como
           R$ 500 porque as duas colunas diziam "R$". */}
-      <td data-celula="cobranca" className="px-4 py-3 text-right tabular-nums">
+      <td data-celula="cobranca" className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
         {item.valorPeriodo ? formatarMoeda(item.valorPeriodo, item.moeda) : "—"}
         <span className="block text-micro text-[var(--ink-3)]">
           {ROTULOS_PERIODICIDADE[item.periodicidade]}
@@ -663,7 +688,10 @@ function Linha({
       </td>
 
       {colunas.natureza && (
-        <td data-celula="natureza" className="px-4 py-3 text-meta text-[var(--ink-2)]">
+        <td
+          data-celula="natureza"
+          className="hidden px-4 py-3 text-meta text-[var(--ink-2)] md:table-cell"
+        >
           {ROTULO_CURTO_NATUREZA[item.natureza] ?? item.natureza}
         </td>
       )}
@@ -721,7 +749,10 @@ function Linha({
       </td>
 
       {colunas.aquisicao && (
-        <td data-celula="aquisicao" className="px-4 py-3 text-dado tabular-nums">
+        <td
+          data-celula="aquisicao"
+          className="hidden px-4 py-3 text-dado tabular-nums md:table-cell"
+        >
           {item.dataInicio ? (
             formatarData(item.dataInicio)
           ) : (
@@ -739,12 +770,12 @@ function Linha({
       )}
 
       {colunas.renovacao && (
-        <td className="px-4 py-2">
+        <td className="hidden px-4 py-2 md:table-cell">
           <CelulaData item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
         </td>
       )}
 
-      <td data-celula="situacao" className="px-4 py-2">
+      <td data-celula="situacao" className="hidden px-4 py-2 md:table-cell">
         <CelulaSituacao item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
       </td>
 
@@ -1081,11 +1112,25 @@ function Cabecalho({
   campo,
   filtros,
   direita,
+  secundaria,
   children,
 }: {
   campo: ChaveOrdem;
   filtros: Filtros;
   direita?: boolean;
+  /**
+   * Some no telefone.
+   *
+   * Sete colunas não cabem em 390px, e nenhuma escolha de fonte resolve isso —
+   * é aritmética. O que cabe é a pergunta que se faz no telefone: o que é, e
+   * quanto custa. O resto está a um toque de distância na tela do custo, que
+   * mostra tudo.
+   *
+   * A coluna é escondida por CSS, e não removida do HTML: girar o aparelho ou
+   * abrir a mesma página no computador devolve a tabela inteira sem recarregar,
+   * e o leitor de tela continua tendo a tabela completa.
+   */
+  secundaria?: boolean;
   children: React.ReactNode;
 }) {
   const ativo = filtros.ordem === campo;
@@ -1097,7 +1142,9 @@ function Cabecalho({
       scope="col"
       data-coluna={campo}
       aria-sort={ativo ? (filtros.dir === "asc" ? "ascending" : "descending") : "none"}
-      className={`px-4 py-3 font-semibold ${direita ? "text-right" : "text-left"}`}
+      className={`px-4 py-3 font-semibold ${direita ? "text-right" : "text-left"} ${
+        secundaria ? "hidden md:table-cell" : ""
+      }`}
     >
       <Link
         href={urlDaLista({ ...filtros, ordem: campo, dir: proxima, destaque: "" })}

@@ -168,7 +168,7 @@ export function FormularioCusto({
             placeholder="Ex.: Microsoft 365 — licenças da equipe"
             erro={erroDe(resultado, "descricao")}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <CampoFornecedor
               valorInicial={v.fornecedor ?? ""}
               fornecedores={fornecedores}
@@ -236,7 +236,7 @@ export function FormularioCusto({
           </summary>
 
           <div className="space-y-4 border-t border-[var(--rule)] px-4 py-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Selecao
                 rotulo="Natureza"
                 nome="natureza"
@@ -251,7 +251,7 @@ export function FormularioCusto({
                 valor={v.comportamento ?? "FIXO"}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo
                 rotulo="Quantidade"
                 nome="quantidade"
@@ -267,7 +267,7 @@ export function FormularioCusto({
                 placeholder="66,30"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo rotulo="Início" nome="dataInicio" tipo="date" valor={v.dataInicio} />
               <Campo
                 rotulo="Término ou renovação"
@@ -405,7 +405,7 @@ function Quanto({
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr]">
         <Campo
           rotulo="Valor por período"
           nome="valorPeriodo"
@@ -435,7 +435,7 @@ function Quanto({
 
       {estrangeira && (
         <div className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Campo
               rotulo={`Cotação — quanto vale 1 ${moeda === "USD" ? "dólar" : "euro"}`}
               nome="cambio"

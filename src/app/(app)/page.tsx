@@ -17,6 +17,7 @@ import { SEM_CATEGORIA, SEM_FORNECEDOR, SEM_SETOR, urlDaLista } from "@/lib/filt
 import { exigirSessao, podeLancar, setoresVisiveis, vePorInteiro } from "@/lib/sessao";
 import { CartaoAceite } from "./aceites";
 import { BarrasRanqueadas, Indicador } from "@/components/graficos";
+import { classesDeBotao } from "@/components/botao";
 import {
   IconeAlerta,
   IconeCalendario,
@@ -91,10 +92,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="titulo-pagina">{setor}</h1>
         {lanca && (
-          <Link
-            href="/custos/novo"
-            className="flex items-center gap-2 rounded-fmp-md bg-[var(--accent)] px-5 py-2.5 text-base font-semibold text-white no-underline shadow-sm transition-transform hover:scale-[1.02]"
-          >
+          <Link href="/custos/novo" className={classesDeBotao("primario", "lg")}>
             <IconeMais />
             Cadastrar custo
           </Link>
@@ -148,7 +146,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
         <PrimeiroCusto setor={setor} />
       ) : (
         <>
-          <section className="mt-8 grid gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-3">
+          <section className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-3">
             <Indicador
               rotulo="Custo mensal da área"
               valor={formatarBRL(mensal)}
@@ -217,7 +215,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
             </section>
           )}
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
             <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
               <h2 className="rotulo-secao">Maiores custos da área</h2>
               {maiores.length === 0 ? (
@@ -270,10 +268,7 @@ function PrimeiroCusto({ setor }: { setor: string }) {
         Assinaturas, contratos, serviços. Cadastre um por vez — leva menos de um minuto cada, e o
         sistema calcula o equivalente mensal sozinho.
       </p>
-      <Link
-        href="/custos/novo"
-        className="mt-6 inline-flex items-center gap-2 rounded-fmp-md bg-[var(--accent)] px-6 py-3 text-base font-semibold text-white no-underline"
-      >
+      <Link href="/custos/novo" className={`mt-6 ${classesDeBotao("primario", "lg")}`}>
         <IconeMais />
         Cadastrar o primeiro custo
       </Link>
@@ -329,28 +324,34 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         <h1 className="titulo-pagina">Visão corporativa</h1>
         {admin && (
           <div className="flex gap-2">
-            <Link
-              href="/admin/usuarios"
-              className="flex items-center gap-2 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium no-underline hover:border-[var(--ink-3)]"
-            >
+            <Link href="/admin/usuarios" className={classesDeBotao("contorno")}>
               <IconeUsuarios />
               Usuários
             </Link>
-            <Link
-              href="/custos/novo"
-              className="flex items-center gap-2 rounded-fmp-md bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white no-underline"
-            >
+            <Link href="/custos/novo" className={classesDeBotao("primario")}>
               <IconeMais />
               Cadastrar custo
             </Link>
           </div>
         )}
       </div>
+      {/* A RESSALVA EM DUAS CAMADAS.
+          Este parágrafo tinha oito linhas e vinha ANTES do primeiro número: num
+          telefone a pessoa abria o painel e lia um texto onde esperava um total.
+
+          Mas ele não podia simplesmente encolher. Ele existe para impedir uma
+          leitura errada — que este número seja confundido com o custo total da
+          FMP — e essa era exatamente a confusão que o rodapé da lista antes
+          pedia desculpa por causar.
+
+          Então separa-se o que cada metade faz: a CONCLUSÃO ("é menor que a
+          lista completa", com o link para conferir) fica sempre visível, porque
+          é ela que evita o erro. O MECANISMO (como o rateio divide, quais
+          naturezas não entram) vira documentação a um toque, porque é
+          referência — se lê uma vez, não toda manhã. */}
       <p className="mt-2 max-w-2xl text-sm text-[var(--ink-2)]">
-        Custo <strong>recorrente</strong> de todos os setores, já com rateio: um item dividido meio
-        a meio entre duas áreas entra pela metade em cada uma, e a soma dos setores fecha com o
-        total. Naturezas diferentes — pontual, investimento, pessoal — nunca são somadas aqui sem
-        pedido explícito, e por isso este número é menor que o da{" "}
+        Custo <strong>recorrente</strong> de todos os setores, já com rateio — por isso é menor que
+        o da{" "}
         <Link
           href={urlDaLista({ natureza: "tudo", situacao: "todos" })}
           className="text-[var(--accent)]"
@@ -359,6 +360,19 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         </Link>
         .
       </p>
+      <details className="group mt-1.5 max-w-2xl">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-meta text-[var(--ink-3)] select-none hover:text-[var(--ink-2)]">
+          <span aria-hidden className="transition-transform group-open:rotate-90">
+            ›
+          </span>
+          Como esta conta é feita
+        </summary>
+        <p className="mt-1.5 pl-4 text-meta text-[var(--ink-3)]">
+          Um item dividido meio a meio entre duas áreas entra pela metade em cada uma, e a soma dos
+          setores fecha com o total. Naturezas diferentes — pontual, investimento, pessoal — nunca
+          são somadas aqui sem pedido explícito.
+        </p>
+      </details>
 
       {admin && (usuarios <= 1 || lancaram < Math.min(3, setores.length)) && (
         <GuiaInicial
@@ -368,7 +382,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         />
       )}
 
-      <section className="mt-7 grid gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-7 grid grid-cols-1 gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
         <Indicador
           rotulo="Custo recorrente por mês"
           valor={formatarBRL(mensal)}
@@ -406,7 +420,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         </p>
       )}
 
-      <div className="mt-7 grid gap-4 lg:grid-cols-2">
+      <div className="mt-7 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BarrasRanqueadas
           titulo="Custo por setor"
           descricao="Quanto cada área consome por mês, já com o rateio aplicado. Clique para ver a lista."
@@ -455,7 +469,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
 
       <section className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
         <h2 className="rotulo-secao">O que falta para o número estar completo</h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <PendenciaResumo
             n={pendencias.semValor}
             rotulo="itens sem valor"
@@ -529,7 +543,7 @@ function GuiaInicial({
       <h2 className="rotulo-secao">
         Comece por aqui — {pendentes} {pendentes === 1 ? "passo pendente" : "passos pendentes"}
       </h2>
-      <ol className="mt-4 grid gap-3 md:grid-cols-3">
+      <ol className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         {passos.map((p, i) => (
           <li
             key={p.titulo}

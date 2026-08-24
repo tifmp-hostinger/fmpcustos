@@ -127,139 +127,144 @@ export function ListaOrganizacao({
 
   return (
     <>
-      <table className="mt-6 w-full text-sm">
-        <caption className="sr-only">{rotulos.plural} cadastrados, com o uso de cada um</caption>
-        <thead>
-          <tr className="border-b border-[var(--rule)] text-left rotulo-coluna">
-            <th className="py-2 font-medium">Nome</th>
-            <th className="py-2 font-medium">Código</th>
-            <th className="py-2 text-right font-medium">Custos</th>
-            <th className="py-2 text-right font-medium">Por mês</th>
-            <th className="py-2" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--rule)]">
-          {linhas.map((linha) => {
-            const extra = aoAbrirExtra?.(linha) ?? null;
-            const menu: ItemMenu[] = [
-              {
-                rotulo: "Renomear",
-                icone: <IconeEditar className="size-4" />,
-                aoEscolher: () => setEditando(linha.id),
-              },
-              ...(extra ? [extra] : []),
-              {
-                rotulo: linha.ativo ? "Inativar" : "Reativar",
-                aoEscolher: () => {
-                  const d = new FormData();
-                  d.set("id", linha.id);
-                  void executar(linha.id, acoes.alternarAtivo, d, acoes.reverter);
+      {/* A faixa rola por dentro, e a página não vai junto. O `relative` é o
+          que impede o `<caption class="sr-only">` — absoluto, invisível, de um
+          pixel — de escapar daqui e esticar o documento inteiro. */}
+      <div className="relative -mx-1 mt-6 overflow-x-auto px-1">
+        <table className="w-full text-sm">
+          <caption className="sr-only">{rotulos.plural} cadastrados, com o uso de cada um</caption>
+          <thead>
+            <tr className="border-b border-[var(--rule)] text-left rotulo-coluna">
+              <th className="py-2 font-medium">Nome</th>
+              <th className="hidden py-2 font-medium sm:table-cell">Código</th>
+              <th className="py-2 text-right font-medium">Custos</th>
+              <th className="py-2 text-right font-medium">Por mês</th>
+              <th className="py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--rule)]">
+            {linhas.map((linha) => {
+              const extra = aoAbrirExtra?.(linha) ?? null;
+              const menu: ItemMenu[] = [
+                {
+                  rotulo: "Renomear",
+                  icone: <IconeEditar className="size-4" />,
+                  aoEscolher: () => setEditando(linha.id),
                 },
-              },
-              {
-                rotulo: "Apagar",
-                icone: <IconeLixeira className="size-4" />,
-                perigoso: true,
-                // Desabilitado com motivo, em vez de ausente: quem procura o
-                // botão precisa achar a explicação, não o vazio.
-                desabilitado: linha.travadoPor !== null,
-                motivo: linha.travadoPor ?? undefined,
-                aoEscolher: () => setConfirmar(linha),
-              },
-            ];
+                ...(extra ? [extra] : []),
+                {
+                  rotulo: linha.ativo ? "Inativar" : "Reativar",
+                  aoEscolher: () => {
+                    const d = new FormData();
+                    d.set("id", linha.id);
+                    void executar(linha.id, acoes.alternarAtivo, d, acoes.reverter);
+                  },
+                },
+                {
+                  rotulo: "Apagar",
+                  icone: <IconeLixeira className="size-4" />,
+                  perigoso: true,
+                  // Desabilitado com motivo, em vez de ausente: quem procura o
+                  // botão precisa achar a explicação, não o vazio.
+                  desabilitado: linha.travadoPor !== null,
+                  motivo: linha.travadoPor ?? undefined,
+                  aoEscolher: () => setConfirmar(linha),
+                },
+              ];
 
-            return (
-              <tr
-                key={linha.id}
-                data-organizacao={linha.id}
-                // O nome no atributo, e não só no texto: cada linha carrega um
-                // `<select>` com TODOS os outros nomes, então casar por texto
-                // acerta qualquer linha da tabela.
-                data-nome={linha.nome}
-                data-ativo={linha.ativo ? "sim" : "nao"}
-                className={linha.ativo ? "" : "opacity-55"}
-              >
-                <td className="py-2.5 pr-3">
-                  {editando === linha.id ? (
-                    <FormaDeRenomear
-                      linha={linha}
-                      ocupado={ocupado === linha.id}
-                      aoCancelar={() => setEditando(null)}
-                      aoSalvar={async (nome) => {
-                        const d = new FormData();
-                        d.set("id", linha.id);
-                        d.set("nome", nome);
-                        const deu = await executar(linha.id, acoes.renomear, d, acoes.reverter);
-                        if (deu) setEditando(null);
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <span className="font-medium">{linha.nome}</span>
-                      {!linha.ativo && (
-                        <span className="ml-2 text-micro text-[var(--ink-3)]">inativo</span>
-                      )}
-                      <span className="mt-0.5 block text-meta text-[var(--ink-3)]">
-                        {linha.paiNome ? `dentro de ${linha.paiNome}` : "no topo"}
-                        {linha.extras.length > 0 && ` · ${linha.extras.join(" · ")}`}
-                      </span>
-                    </>
-                  )}
-                </td>
-                <td className="py-2.5 pr-3 font-mono text-meta text-[var(--ink-3)]">
-                  {linha.codigo}
-                </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums">
-                  {linha.custos > 0 ? (
-                    <Link
-                      href={{
-                        pathname: "/custos",
-                        query: {
-                          f: "todos",
-                          [rotulos.campoPai === "setorPaiId" ? "setor" : "categoria"]: linha.id,
-                        },
-                      }}
-                      className="text-[var(--ink)] no-underline hover:text-[var(--accent)]"
-                    >
-                      {linha.custos}
-                    </Link>
-                  ) : (
-                    <span className="text-[var(--ink-3)]">0</span>
-                  )}
-                </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums">
-                  {linha.mensal}
-                  {/* Quando os dois números divergem, dizer por quê: senão a
+              return (
+                <tr
+                  key={linha.id}
+                  data-organizacao={linha.id}
+                  // O nome no atributo, e não só no texto: cada linha carrega um
+                  // `<select>` com TODOS os outros nomes, então casar por texto
+                  // acerta qualquer linha da tabela.
+                  data-nome={linha.nome}
+                  data-ativo={linha.ativo ? "sim" : "nao"}
+                  className={linha.ativo ? "" : "opacity-55"}
+                >
+                  <td className="py-2.5 pr-3">
+                    {editando === linha.id ? (
+                      <FormaDeRenomear
+                        linha={linha}
+                        ocupado={ocupado === linha.id}
+                        aoCancelar={() => setEditando(null)}
+                        aoSalvar={async (nome) => {
+                          const d = new FormData();
+                          d.set("id", linha.id);
+                          d.set("nome", nome);
+                          const deu = await executar(linha.id, acoes.renomear, d, acoes.reverter);
+                          if (deu) setEditando(null);
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <span className="font-medium">{linha.nome}</span>
+                        {!linha.ativo && (
+                          <span className="ml-2 text-micro text-[var(--ink-3)]">inativo</span>
+                        )}
+                        <span className="mt-0.5 block text-meta text-[var(--ink-3)]">
+                          {linha.paiNome ? `dentro de ${linha.paiNome}` : "no topo"}
+                          {linha.extras.length > 0 && ` · ${linha.extras.join(" · ")}`}
+                        </span>
+                      </>
+                    )}
+                  </td>
+                  <td className="hidden py-2.5 pr-3 font-mono text-meta text-[var(--ink-3)] sm:table-cell">
+                    {linha.codigo}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums">
+                    {linha.custos > 0 ? (
+                      <Link
+                        href={{
+                          pathname: "/custos",
+                          query: {
+                            f: "todos",
+                            [rotulos.campoPai === "setorPaiId" ? "setor" : "categoria"]: linha.id,
+                          },
+                        }}
+                        className="text-[var(--ink)] no-underline hover:text-[var(--accent)]"
+                      >
+                        {linha.custos}
+                      </Link>
+                    ) : (
+                      <span className="text-[var(--ink-3)]">0</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums">
+                    {linha.mensal}
+                    {/* Quando os dois números divergem, dizer por quê: senão a
                       pergunta é "por que 11 custos somam o mesmo que 10?". */}
-                  {linha.correntes < linha.custos && (
-                    <span className="block text-micro text-[var(--ink-3)]">
-                      {linha.correntes} {linha.correntes === 1 ? "corrente" : "correntes"}
-                    </span>
-                  )}
-                </td>
-                <td className="w-10 py-2 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <SeletorDePai
-                      linha={linha}
-                      opcoes={opcoesPai.filter((o) => o.valor !== linha.id)}
-                      rotulo={rotulos.rotuloPai}
-                      campo={rotulos.campoPai}
-                      desabilitado={ocupado === linha.id}
-                      aoEscolher={(paiId) => {
-                        const d = new FormData();
-                        d.set("id", linha.id);
-                        d.set(rotulos.campoPai, paiId);
-                        void executar(linha.id, acoes.alterarPai, d, acoes.reverter);
-                      }}
-                    />
-                    <MenuDeLinha rotulo={`Ações de ${linha.nome}`} itens={menu} />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    {linha.correntes < linha.custos && (
+                      <span className="block text-micro text-[var(--ink-3)]">
+                        {linha.correntes} {linha.correntes === 1 ? "corrente" : "correntes"}
+                      </span>
+                    )}
+                  </td>
+                  <td className="w-10 py-2 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <SeletorDePai
+                        linha={linha}
+                        opcoes={opcoesPai.filter((o) => o.valor !== linha.id)}
+                        rotulo={rotulos.rotuloPai}
+                        campo={rotulos.campoPai}
+                        desabilitado={ocupado === linha.id}
+                        aoEscolher={(paiId) => {
+                          const d = new FormData();
+                          d.set("id", linha.id);
+                          d.set(rotulos.campoPai, paiId);
+                          void executar(linha.id, acoes.alterarPai, d, acoes.reverter);
+                        }}
+                      />
+                      <MenuDeLinha rotulo={`Ações de ${linha.nome}`} itens={menu} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <DialogoDeConfirmacao
         aberto={confirmar !== null}
@@ -425,7 +430,7 @@ export function FormaDeCriar({
       className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
     >
       <h2 className="rotulo-secao">Novo {rotulos.singular}</h2>
-      <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
         <Campo
           rotulo="Nome"
           nome="nome"

@@ -87,7 +87,7 @@ export function BarraDeVisoes({
 
   return (
     <>
-      <div data-barra="visoes" className="mt-5 flex flex-wrap items-center gap-1.5">
+      <div data-barra="visoes" className="faixa-rolante -mx-6 mt-5 items-center gap-1.5 px-6">
         {visoes.length > 0 && <span className="sobrancelha mr-1.5">Visões</span>}
 
         {visoes.map((v) => {

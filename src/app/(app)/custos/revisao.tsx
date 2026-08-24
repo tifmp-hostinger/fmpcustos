@@ -23,6 +23,7 @@ import { ROTULOS_PERIODICIDADE } from "@/lib/opcoes";
 import { IconeCheck } from "@/components/icones";
 import type { Moeda, Periodicidade } from "@/generated/prisma/enums";
 import type { LinhaCusto } from "./tabela";
+import { classesDeBotao } from "@/components/botao";
 
 /**
  * MODO REVISÃO
@@ -408,7 +409,7 @@ function FichaDeRevisao({
           type="button"
           onClick={() => void salvarTudo()}
           disabled={salvando || !temAlgoParaSalvar}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+          className={classesDeBotao("primario")}
         >
           {salvando ? "Salvando…" : "Salvar e ir ao próximo"}
         </button>

@@ -7,6 +7,7 @@ import { useAviso } from "@/components/avisos";
 import { PAPEIS } from "@/lib/opcoes";
 import { IconeCheck, IconeCopiar, IconeFechar } from "@/components/icones";
 import type { Resultado, SenhaTemporaria } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 type Opcao = { valor: string; rotulo: string };
 
@@ -25,7 +26,7 @@ export function NovoUsuario({ setores }: { setores: Opcao[] }) {
         className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
       >
         <h2 className="rotulo-secao">Novo usuário</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo rotulo="Nome" nome="nome" obrigatorio placeholder="Nome completo" />
           <Campo
             rotulo="E-mail"
@@ -35,7 +36,7 @@ export function NovoUsuario({ setores }: { setores: Opcao[] }) {
             placeholder="pessoa@fmp.com.br"
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Selecao rotulo="Perfil" nome="papel" opcoes={PAPEIS} valor="GESTOR_SETOR" obrigatorio />
           <Selecao
             rotulo="Setor"
@@ -129,7 +130,7 @@ function PainelDeSenha({ senha, aoFechar }: { senha: SenhaTemporaria; aoFechar: 
         <button
           type="button"
           onClick={() => copiar(senha.senha, "Senha")}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-dado font-semibold text-white"
+          className={classesDeBotao("primario", "sm")}
         >
           {copiado ? <IconeCheck className="size-4" /> : <IconeCopiar className="size-4" />}
           {copiado ? "Copiado" : "Copiar"}
@@ -226,7 +227,7 @@ export function EditarUsuario({
       <div className="space-y-5 border-t border-[var(--rule)] px-5 py-5">
         <form action={acao} className="space-y-4">
           <input type="hidden" name="id" value={usuario.id} />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Selecao
               rotulo="Perfil"
               nome="papel"

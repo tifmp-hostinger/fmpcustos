@@ -64,11 +64,11 @@ ok(
   valorNaBarra !== null && valorNaLista !== null && Math.abs(valorNaBarra - valorNaLista) < 0.02,
   `barra ${valorNaBarra} · lista ${valorNaLista}`,
 );
-ok("a lista mostra o chip do setor filtrado", (await p.locator("main").innerText()).includes("Setor:"));
 ok(
-  "e oferece o panorama daquele setor",
-  (await p.locator('a[href^="/setores/"]').count()) > 0,
+  "a lista mostra o chip do setor filtrado",
+  (await p.locator("main").innerText()).includes("Setor:"),
 );
+ok("e oferece o panorama daquele setor", (await p.locator('a[href^="/setores/"]').count()) > 0);
 
 console.log("\n— Pendência vira fila de trabalho —");
 await p.goto(`${URL}/`);
@@ -113,20 +113,36 @@ ok("já ordenada pela data mais próxima", p.url().includes("ordem=renovacao"));
 console.log("\n═══ ORDENAÇÃO ═══");
 await p.goto(`${URL}/custos`);
 await p.waitForSelector("table tbody tr");
-const primeiroPorValor = await p.locator('table tbody tr [data-celula="descricao"] a').first().innerText();
+const primeiroPorValor = await p
+  .locator('table tbody tr [data-celula="descricao"] a')
+  .first()
+  .innerText();
 await p.locator("thead a", { hasText: "Custo" }).click();
 // waitForURL, não waitForLoadState: numa navegação do lado do cliente não há
 // requisição de documento, então "networkidle" já é verdade antes da troca.
 await p.waitForURL(/ordem=descricao/, { timeout: 8000 });
-const primeiroPorNome = await p.locator('table tbody tr [data-celula="descricao"] a').first().innerText();
-ok("ordenar por nome muda a primeira linha", primeiroPorValor !== primeiroPorNome,
-   `${primeiroPorValor} → ${primeiroPorNome}`);
+const primeiroPorNome = await p
+  .locator('table tbody tr [data-celula="descricao"] a')
+  .first()
+  .innerText();
+ok(
+  "ordenar por nome muda a primeira linha",
+  primeiroPorValor !== primeiroPorNome,
+  `${primeiroPorValor} → ${primeiroPorNome}`,
+);
 const ordemAria = await p.locator('thead th[data-coluna="descricao"]').getAttribute("aria-sort");
-ok("o cabeçalho anuncia a ordem para leitor de tela", ordemAria === "ascending", `aria-sort=${ordemAria}`);
+ok(
+  "o cabeçalho anuncia a ordem para leitor de tela",
+  ordemAria === "ascending",
+  `aria-sort=${ordemAria}`,
+);
 const nomes = await p.locator('table tbody tr [data-celula="descricao"] a').allInnerTexts();
 const ordenado = [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-ok("e a lista está de fato em ordem alfabética", JSON.stringify(nomes) === JSON.stringify(ordenado),
-   nomes.slice(0, 2).join(" | "));
+ok(
+  "e a lista está de fato em ordem alfabética",
+  JSON.stringify(nomes) === JSON.stringify(ordenado),
+  nomes.slice(0, 2).join(" | "),
+);
 await p.locator("thead a", { hasText: "Custo" }).click();
 await p.waitForURL(/dir=desc/, { timeout: 8000 }).catch(() => {});
 ok("clicar de novo inverte a direção", p.url().includes("dir=desc"), p.url());
@@ -135,15 +151,23 @@ console.log("\n═══ CHIPS DE FILTRO ═══");
 await p.goto(`${URL}/custos?f=ativos&q=Microsoft`);
 await p.waitForLoadState("networkidle");
 const comBusca = await p.locator("table tbody tr").count();
-ok("busca filtra a lista", comBusca > 0 && comBusca < SEMENTE.ativos, `${comBusca} de ${SEMENTE.ativos}`);
-const chipBusca = p.locator('main a', { hasText: "Busca:" }).first();
+ok(
+  "busca filtra a lista",
+  comBusca > 0 && comBusca < SEMENTE.ativos,
+  `${comBusca} de ${SEMENTE.ativos}`,
+);
+const chipBusca = p.locator("main a", { hasText: "Busca:" }).first();
 ok("a busca aparece como chip removível", (await chipBusca.count()) > 0);
 await chipBusca.click();
 await p.waitForURL((u) => !u.searchParams.has("q"), { timeout: 8000 });
 await p
-  .waitForFunction((n) => document.querySelectorAll("table tbody tr").length === n, SEMENTE.ativos, {
-    timeout: 8000,
-  })
+  .waitForFunction(
+    (n) => document.querySelectorAll("table tbody tr").length === n,
+    SEMENTE.ativos,
+    {
+      timeout: 8000,
+    },
+  )
   .catch(() => {});
 ok(
   "remover o chip devolve a lista inteira",
@@ -157,7 +181,11 @@ await p.waitForLoadState("networkidle");
 await p.keyboard.press("/");
 await p.waitForTimeout(200);
 const focoBusca = await p.evaluate(() => document.activeElement?.getAttribute("aria-label"));
-ok("a tecla / foca a busca do cabeçalho", (focoBusca ?? "").includes("Buscar custos"), focoBusca ?? "—");
+ok(
+  "a tecla / foca a busca do cabeçalho",
+  (focoBusca ?? "").includes("Buscar custos"),
+  focoBusca ?? "—",
+);
 await p.keyboard.type("Zoom");
 await p.keyboard.press("Enter");
 await p.waitForURL(/q=Zoom/, { timeout: 8000 });
@@ -172,8 +200,12 @@ await p.waitForSelector('input[name="q"]');
 await p.locator('main input[name="q"]').click();
 await p.keyboard.press("/");
 await p.waitForTimeout(150);
-const dentroDoCampo = await p.evaluate(() => (document.activeElement)?.value ?? "");
-ok("digitar / dentro de um campo escreve a barra, não rouba o foco", dentroDoCampo === "/", `campo="${dentroDoCampo}"`);
+const dentroDoCampo = await p.evaluate(() => document.activeElement?.value ?? "");
+ok(
+  "digitar / dentro de um campo escreve a barra, não rouba o foco",
+  dentroDoCampo === "/",
+  `campo="${dentroDoCampo}"`,
+);
 
 console.log("\n═══ PANORAMA DO SETOR ═══");
 await p.goto(`${URL}/custos?f=ativos&setor=`);
@@ -186,7 +218,10 @@ await p.waitForURL(/\/setores\//, { timeout: 8000 });
 await p.waitForLoadState("networkidle");
 const panorama = await p.locator("main").innerText();
 ok("o panorama do setor abre", /do total da FMP/.test(panorama));
-ok("com participação no total corporativo", /\d+,\d%\s*do total/.test(panorama.replace(/\s+/g, " ")));
+ok(
+  "com participação no total corporativo",
+  /\d+,\d%\s*do total/.test(panorama.replace(/\s+/g, " ")),
+);
 ok("e declara o que os números medem", /podem divergir/.test(panorama));
 const indicadoresPanorama = await p.locator('main a[href*="/custos?"]').count();
 ok("cada número do panorama é uma porta", indicadoresPanorama >= 3, `${indicadoresPanorama} links`);
@@ -217,7 +252,10 @@ console.log("\n═══ ERROS DE CONSOLE ═══");
 ok("nenhum erro de JavaScript", erros.length === 0, erros.slice(0, 2).join(" | "));
 
 const falhas = registro.filter((r) => !r.condicao);
-console.log(`\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`);
-if (falhas.length) falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
+console.log(
+  `\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`,
+);
+if (falhas.length)
+  falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
 await navegador.close();
 process.exit(falhas.length === 0 ? 0 : 1);

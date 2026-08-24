@@ -52,33 +52,50 @@ ok(
 await caixas().nth(0).click();
 await p.waitForTimeout(600);
 const textoBarra = (await barra().innerText()).replace(/ /g, " ");
-ok("a barra aparece com a contagem", textoBarra.includes("1 custo selecionado"), textoBarra.split("\n")[0]);
-ok("e diz quanto dinheiro está selecionado", /R\$ [\d.]+,\d{2}\/mês/.test(textoBarra),
-   textoBarra.match(/R\$ [\d.]+,\d{2}\/mês/)?.[0] ?? "sem soma");
+ok(
+  "a barra aparece com a contagem",
+  textoBarra.includes("1 custo selecionado"),
+  textoBarra.split("\n")[0],
+);
+ok(
+  "e diz quanto dinheiro está selecionado",
+  /R\$ [\d.]+,\d{2}\/mês/.test(textoBarra),
+  textoBarra.match(/R\$ [\d.]+,\d{2}\/mês/)?.[0] ?? "sem soma",
+);
 
 console.log("\n— Shift+clique estende a seleção —");
-await caixas().nth(5).click({ modifiers: ["Shift"] });
+await caixas()
+  .nth(5)
+  .click({ modifiers: ["Shift"] });
 await p.waitForTimeout(600);
 const comShift = (await barra().innerText()).replace(/ /g, " ");
-ok("um Shift+clique marca o intervalo inteiro", comShift.includes("6 custos selecionados"),
-   comShift.split("\n")[0]);
+ok(
+  "um Shift+clique marca o intervalo inteiro",
+  comShift.includes("6 custos selecionados"),
+  comShift.split("\n")[0],
+);
 
 console.log("\n— A soma vem do servidor, não da tela —");
-const somaBarra = Number(
-  (comShift.match(/R\$ ([\d.]+),(\d{2})\/mês/) ?? []).slice(1).join("").replace(/\./g, "") ,
-) / 100;
-const somaLinhas = (await Promise.all(
-  [0, 1, 2, 3, 4, 5].map(async (i) => {
-    const celula = await p
-      .locator("table tbody tr")
-      .nth(i)
-      .locator('[data-celula="mensal"]')
-      .innerText();
-    return Number(celula.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
-  }),
-)).reduce((a, b) => a + b, 0);
-ok("a soma da barra bate com a das linhas marcadas", Math.abs(somaBarra - somaLinhas) < 0.02,
-   `barra ${somaBarra} · linhas ${somaLinhas.toFixed(2)}`);
+const somaBarra =
+  Number((comShift.match(/R\$ ([\d.]+),(\d{2})\/mês/) ?? []).slice(1).join("").replace(/\./g, "")) /
+  100;
+const somaLinhas = (
+  await Promise.all(
+    [0, 1, 2, 3, 4, 5].map(async (i) => {
+      const celula = await p
+        .locator("table tbody tr")
+        .nth(i)
+        .locator('[data-celula="mensal"]')
+        .innerText();
+      return Number(celula.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+    }),
+  )
+).reduce((a, b) => a + b, 0);
+ok(
+  "a soma da barra bate com a das linhas marcadas",
+  Math.abs(somaBarra - somaLinhas) < 0.02,
+  `barra ${somaBarra} · linhas ${somaLinhas.toFixed(2)}`,
+);
 
 console.log("\n═══ FRICÇÃO PROPORCIONAL AO RISCO ═══");
 console.log("  → até 4 itens: age direto, com Desfazer");
@@ -92,7 +109,10 @@ await p.waitForSelector('[role="status"]', { timeout: 8000 });
 const aviso2 = await p.locator('[role="status"]').innerText();
 ok("dois itens mudam sem modal", (await p.locator('[role="alertdialog"]').count()) === 0);
 ok("o aviso diz quantos mudaram", /2 custos em/.test(aviso2), aviso2.split("\n")[0]);
-ok("e oferece Desfazer", (await p.locator('[role="status"] button', { hasText: "Desfazer" }).count()) > 0);
+ok(
+  "e oferece Desfazer",
+  (await p.locator('[role="status"] button', { hasText: "Desfazer" }).count()) > 0,
+);
 
 console.log("  → o Desfazer devolve cada item ao SEU estado");
 await p.locator('[role="status"] button', { hasText: "Desfazer" }).click();
@@ -106,16 +126,24 @@ console.log("  → 5 ou mais: confirmação com a soma");
 await p.goto(`${URL}/custos`);
 await p.waitForSelector("table tbody tr");
 await caixas().nth(0).click();
-await caixas().nth(6).click({ modifiers: ["Shift"] });
+await caixas()
+  .nth(6)
+  .click({ modifiers: ["Shift"] });
 await p.waitForTimeout(600);
 await barra().locator('select[aria-label="Situação"]').selectOption({ label: "Em análise" });
 await p.waitForSelector('[role="alertdialog"]', { timeout: 8000 });
 const modal = (await p.locator('[role="alertdialog"]').innerText()).replace(/ /g, " ");
 ok("sete itens exigem confirmação", modal.includes("7 custos"), modal.split("\n")[0]);
-ok("a confirmação mostra a soma em dinheiro", /R\$ [\d.]+,\d{2}\/mês/.test(modal),
-   modal.match(/R\$ [\d.]+,\d{2}\/mês/)?.[0] ?? "");
-ok("e nomeia os custos em jogo", /Energia elétrica|Limpeza/.test(modal),
-   modal.split("\n").slice(2, 3).join(""));
+ok(
+  "a confirmação mostra a soma em dinheiro",
+  /R\$ [\d.]+,\d{2}\/mês/.test(modal),
+  modal.match(/R\$ [\d.]+,\d{2}\/mês/)?.[0] ?? "",
+);
+ok(
+  "e nomeia os custos em jogo",
+  /Energia elétrica|Limpeza/.test(modal),
+  modal.split("\n").slice(2, 3).join(""),
+);
 
 console.log("  → o foco não cai no botão de confirmar");
 const focoModal = await p.evaluate(() => document.activeElement?.textContent?.trim());
@@ -132,10 +160,15 @@ const doTi = await caixas().count();
 await p.locator('thead input[type="checkbox"]').click();
 await p.waitForTimeout(600);
 const barraTi = await barra().innerText();
-ok("o gestor seleciona só o que é da área dele", barraTi.includes(`${doTi} custos selecionados`),
-   barraTi.split("\n")[0]);
-ok("e não vê a opção de mover entre setores",
-   (await barra().locator('select[aria-label="Mover para setor"]').count()) === 0);
+ok(
+  "o gestor seleciona só o que é da área dele",
+  barraTi.includes(`${doTi} custos selecionados`),
+  barraTi.split("\n")[0],
+);
+ok(
+  "e não vê a opção de mover entre setores",
+  (await barra().locator('select[aria-label="Mover para setor"]').count()) === 0,
+);
 
 console.log("\n═══ EXPORTAR ═══");
 await entrar("admin@fmp.com.br");
@@ -150,40 +183,58 @@ const [download] = await Promise.all([
 const caminho = await download.path();
 const conteudo = (await import("node:fs")).readFileSync(caminho, "utf8");
 const linhasCsv = conteudo.trim().split("\r\n");
-ok("o CSV traz TODAS as linhas selecionadas, não só as 5 da prévia",
-   linhasCsv.length === SEMENTE.ativos + 1, `${linhasCsv.length - 1} linhas + cabeçalho`);
-ok("com as colunas que a colagem lê de volta",
-   linhasCsv[0].includes("Descrição") && linhasCsv[0].includes("Periodicidade"),
-   linhasCsv[0].slice(0, 70));
-ok("e com BOM, para o Excel em português não estragar os acentos",
-   conteudo.charCodeAt(0) === 0xfeff);
+ok(
+  "o CSV traz TODAS as linhas selecionadas, não só as 5 da prévia",
+  linhasCsv.length === SEMENTE.ativos + 1,
+  `${linhasCsv.length - 1} linhas + cabeçalho`,
+);
+ok(
+  "com as colunas que a colagem lê de volta",
+  linhasCsv[0].includes("Descrição") && linhasCsv[0].includes("Periodicidade"),
+  linhasCsv[0].slice(0, 70),
+);
+ok(
+  "e com BOM, para o Excel em português não estragar os acentos",
+  conteudo.charCodeAt(0) === 0xfeff,
+);
 
 console.log("\n═══ REVISÃO EM SEQUÊNCIA ═══");
 await p.goto(`${URL}/custos?f=pendencia&falta=data`);
 await p.waitForSelector("table tbody tr");
 const pendentes = await p.locator("table tbody tr").count();
 const botaoRevisar = p.locator("button", { hasText: "Revisar em sequência" });
-ok("a fila oferece revisão em sequência", (await botaoRevisar.count()) > 0,
-   await botaoRevisar.innerText().catch(() => "—"));
+ok(
+  "a fila oferece revisão em sequência",
+  (await botaoRevisar.count()) > 0,
+  await botaoRevisar.innerText().catch(() => "—"),
+);
 
 await botaoRevisar.click();
 await p.waitForSelector('[role="dialog"]', { timeout: 8000 });
 const painel = p.locator('[role="dialog"]');
 ok("o painel lateral abre no primeiro item", (await painel.count()) === 1);
 const contador = await painel.innerText();
-ok("com o contador do que falta", contador.includes(`faltam ${pendentes}`),
-   contador.split("\n").find((l) => l.includes("faltam")) ?? "");
-ok("mostrando só o que falta neste item", contador.includes("Falta a data de renovação"),
-   contador.split("\n").find((l) => l.startsWith("Falta")) ?? "");
+ok(
+  "com o contador do que falta",
+  contador.includes(`faltam ${pendentes}`),
+  contador.split("\n").find((l) => l.includes("faltam")) ?? "",
+);
+ok(
+  "mostrando só o que falta neste item",
+  contador.includes("Falta a data de renovação"),
+  contador.split("\n").find((l) => l.startsWith("Falta")) ?? "",
+);
 
 const primeiroNome = (await painel.locator("h2").innerText()).trim();
 await painel.locator('input[type="date"]').fill("2027-08-15");
 await painel.locator("button", { hasText: "Salvar e ir ao próximo" }).click();
 await p.waitForTimeout(1200);
 const depoisDeSalvar = await painel.innerText();
-ok("gravar avança sozinho para o próximo custo",
-   (await painel.locator("h2").innerText()).trim() !== primeiroNome,
-   `${primeiroNome} → ${(await painel.locator("h2").innerText()).trim()}`);
+ok(
+  "gravar avança sozinho para o próximo custo",
+  (await painel.locator("h2").innerText()).trim() !== primeiroNome,
+  `${primeiroNome} → ${(await painel.locator("h2").innerText()).trim()}`,
+);
 ok(
   "e o contador desce sem a fila encolher embaixo de quem revisa",
   depoisDeSalvar.includes(`faltam ${pendentes - 1} de ${pendentes}`),
@@ -202,13 +253,19 @@ ok(
 );
 await p.keyboard.press("Alt+ArrowDown");
 await p.waitForTimeout(400);
-ok("Alt+↓ vai para o próximo", (await painel.locator("h2").innerText()).trim() !== antesDaSeta,
-   `${antesDaSeta} → ${(await painel.locator("h2").innerText()).trim()}`);
+ok(
+  "Alt+↓ vai para o próximo",
+  (await painel.locator("h2").innerText()).trim() !== antesDaSeta,
+  `${antesDaSeta} → ${(await painel.locator("h2").innerText()).trim()}`,
+);
 await p.locator('[role="dialog"] h2').click();
 await p.keyboard.press("ArrowUp");
 await p.waitForTimeout(400);
-ok("e ↑ pura funciona fora dos campos", (await painel.locator("h2").innerText()).trim() === antesDaSeta,
-   (await painel.locator("h2").innerText()).trim());
+ok(
+  "e ↑ pura funciona fora dos campos",
+  (await painel.locator("h2").innerText()).trim() === antesDaSeta,
+  (await painel.locator("h2").innerText()).trim(),
+);
 ok("o painel continua aberto", (await p.locator('[role="dialog"]').count()) === 1);
 await p.keyboard.press("Escape");
 await p.waitForTimeout(600);
@@ -223,7 +280,10 @@ console.log("\n═══ ERROS DE CONSOLE ═══");
 ok("nenhum erro de JavaScript", erros.length === 0, erros.slice(0, 2).join(" | "));
 
 const falhas = registro.filter((r) => !r.condicao);
-console.log(`\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`);
-if (falhas.length) falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
+console.log(
+  `\n${falhas.length === 0 ? "✓" : "✗"} ${registro.length - falhas.length}/${registro.length} verificações passaram`,
+);
+if (falhas.length)
+  falhas.forEach((f) => console.log(`   ✗ ${f.nome}${f.extra ? " → " + f.extra : ""}`));
 await navegador.close();
 process.exit(falhas.length === 0 ? 0 : 1);

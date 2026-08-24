@@ -102,7 +102,7 @@ export default async function Cambio() {
 
       <section className="mt-8">
         <h2 className="rotulo-secao">Situação por moeda</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ESTRANGEIRAS.map((moeda) => {
             const cotacao = maisRecente.get(moeda);
             return (

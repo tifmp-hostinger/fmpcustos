@@ -283,6 +283,40 @@ body {
   }
 
   /*
+   * A FAIXA QUE ROLA.
+   *
+   * Uma fila de pílulas de filtro cabe numa linha em 1440px e vira três linhas
+   * em 390px. Três linhas de filtro num telefone empurram a lista para baixo da
+   * dobra: a pessoa abre a tela de custos e não vê custo nenhum.
+   *
+   * A faixa passa a rolar por dentro. Não é "esconder filtro": a fila continua
+   * inteira, e o dedo a percorre — que é o gesto que um telefone já ensinou a
+   * todo mundo. Numa tela larga sobra espaço e a barra de rolagem nunca
+   * aparece, então o mesmo comportamento serve as duas larguras sem `@media`.
+   *
+   * As margens negativas no ponto de uso (`-mx-6 px-6`) fazem a faixa sangrar
+   * até a borda da tela. Sem isso a última pílula é cortada pelo respiro do
+   * contêiner e parece defeito, não continuação.
+   */
+  .faixa-rolante {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    /* A barra de rolagem horizontal rouba altura de uma faixa de 32px e pisca
+       a cada toque. O conteúdo continua alcançável pelo dedo, pela roda e pelo
+       teclado — só a barra some. */
+    scrollbar-width: none;
+  }
+  .faixa-rolante::-webkit-scrollbar {
+    display: none;
+  }
+  /* Pílula não encolhe: espremer "Renova em 90 dias" até virar "Renova em…"
+     seria trocar um filtro legível por um enigma para ganhar 40px. */
+  .faixa-rolante > * {
+    flex-shrink: 0;
+  }
+
+  /*
    * O TÍTULO DE PÁGINA.
    *
    * Noto Serif itálico, como manda o sistema. O sistema pede 60px para manchete

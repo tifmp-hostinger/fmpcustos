@@ -45,7 +45,7 @@ export function NovaCotacao({ hoje }: { hoje: string }) {
       className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
     >
       <h2 className="rotulo-secao">Registrar cotação</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Selecao
           rotulo="Moeda"
           nome="moeda"
@@ -77,11 +77,7 @@ export function NovaCotacao({ hoje }: { hoje: string }) {
           dica="De onde veio o número. Aparece para quem cadastrar um custo."
         />
       </div>
-      <button
-        type="submit"
-        disabled={enviando}
-        className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      <button type="submit" disabled={enviando} className={`mt-4 ${classesDeBotao("primario")}`}>
         {enviando ? "Registrando…" : "Registrar"}
       </button>
       <p className="mt-3 text-meta text-[var(--ink-3)]">

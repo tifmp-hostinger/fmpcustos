@@ -222,14 +222,25 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="titulo-pagina">Custos</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
+        {/* Menor no telefone: com a marca no topo e a aba acesa no rodapé, a
+            palavra "Custos" já está escrita duas vezes na tela. O `<h1>` fica —
+            é a âncora do documento para leitor de tela e para o navegador — mas
+            para de gastar 32px repetindo o óbvio. */}
+        <h1 className="titulo-pagina text-xl sm:text-2xl">Custos</h1>
         {podeLancar(usuario.papel) && (
           <div className="flex flex-wrap items-center gap-2">
             {/* Quem já tem os custos numa planilha não deveria descobrir a
                 colagem por acaso: ela vive ao lado do cadastro avulso, com
                 menos peso visual porque é o caminho menos frequente. */}
-            <Link href="/custos/colar" className={classesDeBotao("contorno")}>
+            {/* Some no telefone, e não por falta de espaço: não existe como
+                selecionar um intervalo de planilha num celular. O botão levaria
+                a uma tela que pede uma colagem que o aparelho não sabe fazer —
+                esconder é mais honesto do que oferecer e frustrar. */}
+            <Link
+              href="/custos/colar"
+              className={`hidden sm:inline-flex ${classesDeBotao("contorno")}`}
+            >
               Colar da planilha
             </Link>
             <Link href="/custos/novo" className={classesDeBotao("primario")}>
@@ -249,7 +260,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       <nav
         aria-label="Natureza do custo"
         data-abas="natureza"
-        className="mt-5 flex flex-wrap gap-1 border-b border-[var(--rule)]"
+        className="faixa-rolante -mx-6 mt-5 gap-1 border-b border-[var(--rule)] px-6"
       >
         {abas.map((r) => (
           <Link
@@ -306,7 +317,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       {/* O ano só existe onde o total mede período: numa aba de compromisso
           mensal ele não teria o que recortar. */}
       {recorte.medida === "periodo" && (
-        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+        <div className="faixa-rolante -mx-6 mt-4 items-center gap-1.5 px-6">
           <span className="text-meta text-[var(--ink-3)]">Exercício:</span>
           {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
             <Link
@@ -329,7 +340,10 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <nav aria-label="Filtrar por situação" className="flex flex-wrap gap-1.5">
+        <nav
+          aria-label="Filtrar por situação"
+          className="faixa-rolante -mx-6 gap-1.5 px-6 sm:mx-0 sm:px-0"
+        >
           {situacoesDe(f.natureza).map((x) => (
             <Link
               key={x.chave}
@@ -580,9 +594,10 @@ function Total({
         <span className="ml-1 text-[var(--ink-2)]">/mês</span>
         {/* A projeção não é um segundo total: é o mesmo número na escala em que
             as decisões de contrato são tomadas. */}
-        <span className="ml-2.5 text-dado text-[var(--ink-3)]">
-          · <span className="tabular-nums">{formatarBRL(mensal.mul(12))}</span> em 12 meses, ao
-          ritmo de hoje
+        <span className="block text-dado text-[var(--ink-3)] sm:ml-2.5 sm:inline">
+          <span className="hidden sm:inline">· </span>
+          <span className="tabular-nums">{formatarBRL(mensal.mul(12))}</span> em 12 meses, ao ritmo
+          de hoje
         </span>
       </p>
     );
@@ -594,8 +609,9 @@ function Total({
       <p className="text-base">
         <strong className="numero text-xl">{formatarBRL(periodo)}</strong>
         <span className="ml-1.5 text-[var(--ink-2)]">{deQuando}</span>
-        <span className="ml-2.5 text-dado text-[var(--ink-3)]">
-          · {quantidadePeriodo} {quantidadePeriodo === 1 ? "lançamento" : "lançamentos"}
+        <span className="block text-dado text-[var(--ink-3)] sm:ml-2.5 sm:inline">
+          <span className="hidden sm:inline">· </span>
+          {quantidadePeriodo} {quantidadePeriodo === 1 ? "lançamento" : "lançamentos"}
         </span>
       </p>
     );
