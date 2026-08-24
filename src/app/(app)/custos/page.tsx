@@ -2,117 +2,86 @@ import Link from "next/link";
 import { Decimal } from "decimal.js";
 import { prisma } from "@/lib/db";
 import { exigirSessao, podeLancar, vePorInteiro } from "@/lib/sessao";
-import { escopoDeItens, listarSetores } from "@/lib/consultas";
 import { formatarBRL } from "@/lib/dinheiro";
-import { IconeBusca, IconeMais } from "@/components/icones";
+import {
+  FALTAS,
+  SEM_SETOR,
+  SITUACOES,
+  chipsAtivos,
+  lerFiltros,
+  temRecorte,
+  urlDaLista,
+  type Filtros,
+  type ParamsBrutos,
+} from "@/lib/filtros";
+import { whereDaLista } from "@/lib/consultas";
+import { IconeBusca, IconeFechar, IconeMais, IconeSeta } from "@/components/icones";
 import { TabelaDeCustos, type LinhaCusto } from "./tabela";
-import type { StatusItem } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Filtros rápidos, na ordem em que fazem sentido para quem opera.
+ * Teto de linhas carregadas de uma vez.
  *
- * "Falta dado" e "Excluídos" são os dois novos. O primeiro converte o
- * diagnóstico do painel ("12 itens sem data de término") em fila de trabalho —
- * antes ele era um número que não levava a lugar nenhum. O segundo é a âncora
- * permanente do desfazer: quem só percebe o erro no dia seguinte, quando o
- * aviso já sumiu, encontra o item aqui.
+ * Não é paginação: é um corte declarado. O recorte de quais itens entram é
+ * sempre o mesmo — os maiores por valor mensal — e a ordenação de exibição
+ * acontece depois, sobre esse conjunto. Ordenar no banco com um teto faria a
+ * própria escolha dos itens mudar a cada clique no cabeçalho, e a lista diria
+ * "os 500 primeiros em ordem alfabética" achando que disse "os 500 maiores".
  */
-const FILTROS: Array<{
-  chave: string;
-  rotulo: string;
-  status: StatusItem[] | null;
-  lixeira?: boolean;
-  pendencia?: boolean;
-}> = [
-  { chave: "ativos", rotulo: "Ativos", status: ["ATIVO"] },
-  { chave: "analise", rotulo: "Em análise", status: ["EM_ANALISE", "CANCELAMENTO_SOLICITADO"] },
-  { chave: "pendencia", rotulo: "Falta dado", status: null, pendencia: true },
-  { chave: "encerrados", rotulo: "Encerrados", status: ["CANCELADO", "SUBSTITUIDO"] },
-  { chave: "todos", rotulo: "Todos", status: null },
-  { chave: "lixeira", rotulo: "Excluídos", status: null, lixeira: true },
-];
+const TETO = 500;
 
-/** Query string repetida (?q=a&q=b) chega como array — normaliza para o primeiro. */
-function unico(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v) ?? "";
-}
-
-export default async function Custos({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    q?: string | string[];
-    f?: string | string[];
-    setor?: string | string[];
-    destaque?: string | string[];
-  }>;
-}) {
+export default async function Custos({ searchParams }: { searchParams: Promise<ParamsBrutos> }) {
   const params = await searchParams;
   const usuario = await exigirSessao();
-  const filtro = FILTROS.find((x) => x.chave === unico(params.f)) ?? FILTROS[0];
-  const busca = unico(params.q).trim().slice(0, 120);
-  const setorFiltrado = unico(params.setor);
+  const f = lerFiltros(params);
   const global = vePorInteiro(usuario.papel);
+  const situacao = SITUACOES.find((s) => s.chave === f.situacao)!;
+  const where = whereDaLista(f, usuario);
 
-  const itens = await prisma.itemCusto.findMany({
-    where: {
-      ...escopoDeItens(usuario, filtro.lixeira ? "dentro" : "fora"),
-      ...(filtro.status ? { status: { in: filtro.status } } : {}),
-      // Falta dado: sem valor, sem categoria, ou sem prazo nem marcação de que
-      // não há prazo. Cancelado não entra — dado faltando em contrato encerrado
-      // não é trabalho, é história.
-      ...(filtro.pendencia
-        ? {
-            status: { in: ["ATIVO", "EM_ANALISE", "PENDENTE_APURACAO"] },
-            OR: [
-              { valorPeriodo: null },
-              { categoriaId: null },
-              { AND: [{ dataFim: null }, { semPrazoDeterminado: false }] },
-            ],
-          }
-        : {}),
-      ...(setorFiltrado
-        ? { rateios: { some: { setorId: setorFiltrado, vigenciaFim: null } } }
-        : {}),
-      ...(busca
-        ? {
-            OR: [
-              { descricao: { contains: busca, mode: "insensitive" } },
-              { fornecedor: { nome: { contains: busca, mode: "insensitive" } } },
-              { observacoes: { contains: busca, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    select: {
-      id: true,
-      descricao: true,
-      periodicidade: true,
-      valorPeriodo: true,
-      valorMensalNormalizado: true,
-      status: true,
-      dataFim: true,
-      semPrazoDeterminado: true,
-      excluidoEm: true,
-      fornecedor: { select: { nome: true } },
-      categoria: { select: { nome: true } },
-      rateios: {
-        where: { vigenciaFim: null },
-        select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
-        orderBy: { percentual: "desc" },
+  const [itens, total, setores, categorias, fornecedores] = await Promise.all([
+    prisma.itemCusto.findMany({
+      where,
+      select: {
+        id: true,
+        descricao: true,
+        periodicidade: true,
+        valorPeriodo: true,
+        valorMensalNormalizado: true,
+        status: true,
+        dataFim: true,
+        semPrazoDeterminado: true,
+        excluidoEm: true,
+        fornecedor: { select: { nome: true } },
+        categoria: { select: { nome: true } },
+        rateios: {
+          where: { vigenciaFim: null },
+          select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
+          orderBy: { percentual: "desc" },
+        },
+        _count: { select: { lancamentos: true } },
       },
-      _count: { select: { lancamentos: true } },
-    },
-    orderBy: [
-      { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
-      { atualizadoEm: "desc" },
-    ],
-    take: 500,
-  });
+      orderBy: [
+        { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
+        { atualizadoEm: "desc" },
+      ],
+      take: TETO,
+    }),
+    prisma.itemCusto.count({ where }),
+    prisma.setor.findMany({
+      where: { ativo: true },
+      select: { id: true, nome: true },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.categoria.findMany({ select: { id: true, nome: true } }),
+    prisma.fornecedor.findMany({ select: { id: true, nome: true } }),
+  ]);
 
-  const setores = global ? await listarSetores() : [];
+  const nomes = {
+    setores: new Map(setores.map((s) => [s.id, s.nome])),
+    categorias: new Map(categorias.map((c) => [c.id, c.nome])),
+    fornecedores: new Map(fornecedores.map((x) => [x.id, x.nome])),
+  };
 
   // O "/mês" do cabeçalho soma só itens correntes: apresentar um contrato
   // cancelado como despesa mensal em andamento seria mentira aritmética.
@@ -123,12 +92,6 @@ export default async function Custos({
         : soma,
     new Decimal(0),
   );
-
-  const escopoTexto = global
-    ? setorFiltrado
-      ? (setores.find((s) => s.valor === setorFiltrado)?.rotulo ?? "um setor")
-      : "todos os setores"
-    : (usuario.setorNome ?? "sua área");
 
   const linhas: LinhaCusto[] = itens.map((i) => {
     // Permissão resolvida aqui, uma vez, com os dados que a consulta já trouxe:
@@ -163,17 +126,8 @@ export default async function Custos({
     };
   });
 
-  const consulta = (extra: Record<string, string | undefined>) => ({
-    pathname: "/custos" as const,
-    query: Object.fromEntries(
-      Object.entries({
-        f: filtro.chave,
-        q: busca || undefined,
-        setor: setorFiltrado || undefined,
-        ...extra,
-      }).filter(([, v]) => v !== undefined && v !== ""),
-    ),
-  });
+  ordenar(linhas, f);
+  const chips = chipsAtivos(f, nomes);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -181,8 +135,18 @@ export default async function Custos({
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight">Custos</h1>
           <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
-            {itens.length} {itens.length === 1 ? "item" : "itens"}
-            {busca && <> para “{busca}”</>} · {filtro.rotulo.toLowerCase()} · {escopoTexto}
+            {/* Contador honesto: quando há corte, a lista diz de quantos. */}
+            {itens.length < total ? (
+              <>
+                Exibindo {itens.length} de {total} custos
+              </>
+            ) : (
+              <>
+                {total} {total === 1 ? "custo" : "custos"}
+              </>
+            )}{" "}
+            · {situacao.rotulo.toLowerCase()} ·{" "}
+            {global ? "todos os setores" : (usuario.setorNome ?? "sua área")}
             {totalMensal.greaterThan(0) && (
               <>
                 {" "}
@@ -205,20 +169,21 @@ export default async function Custos({
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <nav aria-label="Filtrar por situação" className="flex flex-wrap gap-1.5">
-          {FILTROS.map((x) => (
+          {SITUACOES.map((x) => (
             <Link
               key={x.chave}
-              href={{
-                pathname: "/custos",
-                query: {
-                  f: x.chave,
-                  ...(busca ? { q: busca } : {}),
-                  ...(setorFiltrado ? { setor: setorFiltrado } : {}),
-                },
-              }}
-              aria-current={x.chave === filtro.chave ? "true" : undefined}
+              // Trocar de situação preserva o recorte (setor, busca) e limpa o
+              // que só existe dentro do recorte anterior: "falta: valor" não
+              // significa nada em "Encerrados".
+              href={urlDaLista({
+                ...f,
+                situacao: x.chave,
+                falta: x.chave === "pendencia" ? f.falta : "",
+                destaque: "",
+              })}
+              aria-current={x.chave === f.situacao ? "true" : undefined}
               className={`rounded-full px-3.5 py-1.5 text-[13px] no-underline transition-colors ${
-                x.chave === filtro.chave
+                x.chave === f.situacao
                   ? "bg-[var(--ink)] font-semibold text-[var(--ground)]"
                   : "border border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
               }`}
@@ -229,13 +194,19 @@ export default async function Custos({
         </nav>
 
         <form action="/custos" className="relative ml-auto min-w-[220px] flex-1 sm:max-w-xs">
-          <input type="hidden" name="f" value={filtro.chave} />
-          {setorFiltrado && <input type="hidden" name="setor" value={setorFiltrado} />}
+          {/* Os campos escondidos preservam o recorte quando a busca é enviada:
+              sem eles, buscar dentro de um setor jogaria a pessoa para a lista
+              inteira e ela concluiria que o filtro não funciona. */}
+          <input type="hidden" name="f" value={f.situacao} />
+          {f.setor && <input type="hidden" name="setor" value={f.setor} />}
+          {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
+          {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
+          {f.falta && <input type="hidden" name="falta" value={f.falta} />}
           <IconeBusca className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ink-3)]" />
           <input
             type="search"
             name="q"
-            defaultValue={busca}
+            defaultValue={f.busca}
             placeholder="Buscar por nome, fornecedor ou observação…"
             aria-label="Buscar custos"
             className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-2 pr-4 pl-9 text-[14px] outline-none focus:border-[var(--accent)]"
@@ -243,62 +214,104 @@ export default async function Custos({
         </form>
       </div>
 
-      {/* Filtro por setor: é o que faz "Marketing R$ 12.400/mês" no painel
-          virar um link para a lista cujo total é exatamente esse número. */}
-      {global && setores.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-[12px] text-[var(--ink-3)]">Setor:</span>
+      {/* Sub-filtros da fila de pendência: cada tipo de falta é um trabalho
+          diferente, e preencher doze datas seguidas é mais rápido do que
+          alternar entre data, valor e categoria a cada linha. */}
+      {f.situacao === "pendencia" && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-[var(--ink-3)]">O que falta:</span>
           <Link
-            href={consulta({ setor: undefined })}
-            aria-current={!setorFiltrado ? "true" : undefined}
-            className={`rounded-full px-2.5 py-1 text-[12px] no-underline ${
-              !setorFiltrado
-                ? "bg-[var(--ink-2)] font-medium text-[var(--ground)]"
-                : "border border-[var(--rule)] text-[var(--ink-2)]"
-            }`}
+            href={urlDaLista({ ...f, falta: "" })}
+            aria-current={!f.falta ? "true" : undefined}
+            className={chipClasse(!f.falta)}
           >
-            todos
+            qualquer coisa
           </Link>
-          {setores.map((s) => (
+          {FALTAS.map((x) => (
             <Link
-              key={s.valor}
-              href={consulta({ setor: s.valor })}
-              aria-current={setorFiltrado === s.valor ? "true" : undefined}
-              className={`rounded-full px-2.5 py-1 text-[12px] no-underline ${
-                setorFiltrado === s.valor
-                  ? "bg-[var(--ink-2)] font-medium text-[var(--ground)]"
-                  : "border border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-              }`}
+              key={x.chave}
+              href={urlDaLista({ ...f, falta: x.chave })}
+              aria-current={f.falta === x.chave ? "true" : undefined}
+              className={chipClasse(f.falta === x.chave)}
             >
-              {s.rotulo}
+              {x.rotulo}
             </Link>
           ))}
         </div>
       )}
 
+      {/* Recorte ativo, com o X que o remove. */}
+      {chips.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {/* Com um setor filtrado, o panorama dele fica a um clique: a lista
+              responde "quais custos"; o panorama responde "quanto, comparado
+              com quem, e o que vence". São perguntas diferentes. */}
+          {f.setor && f.setor !== SEM_SETOR && nomes.setores.has(f.setor) && (
+            <Link
+              href={`/setores/${f.setor}`}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-[12px] font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
+            >
+              Panorama de {nomes.setores.get(f.setor)}
+              <IconeSeta className="size-3" />
+            </Link>
+          )}
+          {chips.map((c) => (
+            <Link
+              key={c.rotulo}
+              href={c.url}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-[12px] text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {c.rotulo}
+              <IconeFechar className="size-3" />
+            </Link>
+          ))}
+          {temRecorte(f) && chips.length > 1 && (
+            <Link
+              href={urlDaLista({ situacao: f.situacao, ordem: f.ordem, dir: f.dir })}
+              className="rounded-full px-2.5 py-1 text-[12px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+            >
+              Limpar filtros
+            </Link>
+          )}
+        </div>
+      )}
+
       {linhas.length === 0 ? (
         <Vazio
-          busca={busca}
-          filtro={filtro.chave}
-          rotuloFiltro={filtro.rotulo}
+          filtros={f}
           podeLancar={podeLancar(usuario.papel)}
+          rotuloSituacao={situacao.rotulo}
         />
       ) : (
         <TabelaDeCustos
           itens={linhas}
           mostrarSetor={global}
           podeLancar={podeLancar(usuario.papel)}
-          destacar={unico(params.destaque) || undefined}
+          destacar={f.destaque || undefined}
+          filtros={f}
         />
       )}
 
-      {itens.length === 500 && (
+      {itens.length < total && (
         <p className="mt-3 text-[12px] text-[var(--ink-3)]">
-          Exibindo os 500 maiores. Filtre por setor ou busque para ver o resto.
+          Exibindo os {TETO} maiores por valor mensal, de {total}. Filtre por setor ou busque para
+          alcançar o resto.
         </p>
       )}
 
-      {filtro.lixeira && linhas.length > 0 && (
+      {/* Reconciliação declarada. O total daqui e o do painel medem coisas
+          diferentes e vão divergir; duas telas com duas verdades e nenhuma
+          explicação destroem a confiança nas duas. */}
+      {totalMensal.greaterThan(0) && (
+        <p className="mt-3 max-w-3xl text-[12px] leading-relaxed text-[var(--ink-3)]">
+          O total desta lista soma o <strong>valor cheio</strong> de cada item exibido, de todas as
+          naturezas. O painel inicial soma só os <strong>recorrentes</strong> e conta cada item pela
+          fração rateada a cada setor — por isso os dois números podem divergir sem que nenhum
+          esteja errado.
+        </p>
+      )}
+
+      {f.situacao === "lixeira" && linhas.length > 0 && (
         <p className="mt-3 text-[12px] text-[var(--ink-3)]">
           Itens excluídos ficam aqui por 30 dias e depois são apagados de vez. Use o menu da linha
           para restaurar.
@@ -308,62 +321,145 @@ export default async function Custos({
   );
 }
 
+function chipClasse(ativo: boolean): string {
+  return `rounded-full px-2.5 py-1 text-[12px] no-underline transition-colors ${
+    ativo
+      ? "bg-[var(--ink-2)] font-medium text-[var(--ground)]"
+      : "border border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+  }`;
+}
+
+/**
+ * Ordena o conjunto já selecionado.
+ *
+ * Nulos vão sempre para o fim, nas duas direções: "sem data" não é uma data
+ * muito antiga nem muito futura, é ausência — e empurrá-la para o topo faria a
+ * primeira tela ser sempre a das lacunas, independente do que se pediu.
+ */
+function ordenar(linhas: LinhaCusto[], f: Filtros) {
+  const sinal = f.dir === "asc" ? 1 : -1;
+  const texto = (a: string | null, b: string | null) =>
+    (a ?? "").localeCompare(b ?? "", "pt-BR", { sensitivity: "base" });
+  const numero = (a: string | null, b: string | null) => {
+    if (a === null && b === null) return 0;
+    if (a === null) return 1 * sinal; // nulo ao fim, invertendo o sinal aplicado depois
+    if (b === null) return -1 * sinal;
+    return Number(a) - Number(b);
+  };
+
+  linhas.sort((a, b) => {
+    switch (f.ordem) {
+      case "descricao":
+        return sinal * texto(a.descricao, b.descricao);
+      case "cobranca":
+        return sinal * numero(a.valorPeriodo, b.valorPeriodo);
+      case "renovacao":
+        return (
+          sinal *
+          numero(
+            a.dataFim ? String(Date.parse(a.dataFim)) : null,
+            b.dataFim ? String(Date.parse(b.dataFim)) : null,
+          )
+        );
+      case "situacao":
+        return sinal * texto(a.status, b.status);
+      case "setor":
+        return sinal * texto(a.setores[0]?.nome ?? null, b.setores[0]?.nome ?? null);
+      default:
+        return sinal * numero(a.valorMensal, b.valorMensal);
+    }
+  });
+}
+
 function Vazio({
-  busca,
-  filtro,
-  rotuloFiltro,
+  filtros,
   podeLancar,
+  rotuloSituacao,
 }: {
-  busca: string;
-  filtro: string;
-  rotuloFiltro: string;
+  filtros: Filtros;
   podeLancar: boolean;
+  rotuloSituacao: string;
 }) {
+  if (filtros.busca) {
+    return (
+      <Caixa>
+        <p className="font-medium">Nada encontrado para “{filtros.busca}”.</p>
+        <p className="mt-1.5 text-sm text-[var(--ink-3)]">
+          {/* O termo é preservado no link de socorro: perder a busca aqui
+              levava a pessoa para mais longe do que ela procurava. */}
+          Tente outro termo, ou{" "}
+          <Link
+            href={urlDaLista({ situacao: "todos", busca: filtros.busca })}
+            className="text-[var(--accent)]"
+          >
+            procure em todas as situações e setores
+          </Link>
+          .
+        </p>
+      </Caixa>
+    );
+  }
+
+  if (filtros.situacao === "pendencia") {
+    return (
+      <Caixa>
+        <p className="font-medium">
+          {filtros.falta
+            ? `Nenhum custo ${FALTAS.find((x) => x.chave === filtros.falta)!.rotulo}.`
+            : "Nenhum dado faltando por aqui."}
+        </p>
+        <p className="mt-1.5 text-sm text-[var(--ink-3)]">
+          Todo custo tem valor, categoria, fornecedor e prazo — o alerta de renovação cobre a área
+          inteira.
+        </p>
+      </Caixa>
+    );
+  }
+
+  if (filtros.situacao === "lixeira") {
+    return (
+      <Caixa>
+        <p className="font-medium">A lixeira está vazia.</p>
+        <p className="mt-1.5 text-sm text-[var(--ink-3)]">
+          O que for excluído aparece aqui por 30 dias antes de sumir de vez.
+        </p>
+      </Caixa>
+    );
+  }
+
+  if (temRecorte(filtros)) {
+    return (
+      <Caixa>
+        <p className="font-medium">Nenhum custo com esse recorte.</p>
+        <p className="mt-1.5 text-sm text-[var(--ink-3)]">
+          <Link href={urlDaLista({ situacao: filtros.situacao })} className="text-[var(--accent)]">
+            Limpe os filtros
+          </Link>{" "}
+          para ver todos os custos em “{rotuloSituacao.toLowerCase()}”.
+        </p>
+      </Caixa>
+    );
+  }
+
+  return (
+    <Caixa>
+      <p className="font-medium">
+        Nenhum custo{" "}
+        {filtros.situacao === "ativos" ? "ativo" : `em “${rotuloSituacao.toLowerCase()}”`} por aqui.
+      </p>
+      <p className="mt-1.5 text-sm text-[var(--ink-3)]">
+        {podeLancar
+          ? "Cadastre o primeiro: comece pelos contratos e assinaturas pagos todo mês."
+          : "Quando o gestor da sua área lançar os custos, eles aparecem aqui."}
+      </p>
+    </Caixa>
+  );
+}
+
+function Caixa({ children }: { children: React.ReactNode }) {
   return (
     <div className="mt-10 rounded-2xl border border-dashed border-[var(--rule)] px-6 py-14 text-center">
-      {busca ? (
-        <>
-          <p className="font-medium">Nada encontrado para “{busca}”.</p>
-          <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-            {/* O termo é preservado no link de socorro: perder a busca aqui
-                levava a pessoa para mais longe do que ela procurava. */}
-            Tente outro termo, ou{" "}
-            <Link
-              href={{ pathname: "/custos", query: { f: "todos", q: busca } }}
-              className="text-[var(--accent)]"
-            >
-              procure em todas as situações
-            </Link>
-            .
-          </p>
-        </>
-      ) : filtro === "pendencia" ? (
-        <>
-          <p className="font-medium">Nenhum dado faltando por aqui.</p>
-          <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-            Todo custo tem valor, categoria e prazo — o alerta de renovação cobre a área inteira.
-          </p>
-        </>
-      ) : filtro === "lixeira" ? (
-        <>
-          <p className="font-medium">A lixeira está vazia.</p>
-          <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-            O que for excluído aparece aqui por 30 dias antes de sumir de vez.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="font-medium">
-            Nenhum custo {filtro === "ativos" ? "ativo" : `em “${rotuloFiltro.toLowerCase()}”`} por
-            aqui.
-          </p>
-          <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-            {podeLancar
-              ? "Cadastre o primeiro: comece pelos contratos e assinaturas pagos todo mês."
-              : "Quando o gestor da sua área lançar os custos, eles aparecem aqui."}
-          </p>
-        </>
-      )}
+      {children}
     </div>
   );
 }

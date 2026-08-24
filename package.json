@@ -20,7 +20,8 @@
     "sql:acesso": "tsx scripts/gerar-sql-acesso.ts",
     "testar:rateio": "tsx scripts/testar-rateio.ts",
     "dev:semear": "tsx scripts/dev/semear-demo.ts",
-    "dev:e2e": "node scripts/dev/e2e.mjs"
+    "dev:e2e": "node scripts/dev/e2e.mjs",
+    "dev:e2e-navegacao": "node scripts/dev/e2e-navegacao.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

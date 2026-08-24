@@ -13,6 +13,7 @@ import {
 } from "@/lib/metricas";
 import { formatarBRL } from "@/lib/dinheiro";
 import { aceitesPendentesDoSetor, propostasDoUsuario } from "@/lib/consultas";
+import { SEM_CATEGORIA, SEM_FORNECEDOR, SEM_SETOR, urlDaLista } from "@/lib/filtros";
 import { exigirSessao, podeLancar, setoresVisiveis, vePorInteiro } from "@/lib/sessao";
 import { CartaoAceite } from "./aceites";
 import { BarrasRanqueadas, Indicador } from "@/components/graficos";
@@ -97,15 +98,15 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
         )}
       </div>
 
-          {aceites.length > 0 && (
+      {aceites.length > 0 && (
         <section className="mt-5 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
           <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--accent)]">
             <IconeAlerta />
             Aceites aguardando você
           </h2>
           <p className="mt-1 text-[12px] text-[var(--ink-3)]">
-            Outro setor propôs dividir um custo com a sua área. Nada entra no seu número sem o
-            seu aceite.
+            Outro setor propôs dividir um custo com a sua área. Nada entra no seu número sem o seu
+            aceite.
           </p>
           <ul className="mt-3 space-y-2">
             {aceites.map((a) => (
@@ -129,12 +130,13 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
           <ul className="mt-3 space-y-2 text-[13px]">
             {propostas.map((pr) => (
               <li key={pr.id} className="flex flex-wrap items-baseline justify-between gap-2">
-                <Link href={`/custos/${pr.itemId}`} className="font-medium no-underline hover:underline">
+                <Link
+                  href={`/custos/${pr.itemId}`}
+                  className="font-medium no-underline hover:underline"
+                >
                   {pr.itemDescricao}
                 </Link>
-                <span className="text-[var(--ink-3)]">
-                  aguardando {pr.aguardando.join(", ")}
-                </span>
+                <span className="text-[var(--ink-3)]">aguardando {pr.aguardando.join(", ")}</span>
               </li>
             ))}
           </ul>
@@ -149,26 +151,47 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
             <Indicador
               rotulo="Custo mensal da área"
               valor={formatarBRL(mensal)}
-              nota="Equivalente mensal, todas as periodicidades"
+              nota="Soma dos itens ativos e em análise"
+              href={urlDaLista({ situacao: "ativos" })}
             />
-            <Indicador rotulo="Projeção para 12 meses" valor={formatarBRL(mensal.mul(12))} />
+            <Indicador
+              rotulo="Projeção para 12 meses"
+              valor={formatarBRL(mensal.mul(12))}
+              nota="Ao ritmo atual, sem reajuste"
+            />
             <Indicador
               rotulo="Renovações em 90 dias"
               valor={String(renovacoes.length)}
               alerta={renovacoes.length > 0}
               nota={renovacoes.length > 0 ? "Precisam de decisão" : "Nada vencendo"}
+              href={urlDaLista({ situacao: "renovacao", ordem: "renovacao", dir: "asc" })}
             />
           </section>
 
           {lanca && totalPendencias > 0 && (
             <section className="mt-5 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
-              <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--accent)]">
-                <IconeAlerta />
-                Para resolver — deixa seu número completo
-              </h2>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-[13px] font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+                  <IconeAlerta />
+                  Para resolver — deixa seu número completo
+                </h2>
+                {/* A fila inteira, resolvível na própria lista sem abrir item
+                    por item. O cartão mostra os primeiros; o link mostra todos. */}
+                <Link
+                  href={urlDaLista({ situacao: "pendencia" })}
+                  className="text-[12.5px] font-medium text-[var(--accent)] no-underline hover:underline"
+                >
+                  Resolver tudo de uma vez
+                </Link>
+              </div>
               <ul className="mt-3 space-y-2">
                 {pendencias.semValor.map((i) => (
-                  <Pendente key={i.id} id={i.id} texto={`${i.descricao} está sem valor`} acao="Informar valor" />
+                  <Pendente
+                    key={i.id}
+                    id={i.id}
+                    texto={`${i.descricao} está sem valor`}
+                    acao="Informar valor"
+                  />
                 ))}
                 {pendencias.semVigencia.map((i) => (
                   <Pendente
@@ -198,7 +221,9 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
                         className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent)]"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-[14px] font-medium">{m.descricao}</span>
+                          <span className="block truncate text-[14px] font-medium">
+                            {m.descricao}
+                          </span>
                           <span className="block text-[11px] text-[var(--ink-3)]">
                             {m.fornecedor?.nome ?? "sem fornecedor"}
                           </span>
@@ -314,26 +339,42 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         )}
       </div>
       <p className="mt-2 max-w-2xl text-[14px] text-[var(--ink-2)]">
-        Custo <strong>recorrente</strong> de todos os setores, já com rateio. Naturezas diferentes
-        nunca são somadas sem pedido explícito.
+        Custo <strong>recorrente</strong> de todos os setores, já com rateio: um item dividido meio
+        a meio entre duas áreas entra pela metade em cada uma, e a soma dos setores fecha com o
+        total. Naturezas diferentes — pontual, investimento, pessoal — nunca são somadas aqui sem
+        pedido explícito, e por isso este número é menor que o da{" "}
+        <Link href={urlDaLista({ situacao: "todos" })} className="text-[var(--accent)]">
+          lista completa de custos
+        </Link>
+        .
       </p>
 
       {admin && (usuarios <= 1 || lancaram < Math.min(3, setores.length)) && (
-        <GuiaInicial usuariosAtivos={usuarios} setoresQueLancaram={lancaram} totalSetores={setores.length} />
+        <GuiaInicial
+          usuariosAtivos={usuarios}
+          setoresQueLancaram={lancaram}
+          totalSetores={setores.length}
+        />
       )}
 
       <section className="mt-7 grid gap-px overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
         <Indicador
           rotulo="Custo recorrente por mês"
           valor={formatarBRL(mensal)}
-          nota="Equivalente mensal, todas as periodicidades"
+          nota="Itens ativos e em análise, já com rateio"
+          href={urlDaLista({ situacao: "ativos" })}
         />
-        <Indicador rotulo="Projeção para 12 meses" valor={formatarBRL(mensal.mul(12))} nota="Ao ritmo atual, sem reajuste" />
+        <Indicador
+          rotulo="Projeção para 12 meses"
+          valor={formatarBRL(mensal.mul(12))}
+          nota="Ao ritmo atual, sem reajuste"
+        />
         <Indicador
           rotulo="Renovações em 90 dias"
           valor={String(renovacoes.length)}
           alerta={renovacoes.length > 0}
           nota={renovacoes.length > 0 ? "Exigem decisão antes do vencimento" : "Nada vencendo"}
+          href={urlDaLista({ situacao: "renovacao", ordem: "renovacao", dir: "asc" })}
         />
         <Indicador
           rotulo="Setores que já lançaram"
@@ -357,20 +398,29 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
       <div className="mt-7 grid gap-4 lg:grid-cols-2">
         <BarrasRanqueadas
           titulo="Custo por setor"
-          descricao="Quanto cada área consome por mês, já com o rateio aplicado."
+          descricao="Quanto cada área consome por mês, já com o rateio aplicado. Clique para ver a lista."
           fatias={porSetor}
           limite={13}
           vazio="Nenhum custo rateado ainda."
+          recorte={(chave) => ({ situacao: "ativos", setor: chave })}
         />
         <BarrasRanqueadas
           titulo="Concentração por fornecedor"
           descricao="Onde há dependência — e, portanto, onde a negociação vale mais."
           fatias={porFornecedor}
+          recorte={(chave) => ({
+            situacao: "ativos",
+            fornecedor: chave === SEM_FORNECEDOR ? SEM_FORNECEDOR : chave,
+          })}
         />
         <BarrasRanqueadas
           titulo="Custo por categoria"
           descricao="Em que tipo de coisa o dinheiro está indo."
           fatias={porCategoria}
+          recorte={(chave) => ({
+            situacao: "ativos",
+            categoria: chave === SEM_CATEGORIA ? SEM_CATEGORIA : chave,
+          })}
         />
         <CartaoRenovacoes renovacoes={renovacoes} notaVazio={pendencias.semVigencia} />
       </div>
@@ -380,7 +430,14 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         return naoRateado ? (
           <p className="mt-4 rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
             <strong>{formatarBRL(naoRateado.valor)}/mês está sem setor responsável</strong> e
-            aparece como “Não rateado”. Dinheiro sem dono não pode ficar invisível.
+            aparece como “Não rateado”. Dinheiro sem dono não pode ficar invisível —{" "}
+            <Link
+              href={urlDaLista({ situacao: "ativos", setor: SEM_SETOR })}
+              className="font-medium text-[var(--accent)]"
+            >
+              ver quais são
+            </Link>
+            .
           </p>
         ) : null;
       })()}
@@ -390,9 +447,24 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
           O que falta para o número estar completo
         </h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
-          <PendenciaResumo n={pendencias.semValor} rotulo="itens sem valor" detalhe="Não entram em nenhuma soma." />
-          <PendenciaResumo n={pendencias.semVigencia} rotulo="itens sem data de término" detalhe="Não geram alerta de renovação." />
-          <PendenciaResumo n={pendencias.semCategoria} rotulo="itens sem categoria" detalhe="Somem do agrupamento por tipo." />
+          <PendenciaResumo
+            n={pendencias.semValor}
+            rotulo="itens sem valor"
+            detalhe="Não entram em nenhuma soma."
+            falta="valor"
+          />
+          <PendenciaResumo
+            n={pendencias.semVigencia}
+            rotulo="itens sem data de término"
+            detalhe="Não geram alerta de renovação."
+            falta="data"
+          />
+          <PendenciaResumo
+            n={pendencias.semCategoria}
+            rotulo="itens sem categoria"
+            detalhe="Somem do agrupamento por tipo."
+            falta="categoria"
+          />
         </ul>
       </section>
     </main>
@@ -443,7 +515,9 @@ function GuiaInicial({
           <li
             key={p.titulo}
             className={`rounded-xl border p-4 ${
-              p.feito ? "border-[var(--rule)] opacity-60" : "border-[var(--rule)] bg-[var(--ground)]"
+              p.feito
+                ? "border-[var(--rule)] opacity-60"
+                : "border-[var(--rule)] bg-[var(--ground)]"
             }`}
           >
             <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--ink-3)]">
@@ -534,10 +608,20 @@ function CartaoRenovacoes({
   );
 }
 
-function PendenciaResumo({ n, rotulo, detalhe }: { n: number; rotulo: string; detalhe: string }) {
+function PendenciaResumo({
+  n,
+  rotulo,
+  detalhe,
+  falta,
+}: {
+  n: number;
+  rotulo: string;
+  detalhe: string;
+  falta: string;
+}) {
   const limpo = n === 0;
-  return (
-    <li>
+  const corpo = (
+    <>
       <span className={`text-xl font-semibold tabular-nums ${limpo ? "" : "text-[var(--accent)]"}`}>
         {n}
       </span>
@@ -545,6 +629,23 @@ function PendenciaResumo({ n, rotulo, detalhe }: { n: number; rotulo: string; de
       <span className="mt-0.5 block text-[11px] text-[var(--ink-3)]">
         {limpo ? "Nada pendente." : detalhe}
       </span>
+    </>
+  );
+
+  // Zero não é porta: não há fila para abrir, e um link que leva a uma lista
+  // vazia gasta um clique para dizer o que o número já dizia.
+  if (limpo) return <li>{corpo}</li>;
+  return (
+    <li>
+      <Link
+        href={urlDaLista({ situacao: "pendencia", falta })}
+        className="-m-2 block rounded-lg p-2 no-underline transition-colors hover:bg-[var(--ground)]"
+      >
+        {corpo}
+        <span className="mt-1 block text-[11px] font-medium text-[var(--accent)]">
+          Resolver na lista →
+        </span>
+      </Link>
     </li>
   );
 }

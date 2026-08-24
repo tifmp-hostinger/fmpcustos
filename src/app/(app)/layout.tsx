@@ -2,13 +2,10 @@ import Link from "next/link";
 import { exigirSessao, ROTULO_PAPEL } from "@/lib/sessao";
 import { Navegacao, type ItemNav } from "@/components/nav";
 import { ProvedorDeAvisos } from "@/components/avisos";
+import { BuscaGlobal } from "@/components/busca";
 import { sair } from "./sair";
 
-export default async function LayoutApp({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await exigirSessao();
 
   const itens: ItemNav[] = [
@@ -44,6 +41,8 @@ export default async function LayoutApp({
 
             <Navegacao itens={itens} />
 
+            <BuscaGlobal />
+
             <div className="ml-auto flex items-center gap-3">
               <div className="flex items-center gap-2.5">
                 <span
@@ -78,8 +77,8 @@ export default async function LayoutApp({
 
         <footer className="border-t border-[var(--rule)] py-4">
           <p className="mx-auto max-w-6xl px-6 text-[11px] text-[var(--ink-3)]">
-            FMP · Fundação Escola Superior do Ministério Público — plataforma de
-            inteligência de custos
+            FMP · Fundação Escola Superior do Ministério Público — plataforma de inteligência de
+            custos
           </p>
         </footer>
       </div>

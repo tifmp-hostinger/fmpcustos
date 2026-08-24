@@ -57,3 +57,14 @@ as pessoas realmente digitam.
 ```bash
 npm run testar:rateio
 ```
+
+## `e2e-navegacao.mjs` — todo número é uma porta
+
+Verifica a promessa central do painel: clicar num número abre a lista cujo
+total é **exatamente** aquele número. Também cobre ordenação por coluna, chips
+de filtro removíveis, a busca global do cabeçalho (`/` e `Ctrl+K`) e o escopo
+do panorama por setor.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-navegacao
+```

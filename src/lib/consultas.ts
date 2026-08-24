@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma, StatusItem } from "@/generated/prisma/client";
 import { setoresVisiveis, type UsuarioSessao } from "@/lib/sessao";
+import {
+  FALTAS,
+  SITUACOES,
+  SEM_CATEGORIA,
+  SEM_FORNECEDOR,
+  SEM_SETOR,
+  type Filtros,
+} from "@/lib/filtros";
 
 /**
  * Filtro de itens de custo respeitando o escopo de setor do usuário.
@@ -125,4 +133,90 @@ export async function listarSetores() {
     orderBy: { nome: "asc" },
   });
   return setores.map((s) => ({ valor: s.id, rotulo: s.nome }));
+}
+
+/** Só entra em "falta dado" o que ainda está em jogo. */
+const STATUS_EM_JOGO: StatusItem[] = ["ATIVO", "EM_ANALISE", "PENDENTE_APURACAO"];
+
+function faltando(chave: string): Prisma.ItemCustoWhereInput {
+  switch (chave) {
+    case "valor":
+      return { valorPeriodo: null };
+    case "data":
+      // "Sem prazo determinado" é uma resposta, não uma lacuna: quem marcou
+      // isso já resolveu a pendência e não pode continuar sendo cobrado.
+      return { dataFim: null, semPrazoDeterminado: false };
+    case "categoria":
+      return { categoriaId: null };
+    case "fornecedor":
+      return { fornecedorId: null };
+    default:
+      return {};
+  }
+}
+
+/**
+ * O `where` da lista — a definição única do que cada recorte significa.
+ *
+ * Os pedaços entram por `AND` porque `escopoDeItens` já usa `OR` para o escopo
+ * de setor e a busca usa `OR` para os campos de texto: dois `OR` no mesmo
+ * objeto fariam um sobrescrever o outro em silêncio.
+ */
+export function whereDaLista(f: Filtros, usuario: UsuarioSessao): Prisma.ItemCustoWhereInput {
+  const partes: Prisma.ItemCustoWhereInput[] = [];
+  const situacao = SITUACOES.find((s) => s.chave === f.situacao)!;
+
+  if (situacao.status) partes.push({ status: { in: [...situacao.status] } });
+
+  if (f.situacao === "pendencia") {
+    partes.push({ status: { in: STATUS_EM_JOGO } });
+    partes.push(f.falta ? faltando(f.falta) : { OR: FALTAS.map((x) => faltando(x.chave)) });
+  }
+
+  if (f.situacao === "renovacao") {
+    // Truncado para o início do dia em UTC: `dataFim` é @db.Date, e comparar
+    // com o horário corrente faria a renovação sumir no dia em que ela vence.
+    const hoje = new Date();
+    hoje.setUTCHours(0, 0, 0, 0);
+    const limite = new Date(hoje);
+    limite.setUTCDate(limite.getUTCDate() + 90);
+    partes.push({
+      status: { in: ["ATIVO", "EM_ANALISE"] },
+      dataFim: { not: null, gte: hoje, lte: limite },
+    });
+  }
+
+  if (f.setor) {
+    partes.push(
+      f.setor === SEM_SETOR
+        ? { rateios: { none: { vigenciaFim: null } } }
+        : { rateios: { some: { setorId: f.setor, vigenciaFim: null } } },
+    );
+  }
+  if (f.categoria) {
+    partes.push(
+      f.categoria === SEM_CATEGORIA ? { categoriaId: null } : { categoriaId: f.categoria },
+    );
+  }
+  if (f.fornecedor) {
+    partes.push(
+      f.fornecedor === SEM_FORNECEDOR ? { fornecedorId: null } : { fornecedorId: f.fornecedor },
+    );
+  }
+
+  if (f.busca) {
+    partes.push({
+      OR: [
+        { descricao: { contains: f.busca, mode: "insensitive" } },
+        { fornecedor: { nome: { contains: f.busca, mode: "insensitive" } } },
+        { categoria: { nome: { contains: f.busca, mode: "insensitive" } } },
+        { observacoes: { contains: f.busca, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  return {
+    ...escopoDeItens(usuario, f.situacao === "lixeira" ? "dentro" : "fora"),
+    ...(partes.length > 0 ? { AND: partes } : {}),
+  };
 }

@@ -16,6 +16,7 @@ import { useAviso } from "@/components/avisos";
 import { MenuDeLinha, type ItemMenu } from "@/components/menu";
 import { formatarBRL } from "@/lib/dinheiro";
 import { ROTULOS_PERIODICIDADE, ROTULOS_STATUS, STATUS_ITEM } from "@/lib/opcoes";
+import { ORDENS, urlDaLista, type ChaveOrdem, type Filtros } from "@/lib/filtros";
 import {
   IconeCopiar,
   IconeSeta,
@@ -75,12 +76,15 @@ export function TabelaDeCustos({
   mostrarSetor,
   podeLancar,
   destacar,
+  filtros,
 }: {
   itens: LinhaCusto[];
   mostrarSetor: boolean;
   podeLancar: boolean;
   /** Item recém-alterado noutra tela: chega pela URL e pisca ao carregar. */
   destacar?: string;
+  /** Recorte atual, para os cabeçalhos montarem a URL da ordenação. */
+  filtros: Filtros;
 }) {
   const avisar = useAviso();
   const router = useRouter();
@@ -207,12 +211,26 @@ export function TabelaDeCustos({
         </caption>
         <thead>
           <tr className="border-b border-[var(--rule)] text-[11px] tracking-[0.1em] text-[var(--ink-3)] uppercase">
-            <th className="px-4 py-3 text-left font-semibold">Custo</th>
-            {mostrarSetor && <th className="px-4 py-3 text-left font-semibold">Setor</th>}
-            <th className="px-4 py-3 text-right font-semibold">Cobrança</th>
-            <th className="px-4 py-3 text-right font-semibold">Por mês</th>
-            <th className="px-4 py-3 text-left font-semibold">Renova em</th>
-            <th className="px-4 py-3 text-left font-semibold">Situação</th>
+            <Cabecalho campo="descricao" filtros={filtros}>
+              Custo
+            </Cabecalho>
+            {mostrarSetor && (
+              <Cabecalho campo="setor" filtros={filtros}>
+                Setor
+              </Cabecalho>
+            )}
+            <Cabecalho campo="cobranca" filtros={filtros} direita>
+              Cobrança
+            </Cabecalho>
+            <Cabecalho campo="mensal" filtros={filtros} direita>
+              Por mês
+            </Cabecalho>
+            <Cabecalho campo="renovacao" filtros={filtros}>
+              Renova em
+            </Cabecalho>
+            <Cabecalho campo="situacao" filtros={filtros}>
+              Situação
+            </Cabecalho>
             <th className="w-11 px-2 py-3">
               <span className="sr-only">Ações</span>
             </th>
@@ -641,5 +659,53 @@ function Selo({ status, title }: { status: StatusItem; title?: string }) {
     >
       {ROTULOS_STATUS[status]}
     </span>
+  );
+}
+
+/**
+ * Cabeçalho de coluna ordenável.
+ *
+ * Ciclo de dois estados por coluna, começando pela direção que faz sentido para
+ * o dado: dinheiro abre do maior para o menor, texto e data abrem do começo.
+ * `aria-sort` no `<th>` é o que faz o leitor de tela anunciar a ordem — sem
+ * ele, a seta é informação exclusivamente visual.
+ */
+function Cabecalho({
+  campo,
+  filtros,
+  direita,
+  children,
+}: {
+  campo: ChaveOrdem;
+  filtros: Filtros;
+  direita?: boolean;
+  children: React.ReactNode;
+}) {
+  const ativo = filtros.ordem === campo;
+  const padrao = ORDENS.find((o) => o.chave === campo)!.padraoDir as "asc" | "desc";
+  const proxima = ativo ? (filtros.dir === "asc" ? "desc" : "asc") : padrao;
+
+  return (
+    <th
+      scope="col"
+      aria-sort={ativo ? (filtros.dir === "asc" ? "ascending" : "descending") : "none"}
+      className={`px-4 py-3 font-semibold ${direita ? "text-right" : "text-left"}`}
+    >
+      <Link
+        href={urlDaLista({ ...filtros, ordem: campo, dir: proxima, destaque: "" })}
+        scroll={false}
+        className={`inline-flex items-center gap-1 no-underline transition-colors hover:text-[var(--ink)] ${
+          ativo ? "text-[var(--ink)]" : ""
+        }`}
+      >
+        {children}
+        {/* Triângulo cheio para ordenação; a célula de situação usa um chevron
+            de traço para abrir o menu. Se os dois fossem a mesma seta, a mesma
+            forma significaria duas coisas na mesma tabela. */}
+        <span aria-hidden className={`text-[8px] ${ativo ? "" : "opacity-25"}`}>
+          {ativo ? (filtros.dir === "asc" ? "\u25b2" : "\u25bc") : "\u25bc"}
+        </span>
+      </Link>
+    </th>
   );
 }
