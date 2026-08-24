@@ -323,6 +323,98 @@ export function anoEfetivo(f: Pick<Filtros, "natureza" | "ano">, anoAtual: numbe
   return recorte.medida === "periodo" ? String(anoAtual) : "";
 }
 
+/**
+ * O recorte como texto, para guardar — e de volta.
+ *
+ * Uma visão salva guarda a QUERY STRING, e não uma estrutura própria. O ganho é
+ * que ela nunca pode descrever uma tela que não existe: o que se salva é
+ * literalmente o endereço que a lista sabe ler, e um filtro novo passa a ser
+ * salvável sem tocar no banco. Uma tabela com uma coluna por filtro ficaria
+ * desatualizada no primeiro filtro que entrasse depois dela.
+ */
+export function recorteEmTexto(f: Partial<Filtros>): string {
+  // O que está no padrão sai. Sem isto, a tela sem nenhum filtro serializa como
+  // "dir=desc&f=ativos&ordem=mensal" — um recorte que parece recorte, oferece
+  // um botão de "salvar esta visão" para o lugar onde a pessoa já está, e faz
+  // duas telas idênticas terem endereços diferentes conforme o caminho por onde
+  // se chegou nelas.
+  const semPadroes: Partial<Filtros> = { ...f };
+  if (semPadroes.situacao === "ativos") delete semPadroes.situacao;
+
+  const natureza = f.natureza ?? "recorrente";
+  const medida = RECORTES.find((r) => r.chave === natureza)!.medida;
+  const ordemPadrao = medida === "periodo" ? "cobranca" : "mensal";
+  if (semPadroes.ordem === ordemPadrao) {
+    delete semPadroes.ordem;
+    // A direção só sai junto com a ordem: guardar "dir" sozinho descreveria a
+    // direção de uma coluna que a URL não diz qual é.
+    if (semPadroes.dir === ORDENS.find((o) => o.chave === ordemPadrao)!.padraoDir) {
+      delete semPadroes.dir;
+    }
+  }
+
+  const { query } = urlDaLista(semPadroes);
+  const entradas = Object.entries(query as Record<string, string>)
+    // "destaque" é o piscar de uma linha específica depois de uma ação. Guardar
+    // isso numa visão faria a linha piscar toda vez que alguém abrisse.
+    .filter(([chave]) => chave !== "destaque")
+    .sort(([a], [b]) => a.localeCompare(b));
+  return new URLSearchParams(entradas).toString();
+}
+
+/** O caminho que uma visão salva abre. */
+export function enderecoDoRecorte(recorte: string): string {
+  return recorte ? `/custos?${recorte}` : "/custos";
+}
+
+/**
+ * Uma frase que diz o que a visão mostra.
+ *
+ * Existe porque "Contratos de TI" é um nome, não uma definição: seis meses
+ * depois ninguém lembra se incluía os cancelados. A visão sempre carrega, ao
+ * lado do nome, o que ela de fato filtra.
+ */
+export function descreverRecorte(
+  recorte: string,
+  nomes: {
+    setores: Map<string, string>;
+    categorias: Map<string, string>;
+    fornecedores: Map<string, string>;
+  },
+): string {
+  const f = lerFiltros(Object.fromEntries(new URLSearchParams(recorte)));
+  const partes: string[] = [RECORTES.find((r) => r.chave === f.natureza)!.rotulo.toLowerCase()];
+
+  const situacao = SITUACOES.find((s) => s.chave === f.situacao)!;
+  if (f.situacao !== "ativos") partes.push(situacao.rotulo.toLowerCase());
+  if (f.falta) partes.push(FALTAS.find((x) => x.chave === f.falta)?.rotulo ?? f.falta);
+  if (f.setor) {
+    partes.push(
+      f.setor === SEM_SETOR ? "não rateados" : (nomes.setores.get(f.setor) ?? "um setor"),
+    );
+  }
+  if (f.categoria) {
+    partes.push(
+      f.categoria === SEM_CATEGORIA
+        ? "sem categoria"
+        : (nomes.categorias.get(f.categoria) ?? "uma categoria"),
+    );
+  }
+  if (f.fornecedor) {
+    partes.push(
+      f.fornecedor === SEM_FORNECEDOR
+        ? "sem fornecedor"
+        : (nomes.fornecedores.get(f.fornecedor) ?? "um fornecedor"),
+    );
+  }
+  if (f.busca) partes.push(`busca “${f.busca}”`);
+  if (f.ano && f.ano !== TODOS_OS_ANOS) partes.push(f.ano);
+  if (f.agrupar) {
+    partes.push(AGRUPAMENTOS.find((a) => a.chave === f.agrupar)!.rotulo.toLowerCase());
+  }
+  return partes.join(" · ");
+}
+
 /** Chaves que o painel usa quando o agrupamento não tem dono. */
 export const SEM_SETOR = "nao-rateado";
 export const SEM_CATEGORIA = "sem-categoria";

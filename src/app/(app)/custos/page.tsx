@@ -12,6 +12,8 @@ import {
   TODOS_OS_ANOS,
   anoEfetivo,
   chipsAtivos,
+  descreverRecorte,
+  recorteEmTexto,
   faltasDe,
   situacoesDe,
   lerFiltros,
@@ -25,6 +27,7 @@ import { IconeBusca, IconeFechar, IconeMais, IconeSeta } from "@/components/icon
 import { TabelaDeCustos, type LinhaCusto } from "./tabela";
 import { ModoRevisao } from "./revisao";
 import { AplicarAoTrocar } from "./aplicar";
+import { BarraDeVisoes, type VisaoNaTela } from "./barra-visoes";
 
 export const dynamic = "force-dynamic";
 
@@ -55,76 +58,91 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   const ano = anoEfetivo(f, anoAtual);
   const where = whereDaLista(f, usuario, anoAtual);
 
-  const [itens, total, setores, categorias, fornecedores, porMes, noPeriodo, porNatureza] =
-    await Promise.all([
-      prisma.itemCusto.findMany({
-        where,
-        select: {
-          id: true,
-          descricao: true,
-          natureza: true,
-          periodicidade: true,
-          moeda: true,
-          cambio: true,
-          valorPeriodo: true,
-          valorMensalNormalizado: true,
-          valorEmReais: true,
-          status: true,
-          dataInicio: true,
-          dataFim: true,
-          semPrazoDeterminado: true,
-          excluidoEm: true,
-          fornecedor: { select: { nome: true } },
-          categoria: { select: { nome: true } },
-          rateios: {
-            where: { vigenciaFim: null },
-            select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
-            orderBy: { percentual: "desc" },
-          },
-          _count: { select: { lancamentos: true } },
+  const [
+    itens,
+    total,
+    setores,
+    categorias,
+    fornecedores,
+    porMes,
+    noPeriodo,
+    porNatureza,
+    visoesSalvas,
+  ] = await Promise.all([
+    prisma.itemCusto.findMany({
+      where,
+      select: {
+        id: true,
+        descricao: true,
+        natureza: true,
+        periodicidade: true,
+        moeda: true,
+        cambio: true,
+        valorPeriodo: true,
+        valorMensalNormalizado: true,
+        valorEmReais: true,
+        status: true,
+        dataInicio: true,
+        dataFim: true,
+        semPrazoDeterminado: true,
+        excluidoEm: true,
+        fornecedor: { select: { nome: true } },
+        categoria: { select: { nome: true } },
+        rateios: {
+          where: { vigenciaFim: null },
+          select: { setorId: true, percentual: true, setor: { select: { nome: true } } },
+          orderBy: { percentual: "desc" },
         },
-        // Numa aba que mede período, "os 500 maiores" precisa ser pelo valor da
-        // cobrança: ordenar por valor mensal traria os 500 primeiros de uma coluna
-        // que é nula para toda compra avulsa.
-        orderBy:
-          recorte.medida === "periodo"
-            ? [{ valorEmReais: { sort: "desc", nulls: "last" } }, { atualizadoEm: "desc" }]
-            : [
-                { valorMensalNormalizado: { sort: "desc", nulls: "last" } },
-                { atualizadoEm: "desc" },
-              ],
-        take: TETO,
-      }),
-      prisma.itemCusto.count({ where }),
-      prisma.setor.findMany({
-        where: { ativo: true },
-        select: { id: true, nome: true },
-        orderBy: { nome: "asc" },
-      }),
-      prisma.categoria.findMany({ select: { id: true, nome: true } }),
-      prisma.fornecedor.findMany({ select: { id: true, nome: true } }),
-      // Os totais somam NO BANCO, sobre o recorte inteiro — não sobre as linhas
-      // carregadas. Somar em memória dá o mesmo número enquanto a lista couber no
-      // teto e passa a mentir em silêncio no dia em que não couber, que é
-      // justamente o dia em que alguém mais precisa do número.
-      prisma.itemCusto.aggregate({
-        where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...RENOVAM] } },
-        _sum: { valorMensalNormalizado: true },
-        _count: { _all: true },
-      }),
-      prisma.itemCusto.aggregate({
-        where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...ACONTECEM] } },
-        _sum: { valorEmReais: true },
-        _count: { _all: true },
-      }),
-      // Quais abas existem de verdade. Uma aba "Pessoal" permanentemente vazia é
-      // ruído fixo, e o sistema não oferece o que já sabe que vai negar.
-      prisma.itemCusto.groupBy({
-        by: ["natureza"],
-        where: comEscopo(usuario, [{ status: { in: [...CORRENTES, "PENDENTE_APURACAO"] } }]),
-        _count: { _all: true },
-      }),
-    ]);
+        _count: { select: { lancamentos: true } },
+      },
+      // Numa aba que mede período, "os 500 maiores" precisa ser pelo valor da
+      // cobrança: ordenar por valor mensal traria os 500 primeiros de uma coluna
+      // que é nula para toda compra avulsa.
+      orderBy:
+        recorte.medida === "periodo"
+          ? [{ valorEmReais: { sort: "desc", nulls: "last" } }, { atualizadoEm: "desc" }]
+          : [{ valorMensalNormalizado: { sort: "desc", nulls: "last" } }, { atualizadoEm: "desc" }],
+      take: TETO,
+    }),
+    prisma.itemCusto.count({ where }),
+    prisma.setor.findMany({
+      where: { ativo: true },
+      select: { id: true, nome: true },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.categoria.findMany({ select: { id: true, nome: true } }),
+    prisma.fornecedor.findMany({ select: { id: true, nome: true } }),
+    // Os totais somam NO BANCO, sobre o recorte inteiro — não sobre as linhas
+    // carregadas. Somar em memória dá o mesmo número enquanto a lista couber no
+    // teto e passa a mentir em silêncio no dia em que não couber, que é
+    // justamente o dia em que alguém mais precisa do número.
+    prisma.itemCusto.aggregate({
+      where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...RENOVAM] } },
+      _sum: { valorMensalNormalizado: true },
+      _count: { _all: true },
+    }),
+    prisma.itemCusto.aggregate({
+      where: { ...where, status: { in: [...CORRENTES] }, natureza: { in: [...ACONTECEM] } },
+      _sum: { valorEmReais: true },
+      _count: { _all: true },
+    }),
+    // Quais abas existem de verdade. Uma aba "Pessoal" permanentemente vazia é
+    // ruído fixo, e o sistema não oferece o que já sabe que vai negar.
+    prisma.itemCusto.groupBy({
+      by: ["natureza"],
+      where: comEscopo(usuario, [{ status: { in: [...CORRENTES, "PENDENTE_APURACAO"] } }]),
+      _count: { _all: true },
+    }),
+    // As minhas e as da instituição. Uma visão guarda o RECORTE, nunca o
+    // resultado: a mesma visão institucional abre a lista de cada pessoa
+    // dentro do escopo de setor dela, sem vazar uma linha sequer.
+    prisma.visaoSalva.findMany({
+      where: { OR: [{ donoId: usuario.id }, { institucional: true }] },
+      orderBy: [{ institucional: "desc" }, { posicao: "asc" }, { nome: "asc" }],
+      select: { id: true, nome: true, recorte: true, institucional: true, donoId: true },
+      take: 60,
+    }),
+  ]);
 
   const nomes = {
     setores: new Map(setores.map((s) => [s.id, s.nome])),
@@ -187,6 +205,20 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   ordenar(linhas, f);
   const chips = chipsAtivos(f, nomes);
 
+  const recorteAtual = recorteEmTexto(f);
+  const visoes: VisaoNaTela[] = visoesSalvas.map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    recorte: v.recorte,
+    descricao: descreverRecorte(v.recorte, nomes),
+    institucional: v.institucional,
+    minha: v.donoId === usuario.id,
+    // Uma visão da instituição é de quem publicou e de quem administra: deixar
+    // qualquer pessoa apagar o atalho que os treze setores usam seria dar a uma
+    // pessoa o poder de mexer na tela de todas as outras.
+    podeApagar: v.donoId === usuario.id || (v.institucional && global),
+  }));
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -212,6 +244,8 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           </div>
         )}
       </div>
+
+      <BarraDeVisoes visoes={visoes} recorteAtual={recorteAtual} podePublicar={global} />
 
       {/* A NATUREZA, COMO DIVISÃO DA TELA.
           Não é um filtro entre outros: trocar de aba troca a pergunta, a

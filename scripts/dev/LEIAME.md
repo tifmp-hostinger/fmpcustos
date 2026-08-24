@@ -137,6 +137,18 @@ mede por período, e que os subtotais dos grupos fecham com o total.
 E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-naturezas
 ```
 
+## `e2e-visoes.mjs` — visões salvas
+
+Cobre a outra metade da resposta ao pedido de "pasta": salvar o recorte da tela
+com nome, voltar a ele num clique, o botão que só aparece quando há o que
+salvar, a recusa de nome repetido, e — o mais importante — a visão da
+instituição aparecendo para outra pessoa **dentro do escopo de setor dela**, já
+que a visão guarda o recorte e nunca o resultado.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-visoes
+```
+
 ## `smtp-de-mentira.mjs` — conferir o e-mail de verdade
 
 Um servidor SMTP falso que aceita qualquer autenticação e guarda o que recebe em
@@ -163,7 +175,7 @@ Abra o `.html` no navegador para ver o e-mail como ele chega.
 ## Rodar tudo de uma vez
 
 ```bash
-npm run dev:e2e-tudo    # as oito suítes de navegador, em sequência
+npm run dev:e2e-tudo    # as nove suítes de navegador, em sequência
 npm run testar          # as seis suítes de unidade
 ```
 

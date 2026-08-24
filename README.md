@@ -31,6 +31,7 @@ o objetivo é que o dado gere indicador, alerta, rateio e recomendação.
 | Resumo semanal por e-mail, por setor | ✅ (exige SMTP configurado) |
 | Setores e categorias pela interface, com fusão de duplicatas | ✅ |
 | Lista separada por natureza, cada uma na sua unidade, com agrupamento | ✅ |
+| Visões salvas — pessoais e da instituição | ✅ |
 | Fechamento mensal por competência | ⛔ próximo |
 | SSO Microsoft Entra ID | ⛔ próximo |
 | CAPEX e custo de pessoal | ⏸ decisão em aberto (integrar × construir) |
@@ -196,7 +197,7 @@ docs/
 | `npm run rotina resumo` | Manda o resumo semanal para quem deve receber |
 | `npm run rotina smtp` | Testa a conexão de e-mail sem enviar nada |
 | `npm run testar` | As seis suítes de unidade (sem banco, sem navegador) |
-| `npm run dev:e2e-tudo` | As oito suítes de navegador (exige base semeada e servidor de pé) |
+| `npm run dev:e2e-tudo` | As nove suítes de navegador (exige base semeada e servidor de pé) |
 | `npx tsx scripts/gerar-sql-dados.ts` | Regera o SQL de dados iniciais |
 | `npx tsx scripts/gerar-sql-admin.ts <email> <nome> [senha]` | Gera o SQL do primeiro admin |
 

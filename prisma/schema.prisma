@@ -265,6 +265,7 @@ model Usuario {
   modelosCriados   ModeloRateio[]          @relation("ModelosCriados")
   aceitesDecididos PropostaRateioParcela[] @relation("AceitesDecididos")
   cotacoes         CotacaoMoeda[]          @relation("CotacoesRegistradas")
+  visoesSalvas     VisaoSalva[]            @relation("VisoesSalvas")
 
   /// Resumo semanal por e-mail. Sistema de custo depende de alguém lembrar de
   /// abri-lo; o resumo inverte isso. Quem não quiser, desmarca.
@@ -925,6 +926,45 @@ model CotacaoMoeda {
   @@unique([moeda, data])
   @@index([moeda, data(sort: Desc)])
   @@map("cotacao_moeda")
+}
+
+/// Um recorte da lista de custos, com nome.
+///
+/// É a alternativa à pasta. Uma árvore obriga a escolher UMA hierarquia para
+/// cada custo, e um custo pertence a várias ao mesmo tempo — setor, categoria,
+/// fornecedor, natureza — e, com rateio, a vários setores simultaneamente. A
+/// visão salva inverte: o custo fica onde está, e o que se guarda é a pergunta.
+///
+/// O recorte mora nos mesmos parâmetros da URL, e não numa estrutura própria:
+/// assim uma visão salva é sempre exatamente o que a tela mostra, e um filtro
+/// novo na lista passa a poder ser salvo sem migração nenhuma.
+model VisaoSalva {
+  id   String @id @default(cuid())
+  nome String
+
+  /// A query string do recorte, sem o "?": "nat=pontual&f=todos&g=fornecedor".
+  recorte String
+
+  donoId String
+  dono   Usuario @relation("VisoesSalvas", fields: [donoId], references: [id], onDelete: Cascade)
+
+  /// Visível para todo mundo, não só para quem criou. Só quem enxerga por
+  /// inteiro pode publicar: uma visão da instituição precisa fazer sentido para
+  /// os treze setores, e quem só vê o próprio não tem como saber se faz.
+  institucional Boolean @default(false)
+
+  /// Ordem de exibição. Arrastar não existe (ainda); serve para o futuro e para
+  /// manter estável a lista de quem tem muitas.
+  posicao Int @default(0)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  /// Dois recortes iguais com nomes diferentes na mesma conta são ruído; o mesmo
+  /// nome duas vezes é confusão. A unicidade é do nome, por dono.
+  @@unique([donoId, nome])
+  @@index([institucional])
+  @@map("visao_salva")
 }
 
 /// Append-only. Nada aqui é atualizado ou removido pela aplicação.
