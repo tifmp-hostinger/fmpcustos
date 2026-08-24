@@ -83,7 +83,7 @@ await p.locator('button[type="submit"]', { hasText: "Cadastrar custo" }).click()
 await p.waitForURL(/\/custos(\?|$)/, { timeout: 10000 });
 await p.goto(`${URL}/custos?f=todos&q=Teste de fornecedor`);
 await p.waitForSelector("table tbody tr");
-const fornecedorGravado = await p.locator("table tbody tr td:first-child span").first().innerText();
+const fornecedorGravado = await p.locator('table tbody tr [data-celula="descricao"] span').first().innerText();
 ok(
   "“MICROSOFT LTDA” foi gravado no fornecedor Microsoft que já existia",
   fornecedorGravado.startsWith("Microsoft ·") || fornecedorGravado.startsWith("Microsoft"),

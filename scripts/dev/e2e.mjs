@@ -55,7 +55,7 @@ ok("menu visível em repouso (não é hover-only)", Number(opacidade) > 0.4, `op
 
 console.log("\n— Atalho: mudar situação na própria célula —");
 const alvo = p.locator("table tbody tr").filter({ hasText: "Link dedicado" });
-const situacaoAntes = (await alvo.locator("td").nth(5).innerText()).trim();
+const situacaoAntes = (await alvo.locator('[data-celula="situacao"]').innerText()).trim();
 await alvo.locator('button[aria-label*="Situação de"]').click();
 await p.waitForSelector('[role="menu"]');
 const opcoesSituacao = await p.locator('[role="menu"] [role="menuitem"]').count();
@@ -70,7 +70,7 @@ console.log("\n— Desfazer de verdade —");
 await p.locator('[role="status"] button', { hasText: "Desfazer" }).click();
 await p.waitForTimeout(1800);
 await limparAviso();
-const situacaoDepois = (await p.locator("table tbody tr").filter({ hasText: "Link dedicado" }).locator("td").nth(5).innerText()).trim();
+const situacaoDepois = (await p.locator("table tbody tr").filter({ hasText: "Link dedicado" }).locator('[data-celula="situacao"]').innerText()).trim();
 ok("Desfazer restaura a situação anterior", situacaoDepois === situacaoAntes, `${situacaoAntes} → alterado → ${situacaoDepois}`);
 
 console.log("\n— Atalho: data de renovação na célula —");

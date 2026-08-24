@@ -12,7 +12,9 @@ import {
   restaurarItem,
   reverterCampo,
 } from "./acoes-rapidas";
+import { reverterLote } from "./acoes-lote";
 import { useAviso } from "@/components/avisos";
+import { BarraDeSelecao } from "./selecao";
 import { MenuDeLinha, type ItemMenu } from "@/components/menu";
 import { formatarBRL } from "@/lib/dinheiro";
 import { ROTULOS_PERIODICIDADE, ROTULOS_STATUS, STATUS_ITEM } from "@/lib/opcoes";
@@ -27,7 +29,7 @@ import {
   IconeRateio,
   IconeRestaurar,
 } from "@/components/icones";
-import type { Resultado } from "@/lib/acoes";
+import type { Desfazer, Resultado } from "@/lib/acoes";
 import type { StatusItem } from "@/generated/prisma/enums";
 
 /**
@@ -77,6 +79,7 @@ export function TabelaDeCustos({
   podeLancar,
   destacar,
   filtros,
+  setores,
 }: {
   itens: LinhaCusto[];
   mostrarSetor: boolean;
@@ -85,6 +88,8 @@ export function TabelaDeCustos({
   destacar?: string;
   /** Recorte atual, para os cabeçalhos montarem a URL da ordenação. */
   filtros: Filtros;
+  /** Destinos possíveis da transferência em lote. Vazio para quem não pode. */
+  setores: Array<{ valor: string; rotulo: string }>;
 }) {
   const avisar = useAviso();
   const router = useRouter();
@@ -96,6 +101,9 @@ export function TabelaDeCustos({
   const [otimista, setOtimista] = useState<Record<string, Partial<LinhaCusto>>>({});
   const [gravando, setGravando] = useState<Set<string>>(new Set());
   const [aceso, setAceso] = useState<string | undefined>(destacar);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  /** Última linha marcada, para o Shift+clique saber de onde estender. */
+  const ultimaMarcada = useRef<string | null>(null);
 
   // Ajuste de estado durante a renderização — o padrão do React para "derivar
   // de uma prop que mudou". Num efeito, a linha destacada pela URL só acenderia
@@ -104,6 +112,16 @@ export function TabelaDeCustos({
   if (destaqueVindoDaUrl !== destacar) {
     setDestaqueVindoDaUrl(destacar);
     setAceso(destacar);
+  }
+
+  // Trocar de filtro esvazia a seleção. Manter marcado o que saiu da tela
+  // faria a barra dizer "12 selecionados" com três linhas visíveis — e a ação
+  // em lote atingiria nove custos que a pessoa não está mais vendo.
+  const idsVisiveis = useMemo(() => itens.map((i) => i.id).join(","), [itens]);
+  const [idsAnteriores, setIdsAnteriores] = useState(idsVisiveis);
+  if (idsAnteriores !== idsVisiveis) {
+    setIdsAnteriores(idsVisiveis);
+    if (selecionados.size > 0) setSelecionados(new Set());
   }
 
   const linhas = useMemo(
@@ -133,15 +151,25 @@ export function TabelaDeCustos({
    * porque a action de ida devolveu junto o estado anterior.
    */
   const desfazer = useCallback(
-    async (pedido: NonNullable<Extract<Resultado, { ok: true }>["desfazer"]>) => {
+    async (pedido: Desfazer) => {
       const dados = new FormData();
-      dados.set("id", pedido.id);
 
+      // O lote tem sua própria ação inversa: cada item volta ao SEU valor
+      // anterior. Ações de linha nunca produzem este caso — quem o produz é a
+      // barra de seleção, que trata do desfazer dela.
+      if (pedido.acao === "reverterLote") {
+        dados.set("itens", JSON.stringify(pedido.itens));
+        const r = await reverterLote(dados);
+        transicao(() => router.refresh());
+        return r.ok ? { ok: true, mensagem: r.mensagem } : { ok: false, erro: r.erro };
+      }
+
+      dados.set("id", pedido.id);
       const r =
         pedido.acao === "restaurarCusto"
           ? await restaurarItem(dados)
           : await (async () => {
-              dados.set("antes", JSON.stringify(pedido.antes ?? {}));
+              dados.set("antes", JSON.stringify(pedido.antes));
               return reverterCampo(dados);
             })();
 
@@ -200,6 +228,45 @@ export function TabelaDeCustos({
     [avisar, desfazer, limparOtimista, router, transicao],
   );
 
+  /**
+   * Marca uma linha. Com Shift, estende do último clique até aqui — o gesto
+   * que a pessoa traz da planilha, e a diferença entre um clique e catorze.
+   */
+  function marcar(id: string, comShift: boolean) {
+    setSelecionados((atuais) => {
+      const proximo = new Set(atuais);
+      const inicio = ultimaMarcada.current;
+
+      if (comShift && inicio && inicio !== id) {
+        const ordem = linhas.map((l) => l.id);
+        const a = ordem.indexOf(inicio);
+        const b = ordem.indexOf(id);
+        if (a >= 0 && b >= 0) {
+          const [de, ate] = a < b ? [a, b] : [b, a];
+          // O intervalo assume o estado da linha clicada: estender uma seleção
+          // e estender uma desmarcação são o mesmo gesto com sinal trocado.
+          const marcando = !atuais.has(id);
+          for (let i = de; i <= ate; i++) {
+            if (marcando) proximo.add(ordem[i]);
+            else proximo.delete(ordem[i]);
+          }
+          return proximo;
+        }
+      }
+
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+    ultimaMarcada.current = id;
+  }
+
+  const selecionaveis = linhas.filter((l) => l.podeEditar && !l.naLixeira);
+  const todosMarcados =
+    selecionaveis.length > 0 && selecionaveis.every((l) => selecionados.has(l.id));
+  const algunsMarcados = selecionaveis.some((l) => selecionados.has(l.id));
+  const emLote = podeLancar && selecionaveis.length > 0;
+
   if (linhas.length === 0) return null;
 
   return (
@@ -211,6 +278,31 @@ export function TabelaDeCustos({
         </caption>
         <thead>
           <tr className="border-b border-[var(--rule)] text-[11px] tracking-[0.1em] text-[var(--ink-3)] uppercase">
+            {emLote && (
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={todosMarcados}
+                  ref={(el) => {
+                    // Indeterminado só existe por propriedade, não por atributo:
+                    // é o estado que diz "parte da lista", e sem ele o quadrado
+                    // vazio mente sobre haver seleção ativa.
+                    if (el) el.indeterminate = algunsMarcados && !todosMarcados;
+                  }}
+                  onChange={() =>
+                    setSelecionados(
+                      todosMarcados ? new Set() : new Set(selecionaveis.map((l) => l.id)),
+                    )
+                  }
+                  aria-label={
+                    todosMarcados
+                      ? "Desmarcar todos os custos desta tela"
+                      : `Marcar os ${selecionaveis.length} custos desta tela`
+                  }
+                  className="size-4 align-middle accent-[var(--accent)]"
+                />
+              </th>
+            )}
             <Cabecalho campo="descricao" filtros={filtros}>
               Custo
             </Cabecalho>
@@ -246,10 +338,24 @@ export function TabelaDeCustos({
               gravando={gravando.has(item.id)}
               aceso={aceso === item.id}
               executar={executar}
+              emLote={emLote}
+              marcado={selecionados.has(item.id)}
+              aoMarcar={marcar}
             />
           ))}
         </tbody>
       </table>
+
+      <BarraDeSelecao
+        ids={[...selecionados]}
+        setores={setores}
+        podeTransferir={setores.length > 0}
+        aoLimpar={() => setSelecionados(new Set())}
+        aoConcluir={() => {
+          setSelecionados(new Set());
+          transicao(() => router.refresh());
+        }}
+      />
     </div>
   );
 }
@@ -261,12 +367,18 @@ function Linha({
   gravando,
   aceso,
   executar,
+  emLote,
+  marcado,
+  aoMarcar,
 }: {
   item: LinhaCusto;
   mostrarSetor: boolean;
   podeLancar: boolean;
   gravando: boolean;
   aceso: boolean;
+  emLote: boolean;
+  marcado: boolean;
+  aoMarcar: (id: string, comShift: boolean) => void;
   executar: (
     id: string,
     acao: (dados: FormData) => Promise<Resultado>,
@@ -363,14 +475,41 @@ function Linha({
       // chega por teclado — as duas coisas, nunca só a primeira.
       className={`group/linha border-b border-[var(--rule)] transition-colors last:border-0 hover:bg-[var(--ground)] focus-within:bg-[var(--ground)] ${
         item.naLixeira ? "opacity-55" : ""
-      } ${aceso ? "motion-safe:animate-[destacar_2s_ease-out]" : ""}`}
+      } ${marcado ? "bg-[var(--accent)]/[0.06]" : ""} ${
+        aceso ? "motion-safe:animate-[destacar_2s_ease-out]" : ""
+      }`}
       aria-busy={gravando || undefined}
       onContextMenu={(e) => {
         e.preventDefault();
         abrirMenu.current?.();
       }}
     >
-      <td className="px-4 py-3">
+      {emLote && (
+        <td className="px-3 py-3">
+          {item.podeEditar && !item.naLixeira ? (
+            <input
+              type="checkbox"
+              checked={marcado}
+              // `onClick` e não `onChange`: só o evento de clique carrega a
+              // tecla Shift, e é ela que transforma catorze cliques em dois.
+              onChange={() => {}}
+              onClick={(e) => aoMarcar(item.id, e.shiftKey)}
+              aria-label={`Selecionar ${item.descricao}`}
+              className="size-4 align-middle accent-[var(--accent)]"
+            />
+          ) : (
+            <span
+              title={item.motivoBloqueio ?? "Item na lixeira"}
+              aria-label="Não selecionável"
+              className="block size-4"
+            />
+          )}
+        </td>
+      )}
+      {/* `data-celula` dá um ponto de referência estável: a posição da coluna
+          muda conforme o perfil (a caixa de seleção e a coluna Setor só existem
+          para quem pode). Contar posições aqui quebraria a cada ajuste. */}
+      <td data-celula="descricao" className="px-4 py-3">
         <Link
           href={`/custos/${item.id}`}
           className="font-medium no-underline hover:text-[var(--accent)]"
@@ -396,7 +535,7 @@ function Linha({
         </span>
       </td>
 
-      <td className="px-4 py-3 text-right font-medium tabular-nums">
+      <td data-celula="mensal" className="px-4 py-3 text-right font-medium tabular-nums">
         {item.valorMensal ? formatarBRL(item.valorMensal) : "—"}
       </td>
 
@@ -404,7 +543,7 @@ function Linha({
         <CelulaData item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
       </td>
 
-      <td className="px-4 py-2">
+      <td data-celula="situacao" className="px-4 py-2">
         <CelulaSituacao item={item} bloqueado={bloqueado} motivo={motivo} executar={executar} />
       </td>
 
@@ -688,6 +827,7 @@ function Cabecalho({
   return (
     <th
       scope="col"
+      data-coluna={campo}
       aria-sort={ativo ? (filtros.dir === "asc" ? "ascending" : "descending") : "none"}
       className={`px-4 py-3 font-semibold ${direita ? "text-right" : "text-left"}`}
     >

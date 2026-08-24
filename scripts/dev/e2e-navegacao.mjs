@@ -112,17 +112,17 @@ ok("já ordenada pela data mais próxima", p.url().includes("ordem=renovacao"));
 console.log("\n═══ ORDENAÇÃO ═══");
 await p.goto(`${URL}/custos`);
 await p.waitForSelector("table tbody tr");
-const primeiroPorValor = await p.locator("table tbody tr td:first-child a").first().innerText();
+const primeiroPorValor = await p.locator('table tbody tr [data-celula="descricao"] a').first().innerText();
 await p.locator("thead a", { hasText: "Custo" }).click();
 // waitForURL, não waitForLoadState: numa navegação do lado do cliente não há
 // requisição de documento, então "networkidle" já é verdade antes da troca.
 await p.waitForURL(/ordem=descricao/, { timeout: 8000 });
-const primeiroPorNome = await p.locator("table tbody tr td:first-child a").first().innerText();
+const primeiroPorNome = await p.locator('table tbody tr [data-celula="descricao"] a').first().innerText();
 ok("ordenar por nome muda a primeira linha", primeiroPorValor !== primeiroPorNome,
    `${primeiroPorValor} → ${primeiroPorNome}`);
-const ordemAria = await p.locator("thead th").first().getAttribute("aria-sort");
+const ordemAria = await p.locator('thead th[data-coluna="descricao"]').getAttribute("aria-sort");
 ok("o cabeçalho anuncia a ordem para leitor de tela", ordemAria === "ascending", `aria-sort=${ordemAria}`);
-const nomes = await p.locator("table tbody tr td:first-child a").allInnerTexts();
+const nomes = await p.locator('table tbody tr [data-celula="descricao"] a').allInnerTexts();
 const ordenado = [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 ok("e a lista está de fato em ordem alfabética", JSON.stringify(nomes) === JSON.stringify(ordenado),
    nomes.slice(0, 2).join(" | "));

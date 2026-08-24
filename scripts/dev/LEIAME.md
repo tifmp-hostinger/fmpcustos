@@ -58,6 +58,33 @@ temporária — inclusive a recusa de resetar a própria senha.
 E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-memoria
 ```
 
+## `e2e-lote.mjs` — lote e fila de pendências
+
+Cobre a seleção com Shift+clique, a soma vinda do servidor, a fricção que
+cresce com o tamanho do lote (age direto até 4, confirma a partir de 5), o
+desfazer que devolve cada item ao seu próprio estado, a exportação completa
+em CSV e a revisão em sequência no painel lateral.
+
+```bash
+E2E_URL=http://127.0.0.1:3000 npm run dev:e2e-lote
+```
+
+> **Nota sobre seletores.** Os testes de navegador usam `data-celula`,
+> `data-coluna` e `data-barra` em vez de contar posições de coluna. A tabela
+> muda de forma conforme o perfil — a caixa de seleção e a coluna Setor só
+> existem para quem pode — e um teste que conta `td:nth-child` quebra a cada
+> ajuste sem que nada esteja errado no sistema.
+
+## Rodar tudo de uma vez
+
+```bash
+npm run dev:e2e-tudo    # as quatro suítes de navegador, em sequência
+npm run testar          # as três suítes de unidade
+```
+
+Cada suíte espera a base recém-semeada. Entre uma e outra, rode
+`npm run dev:semear` de novo.
+
 ## Testes de unidade — sem banco, sem navegador
 
 ```bash

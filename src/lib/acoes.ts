@@ -12,19 +12,22 @@ import { lerValorDigitado } from "@/lib/dinheiro";
  * a pessoa caçar o erro num formulário de quatorze campos.
  */
 
+/** Os campos de um item, serializados, como estavam antes da alteração. */
+export type EstadoAnterior = Record<string, string | null>;
+
 /**
  * O que o aviso de sucesso precisa carregar para o "Desfazer" existir de fato.
  *
- * `acao` é o nome da operação inversa e `id` o registro afetado — juntos, é tudo
- * que a ação de desfazer precisa. Um botão Desfazer que não sabe o que reverter
- * é enfeite; este par é o que o torna verdadeiro.
+ * União discriminada em vez de um objeto com campos opcionais: cada forma de
+ * desfazer precisa de coisas diferentes, e `id` opcional num tipo só permitia
+ * montar um pedido sem o que reverter. Um botão Desfazer que não sabe o que
+ * reverter é enfeite.
  */
-export type Desfazer = {
-  acao: "restaurarCusto" | "reverterCampo";
-  id: string;
-  /** Estado anterior, serializado, para `reverterCampo` saber ao que voltar. */
-  antes?: Record<string, string | null>;
-};
+export type Desfazer =
+  | { acao: "restaurarCusto"; id: string }
+  | { acao: "reverterCampo"; id: string; antes: EstadoAnterior }
+  /** Alteração em lote: cada item volta ao SEU valor anterior, não a um comum. */
+  | { acao: "reverterLote"; itens: Array<{ id: string; antes: EstadoAnterior }> };
 
 /**
  * Uma senha temporária recém-gerada.
@@ -48,6 +51,8 @@ export type Resultado =
       desfazer?: Desfazer;
       /** Para onde ir depois do sucesso. Ausente = fica onde está. */
       irPara?: string;
+      /** Milissegundos do aviso. Destrutivo e em lote ganham mais leitura. */
+      duracao?: number;
     }
   | { ok: false; erro: string; valores?: Record<string, string>; campo?: string };
 
@@ -64,6 +69,7 @@ export const sucesso = (
     destaqueId?: string;
     desfazer?: Desfazer;
     irPara?: string;
+    duracao?: number;
     senhaTemporaria?: SenhaTemporaria;
   },
 ): Resultado => ({ ok: true, mensagem, ...extras });

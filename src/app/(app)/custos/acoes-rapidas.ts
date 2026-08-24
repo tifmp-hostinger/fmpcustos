@@ -547,3 +547,32 @@ export async function duplicarItem(dados: FormData): Promise<Resultado> {
     irPara: `/custos/${copia.id}`,
   });
 }
+
+export async function alterarCategoria(dados: FormData): Promise<Resultado> {
+  const usuario = await exigirSessao();
+  const id = texto(dados, "id");
+  if (!id) return falha("Custo não informado.");
+
+  const categoriaId = textoOpcional(dados, "categoriaId");
+  const permissao = await itemQuePosseMexer(usuario, id);
+  if (!permissao.ok) return falha(permissao.erro);
+
+  const antes = await prisma.itemCusto.findUnique({
+    where: { id },
+    select: { categoriaId: true },
+  });
+  if (!antes) return falha("Este custo não existe mais.");
+
+  if (categoriaId) {
+    const existe = await prisma.categoria.count({ where: { id: categoriaId } });
+    if (existe === 0) return falha("Categoria inválida.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.itemCusto.update({ where: { id }, data: { categoriaId } });
+    await registrar(usuario.id, id, { categoriaId: antes.categoriaId }, { categoriaId });
+  });
+
+  atualizarListas(id);
+  return sucesso(`Categoria de ${permissao.item.descricao} definida.`, { destaqueId: id });
+}

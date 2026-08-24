@@ -17,6 +17,7 @@ import {
 import { whereDaLista } from "@/lib/consultas";
 import { IconeBusca, IconeFechar, IconeMais, IconeSeta } from "@/components/icones";
 import { TabelaDeCustos, type LinhaCusto } from "./tabela";
+import { ModoRevisao } from "./revisao";
 
 export const dynamic = "force-dynamic";
 
@@ -248,6 +249,16 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
               {x.rotulo}
             </Link>
           ))}
+          {podeLancar(usuario.papel) && linhas.length > 0 && (
+            <span className="ml-auto">
+              {/* A fila percorrida de uma vez, sem sair da lista: é a diferença
+                  entre doze aberturas de item e doze digitações seguidas. */}
+              <ModoRevisao
+                itens={linhas}
+                categorias={categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))}
+              />
+            </span>
+          )}
         </div>
       )}
 
@@ -300,6 +311,9 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           podeLancar={podeLancar(usuario.papel)}
           destacar={f.destaque || undefined}
           filtros={f}
+          // Transferir custo entre setores é de quem enxerga por inteiro: para
+          // os demais a lista vem vazia e a ação nem aparece na barra.
+          setores={global ? setores.map((s) => ({ valor: s.id, rotulo: s.nome })) : []}
         />
       )}
 

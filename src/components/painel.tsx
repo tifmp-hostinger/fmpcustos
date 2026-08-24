@@ -14,7 +14,8 @@ import { IconeFechar, IconeSeta } from "@/components/icones";
  *
  * As setas ↑/↓ trocam o registro sem fechar o painel — é assim que se revisa
  * vinte itens num fechamento, e é a diferença entre uma fila de trabalho e
- * vinte idas e voltas.
+ * vinte idas e voltas. Dentro de um campo elas continuam sendo do campo; com
+ * Alt, navegam de qualquer lugar.
  *
  * Abaixo de 1200px o painel vira sobreposição de tela cheia: máquina
  * administrativa de 1366px existe, e espremer a lista em 900px para caber um
@@ -63,15 +64,18 @@ export function PainelLateral({
         aoFechar();
         return;
       }
-      // Só navega entre registros quando o foco não está num campo: caso
-      // contrário, a seta para baixo dentro de um texto trocaria de item.
+      // Seta pura só navega quando o foco NÃO está num campo: dentro de um
+      // campo de data a seta muda o dia, e roubar isso seria pior que não ter
+      // atalho nenhum. Com Alt, ela navega sempre — inclusive no meio da
+      // digitação, que é onde a pessoa está o tempo todo numa fila de revisão.
       const alvo = e.target as HTMLElement | null;
       const digitando =
         alvo?.tagName === "INPUT" ||
         alvo?.tagName === "TEXTAREA" ||
         alvo?.tagName === "SELECT" ||
         alvo?.isContentEditable;
-      if (digitando) return;
+      if (digitando && !e.altKey) return;
+
       if (e.key === "ArrowDown" && aoProximo) {
         e.preventDefault();
         aoProximo();
@@ -145,7 +149,7 @@ export function PainelLateral({
                 onClick={aoAnterior}
                 disabled={!aoAnterior}
                 aria-label="Item anterior"
-                title="Item anterior (↑)"
+                title="Item anterior (↑ ou Alt+↑)"
                 className="rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--surface)] hover:text-[var(--ink)] disabled:opacity-30"
               >
                 <IconeSeta className="size-4 -rotate-90" />
@@ -155,7 +159,7 @@ export function PainelLateral({
                 onClick={aoProximo}
                 disabled={!aoProximo}
                 aria-label="Próximo item"
-                title="Próximo item (↓)"
+                title="Próximo item (↓ ou Alt+↓)"
                 className="rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--surface)] hover:text-[var(--ink)] disabled:opacity-30"
               >
                 <IconeSeta className="size-4 rotate-90" />
