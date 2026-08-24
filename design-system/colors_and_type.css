@@ -1,0 +1,194 @@
+/* ============================================================
+   FMP — Fundação Escola Superior do Ministério Público
+   Design System · Color + Type foundations
+   ============================================================
+   Official palette source: uploads/Paleta Cromática.pdf
+   Fonts: Outfit (sans) + Noto Serif (serif) are the brand fonts.
+   Headlines use Noto Serif italic. Outfit + Noto Serif (upright)
+   are wired from local TTFs in fonts/; Noto Serif's true italic
+   axis is loaded from Google Fonts (the local TTF is the upright
+   master only).
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@1,400;1,500;1,600;1,700&display=swap');
+
+/* ---- Local brand fonts (variable TTFs supplied by FMP) ---- */
+@font-face {
+  font-family: 'Outfit';
+  src: url('fonts/Outfit-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif';
+  src: url('fonts/NotoSerif-VariableFont_wdth_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;   /* width axis: ExtraCondensed (62.5%) → Normal (100%) */
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---- Brand core palette (Pantone-mapped, from Paleta Cromática) ---- */
+  --fmp-red:        #EE2A42; /* Pantone Red 032 C · RGB 238,42,66 · primary brand */
+  --fmp-black:      #191818; /* Pantone Neutral Black C · RGB 25,24,24 · near-black */
+  --fmp-sand:       #BFBAA4; /* Pantone 4745 C · RGB 191,186,164 · warm neutral / "gold" */
+  --fmp-cream:      #EFEEEA; /* Pantone Cool Gray 1 C · RGB 239,238,234 · light ground */
+
+  /* ---- Extended neutrals (derived, oklch-harmonised with the four cores) ---- */
+  --fmp-white:      #FFFFFF;
+  --fmp-paper:      #F6F5F1;  /* a touch lighter than cream, for nested cards on cream */
+  --fmp-ink-2:      #3A3838;  /* secondary text on light */
+  --fmp-ink-3:      #6E6B66;  /* muted text / captions on light */
+  --fmp-line:       #DEDCD4;  /* hairline borders on cream */
+  --fmp-line-2:     #CFCCBF;  /* stronger hairline / sand-tinted */
+
+  /* ---- Red — ONE brand red (#EE2A42). The values below are NOT additional
+     brand colors: they are interaction-state derivations (hover/press darken)
+     and tint washes for UI surfaces only. Never present them as palette reds. */
+  --fmp-red-700:    #B81E32;  /* pressed state only (darkened red) */
+  --fmp-red-600:    #D32238;  /* hover state only (darkened red) */
+  --fmp-red:        #EE2A42;  /* THE brand red (declared above) */
+  --fmp-red-300:    #F5818F;  /* soft tint — UI fills only */
+  --fmp-red-100:    #FBD7DC;  /* wash — selected rows / tint backgrounds */
+  --fmp-red-tint:   rgba(238,42,66,0.08); /* faint red wash */
+
+  /* ---- Dark surfaces (the "Especializações" prestige treatment) ---- */
+  /* Two official blacks: palette Neutral Black + pure black. */
+  --fmp-pure-black: #000000;  /* pure black ground */
+  --fmp-dark:       #000000;  /* deepest prestige background = pure black */
+  --fmp-dark-2:     #191818;  /* Pantone Neutral Black — panel on dark */
+  --fmp-dark-3:     #2A2728;  /* raised surface on dark */
+  --fmp-dark-line:  rgba(191,186,164,0.28); /* sand hairline on dark */
+  --fmp-on-dark:    #EFEEEA;  /* primary text on dark */
+  --fmp-on-dark-2:  #BFBAA4;  /* sand secondary text on dark (never over red) */
+
+  /* ---- Semantic foreground / background tokens ---- */
+  --bg:             var(--fmp-cream);
+  --bg-elevated:    var(--fmp-white);
+  --fg1:            var(--fmp-black);   /* primary text */
+  --fg2:            var(--fmp-ink-2);   /* secondary text */
+  --fg3:            var(--fmp-ink-3);   /* muted / meta */
+  --accent:         var(--fmp-red);
+  --accent-ink:     var(--fmp-white);   /* text on red */
+
+  /* ---- Type families ---- */
+  --font-display:   'Noto Serif', Georgia, 'Times New Roman', serif; /* hero serif italic (Noto Serif) */
+  --font-serif:     'Noto Serif', Georgia, 'Times New Roman', serif;  /* editorial body serif */
+  --font-sans:      'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; /* UI / labels / support */
+
+  /* ---- Type scale (rem, 16px base) ---- */
+  --text-xs:    0.75rem;   /* 12px — micro labels */
+  --text-sm:    0.875rem;  /* 14px — captions */
+  --text-base:  1rem;      /* 16px — body */
+  --text-lg:    1.125rem;  /* 18px — lead body */
+  --text-xl:    1.5rem;    /* 24px */
+  --text-2xl:   2rem;      /* 32px */
+  --text-3xl:   2.75rem;   /* 44px */
+  --text-4xl:   3.75rem;   /* 60px */
+  --text-5xl:   5rem;      /* 80px — display */
+
+  /* ---- Weights ---- */
+  --w-thin:     200; /* @kind font */
+  --w-light:    300; /* @kind font */
+  --w-regular:  400; /* @kind font */
+  --w-medium:   500; /* @kind font */
+  --w-semibold: 600; /* @kind font */
+  --w-bold:     700; /* @kind font */
+  --w-black:    800; /* @kind font */
+
+  /* ---- Radii (the FMP "soft superellipse" language) ---- */
+  --radius-sm:   8px;
+  --radius-md:   16px;
+  --radius-lg:   28px;
+  --radius-xl:   44px;   /* large panel corners, as on KV image masks */
+  --radius-pill: 999px;
+
+  /* ---- Spacing scale (8px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---- Elevation (soft, warm-tinted shadows) ---- */
+  --shadow-sm: 0 1px 2px rgba(25,24,24,0.06), 0 1px 3px rgba(25,24,24,0.05);
+  --shadow-md: 0 4px 12px rgba(25,24,24,0.08), 0 2px 4px rgba(25,24,24,0.05);
+  --shadow-lg: 0 18px 40px rgba(25,24,24,0.12), 0 6px 14px rgba(25,24,24,0.07);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1); /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+  --dur-fast: 140ms; /* @kind other */
+  --dur: 240ms; /* @kind other */
+  --dur-slow: 420ms; /* @kind other */
+}
+
+/* ============================================================
+   Semantic element styles — apply via class on a scoped root
+   ============================================================ */
+
+.fmp {
+  font-family: var(--font-sans);
+  color: var(--fg1);
+  background: var(--bg);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display / hero headline — Noto Serif italic, the signature FMP voice */
+.fmp-display {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: var(--w-medium);
+  font-size: var(--text-5xl);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--fg1);
+}
+.fmp-display em,
+.fmp-display .accent { color: var(--fmp-red); font-style: italic; }
+.fmp-display strong { font-weight: var(--w-bold); font-style: italic; }
+
+/* Headings — sans, used for UI and structural titles */
+.fmp-h1 { font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: var(--text-4xl); line-height: 1.05; letter-spacing: -0.01em; }
+.fmp-h2 { font-family: var(--font-sans); font-weight: 700; font-size: var(--text-2xl); line-height: 1.12; letter-spacing: -0.01em; }
+.fmp-h3 { font-family: var(--font-sans); font-weight: 600; font-size: var(--text-xl); line-height: 1.2; }
+.fmp-h4 { font-family: var(--font-sans); font-weight: 600; font-size: var(--text-lg); line-height: 1.3; }
+
+/* Body */
+.fmp-lead { font-size: var(--text-lg); line-height: 1.55; color: var(--fg2); }
+.fmp-body { font-size: var(--text-base); line-height: 1.6; color: var(--fg2); }
+.fmp-serif-body { font-family: var(--font-serif); font-size: var(--text-lg); line-height: 1.7; color: var(--fg1); }
+.fmp-caption { font-size: var(--text-sm); color: var(--fg3); line-height: 1.45; }
+
+/* Eyebrow / overline label — uppercase sans, wide tracking */
+.fmp-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fmp-red);
+}
+
+/* Institutional lockup descriptor (under the wordmark) */
+.fmp-lockup-text {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.66rem;
+  line-height: 1.18;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg1);
+}
+
+a.fmp-link { color: var(--fg1); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; text-decoration-color: var(--fmp-red); }
+a.fmp-link:hover { color: var(--fmp-red); }

@@ -1,36 +1,184 @@
 @import "tailwindcss";
 
-/* Identidade FMP */
+/* ============================================================
+   O DESENHO DA PLATAFORMA VEM DO SISTEMA DE DESIGN DA FMP
+   ============================================================
+
+   A fonte é `design-system/colors_and_type.css`. O bloco `:root` abaixo é uma
+   CÓPIA LITERAL do bloco de lá — mesmos nomes, mesmos valores, mesma ordem —
+   para que um diff entre os dois arquivos seja legível a olho nu. Quando a
+   paleta mudar no sistema, ela muda aqui pelo mesmo diff.
+
+   O que esta camada acrescenta, e por quê, está declarado como acréscimo em
+   cada lugar. Nada é inventado em silêncio.
+   ============================================================ */
+
 @theme {
-  --color-fmp-vermelho: #ee2a42;
-  --color-fmp-vermelho-escuro: #c81e33;
-  --color-fmp-preto: #191818;
-  --color-fmp-creme: #efeeea;
-  --color-fmp-areia: #bfbaa4;
+  /* ---- Paleta da marca (Pantone) ----
+     Repetida aqui em hexadecimal literal, e não como `var()`, porque é daqui
+     que o Tailwind gera as classes (`bg-fmp-red`, `text-fmp-sand`). */
+  --color-fmp-red: #ee2a42;
+  --color-fmp-black: #191818;
+  --color-fmp-sand: #bfbaa4;
+  --color-fmp-cream: #efeeea;
 
-  --font-sans: var(--fonte-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--fonte-serif), Georgia, serif;
+  --font-sans: var(--fonte-sans), "Outfit", system-ui, -apple-system, sans-serif;
+  --font-serif: var(--fonte-serif), "Noto Serif", Georgia, "Times New Roman", serif;
+
+  /* ---- Escala tipográfica do sistema, sem alteração ---- */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.5rem; /* 24px */
+  --text-2xl: 2rem; /* 32px */
+  --text-3xl: 2.75rem; /* 44px */
+  --text-4xl: 3.75rem; /* 60px */
+  --text-5xl: 5rem; /* 80px */
+
+  /* ---- Extensão densa — ACRÉSCIMO desta plataforma ----
+     A escala acima foi desenhada para uma página institucional, onde o corpo é
+     16px e o degrau abaixo dele é 14. Uma linha de tabela não é um parágrafo:
+     esta tela mostra quinhentos custos com sete colunas, e 16px de corpo
+     transformaria a lista em três telas de rolagem por vinte itens.
+
+     Então acrescenta-se abaixo do `--text-sm`, sem mexer em nenhum degrau
+     existente, e nomeando por PAPEL — não por tamanho. Era essa a doença que
+     estes três degraus curam: a tela tinha 383 tamanhos escolhidos à mão em 16
+     valores distintos, `text-[12.5px]` ao lado de `text-[13px]` sem que
+     ninguém soubesse dizer o que diferenciava os dois. */
+  --text-micro: 0.6875rem; /* 11px — sigla, contador, rótulo de eixo */
+  --text-micro--line-height: 1.35;
+  --text-meta: 0.75rem; /* 12px — legenda, apoio, segunda linha (= --text-xs) */
+  --text-meta--line-height: 1.45;
+  --text-dado: 0.8125rem; /* 13px — a célula da tabela; o corpo desta plataforma */
+  --text-dado--line-height: 1.5;
+
+  /* ---- Raios: a linguagem de "superelipse suave" ----
+     Sob nome próprio (`rounded-fmp-md`) em vez de sobrescrever `rounded-lg`.
+     A escala do sistema vai de 8 a 44px; a do Tailwind, de 4 a 12. Trocar uma
+     pela outra arredondaria todo campo de formulário em 28px. */
+  --radius-fmp-sm: 8px;
+  --radius-fmp-md: 16px;
+  --radius-fmp-lg: 28px;
+  --radius-fmp-xl: 44px;
+
+  /* ---- Elevação: sombra morna, nunca cinza neutro ---- */
+  --shadow-fmp-sm: 0 1px 2px rgba(25, 24, 24, 0.06), 0 1px 3px rgba(25, 24, 24, 0.05);
+  --shadow-fmp-md: 0 4px 12px rgba(25, 24, 24, 0.08), 0 2px 4px rgba(25, 24, 24, 0.05);
+  --shadow-fmp-lg: 0 18px 40px rgba(25, 24, 24, 0.12), 0 6px 14px rgba(25, 24, 24, 0.07);
+
+  --ease-fmp: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-fmp-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ============================================================
+   CÓPIA LITERAL DO `:root` DE design-system/colors_and_type.css
+   ============================================================ */
 :root {
-  --ground: var(--color-fmp-creme);
-  --surface: #f7f6f3;
-  --ink: var(--color-fmp-preto);
-  --ink-2: #4a4644;
-  --ink-3: #78726c;
-  --rule: #d8d5cb;
-  --accent: var(--color-fmp-vermelho-escuro);
+  /* ---- Brand core palette (Pantone-mapped, from Paleta Cromática) ---- */
+  --fmp-red: #ee2a42; /* Pantone Red 032 C · RGB 238,42,66 · primary brand */
+  --fmp-black: #191818; /* Pantone Neutral Black C · RGB 25,24,24 · near-black */
+  --fmp-sand: #bfbaa4; /* Pantone 4745 C · RGB 191,186,164 · warm neutral / "gold" */
+  --fmp-cream: #efeeea; /* Pantone Cool Gray 1 C · RGB 239,238,234 · light ground */
+
+  /* ---- Extended neutrals (derived, oklch-harmonised with the four cores) ---- */
+  --fmp-white: #ffffff;
+  --fmp-paper: #f6f5f1; /* a touch lighter than cream, for nested cards on cream */
+  --fmp-ink-2: #3a3838; /* secondary text on light */
+  --fmp-ink-3: #6e6b66; /* muted text / captions on light */
+  --fmp-line: #dedcd4; /* hairline borders on cream */
+  --fmp-line-2: #cfccbf; /* stronger hairline / sand-tinted */
+
+  /* ---- Red — ONE brand red (#EE2A42). The values below are NOT additional
+     brand colors: they are interaction-state derivations (hover/press darken)
+     and tint washes for UI surfaces only. Never present them as palette reds. */
+  --fmp-red-700: #b81e32; /* pressed state only (darkened red) */
+  --fmp-red-600: #d32238; /* hover state only (darkened red) */
+  --fmp-red-300: #f5818f; /* soft tint — UI fills only */
+  --fmp-red-100: #fbd7dc; /* wash — selected rows / tint backgrounds */
+  --fmp-red-tint: rgba(238, 42, 66, 0.08); /* faint red wash */
+
+  /* ---- Dark surfaces (the "Especializações" prestige treatment) ---- */
+  --fmp-pure-black: #000000;
+  --fmp-dark: #000000;
+  --fmp-dark-2: #191818;
+  --fmp-dark-3: #2a2728;
+  --fmp-dark-line: rgba(191, 186, 164, 0.28);
+  --fmp-on-dark: #efeeea;
+  --fmp-on-dark-2: #bfbaa4;
+
+  /* ---- Radii / spacing / motion (o resto do sistema) ---- */
+  --radius-fmp-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
 }
 
+/* ============================================================
+   CAMADA SEMÂNTICA — o que a plataforma pergunta ao tema
+   ============================================================
+
+   Os nomes curtos (`--ground`, `--ink`, `--rule`, `--accent`) já eram os da
+   plataforma antes do sistema chegar; o que mudou foi o valor por trás deles.
+   Mantê-los é o que permitiu trocar o desenho inteiro sem tocar em 383 lugares
+   de uma vez, e é por eles que o modo escuro vira.
+   ============================================================ */
+:root {
+  --ground: var(--fmp-cream);
+  --surface: var(--fmp-white);
+  --surface-2: var(--fmp-paper);
+  --ink: var(--fmp-black);
+  --ink-2: var(--fmp-ink-2);
+  --ink-3: var(--fmp-ink-3);
+  --rule: var(--fmp-line);
+  --rule-2: var(--fmp-line-2);
+
+  /* O vermelho da marca é UM. O que antes era `--accent: #c81e33` — um vermelho
+     escurecido à mão que não existe na paleta — passa a ser o vermelho oficial,
+     com os estados de interação vindo do sistema em vez do olho. */
+  --accent: var(--fmp-red);
+  --accent-hover: var(--fmp-red-600);
+  --accent-press: var(--fmp-red-700);
+  --accent-wash: var(--fmp-red-tint);
+  --accent-ink: var(--fmp-white);
+}
+
+/* ============================================================
+   MODO ESCURO = O TRATAMENTO "PRESTÍGIO" DO SISTEMA
+   ============================================================
+
+   O escuro anterior era inventado (#141313, e um vermelho clareado para
+   #ff5468 que não é cor da marca). O sistema já tem um escuro oficial: o fundo
+   das Especializações. É ele que entra.
+
+   O vermelho NÃO é clareado. Sobre #0d0b0c ele fecha 4,6:1 — passa em AA para
+   texto normal — e clarear a única cor da marca para resolver um contraste que
+   já passa seria trocar a identidade por nada. O que muda é a regra de uso: no
+   escuro, texto pequeno de apoio é areia (`--fmp-on-dark-2`), nunca vermelho.
+   É a mesma regra do kit, onde o vermelho sobre escuro só aparece em manchete
+   e em número grande.
+   ============================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #141313;
-    --surface: #1d1b1a;
-    --ink: var(--color-fmp-creme);
-    --ink-2: #c6c1b8;
-    --ink-3: #948e85;
-    --rule: #332f2e;
-    --accent: #ff5468;
+    --ground: #0d0b0c;
+    --surface: var(--fmp-dark-2);
+    --surface-2: var(--fmp-dark-3);
+    --ink: var(--fmp-on-dark);
+    --ink-2: #cbc7bc;
+    --ink-3: var(--fmp-on-dark-2);
+    --rule: var(--fmp-dark-line);
+    --rule-2: rgba(191, 186, 164, 0.42);
+    --accent-wash: rgba(238, 42, 66, 0.14);
   }
 }
 
@@ -38,7 +186,70 @@ body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-size: var(--text-dado);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================================
+   A VOZ DA MARCA — as três classes que fazem a plataforma parecer FMP
+   ============================================================ */
+
+/*
+ * O NÚMERO EM SERIFA ITÁLICA.
+ *
+ * É o gesto assinatura da FMP, e era o que faltava aqui: a plataforma inteira
+ * escrevia seus números na mesma fonte de interface dos rótulos, então o total
+ * de R$ 138 mil pesava o mesmo que a palavra "Filtros" ao lado dele.
+ *
+ * `tabular-nums` porque números que mudam sozinhos — um total que recalcula ao
+ * trocar de aba — não podem dançar de largura enquanto mudam.
+ */
+.numero {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/*
+ * A SOBRANCELHA.
+ *
+ * Rótulo de seção em caixa alta com entrelinha larga e vermelho da marca. É o
+ * que dá hierarquia a uma tela densa sem gastar tamanho: diz "começa aqui uma
+ * seção" em 11px, onde um título gastaria 32.
+ */
+.sobrancelha {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+
+/*
+ * O TÍTULO DE PÁGINA.
+ *
+ * Noto Serif itálico, como manda o sistema. O sistema pede 60px para manchete
+ * institucional; aqui são 32, porque uma ferramenta de trabalho que gasta um
+ * sexto da tela dizendo o próprio nome está gastando a tela do usuário para
+ * falar de si. O itálico é o que carrega a marca — o tamanho não precisa.
+ */
+.titulo-pagina {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+}
+.titulo-pagina em,
+.titulo-pagina .destaque {
+  color: var(--accent);
+  font-style: italic;
 }
 
 /*

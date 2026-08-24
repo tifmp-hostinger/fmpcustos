@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- @dsCard group="UI Kit — Website" name="Website — Home (fmp.edu.br)" subtitle="Recriação fiel da home: hero slider, cursos, diferenciais, OAB, depoimentos, notícias, contato, rodapé" viewport="1280x820" -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FMP — Home (referência)</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--fmp-cream); }
+  #scroll-root { height: 100vh; overflow-y: auto; }
+  #scroll-root::-webkit-scrollbar { width: 11px; }
+  #scroll-root::-webkit-scrollbar-thumb { background: var(--fmp-line-2); border-radius: 99px; border: 3px solid var(--fmp-cream); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  a { color: var(--fmp-red); }
+  a:hover { color: var(--fmp-red-600); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="HomePrim.jsx"></script>
+<script type="text/babel" src="HomeTop.jsx"></script>
+<script type="text/babel" src="HomeMid.jsx"></script>
+<script type="text/babel" src="HomeBottom.jsx"></script>
+<script type="text/babel">
+  function Home() {
+    return (
+      <div id="scroll-root" style={{ fontFamily: 'var(--font-sans)', color: 'var(--fmp-black)' }}>
+        <Header />
+        <Hero />
+        <Courses />
+        <Differentials />
+        <Oab />
+        <Authority />
+        <Prestige />
+        <Testimonials />
+        <News />
+        <Contact />
+        <Footer />
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Home />);
+</script>
+</body>
+</html>
