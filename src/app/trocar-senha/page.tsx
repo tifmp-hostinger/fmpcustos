@@ -10,10 +10,10 @@ export default function TrocarSenha() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-3)]">
+      <p className="text-micro font-semibold uppercase tracking-[0.16em] text-[var(--ink-3)]">
         FMP · Inteligência de custos
       </p>
-      <h1 className="mt-3 font-serif text-3xl font-bold tracking-tight">
+      <h1 className="mt-3 titulo-pagina">
         Definir uma <em className="text-[var(--accent)]">nova senha</em>
       </h1>
       <p className="mt-3 text-sm text-[var(--ink-2)]">

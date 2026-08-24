@@ -22,7 +22,7 @@ export function NovoUsuario({ setores }: { setores: Opcao[] }) {
     <div className="space-y-3">
       <form
         action={acao}
-        className="space-y-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5"
+        className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
       >
         <h2 className="text-sm font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
           Novo usuário
@@ -102,14 +102,14 @@ function PainelDeSenha({ senha, aoFechar }: { senha: SenhaTemporaria; aoFechar: 
   return (
     <section
       role="status"
-      className="rounded-xl border-2 border-[var(--accent)]/40 bg-[var(--accent)]/[0.04] p-5"
+      className="rounded-fmp-md border-2 border-[var(--accent)]/40 bg-[var(--accent)]/[0.04] p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+          <h3 className="text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
             Senha temporária de {senha.nome}
           </h3>
-          <p className="mt-1 text-[12px] text-[var(--ink-3)]">
+          <p className="mt-1 text-meta text-[var(--ink-3)]">
             Aparece uma vez só. Repasse por um canal seguro — ela será trocada no primeiro acesso.
           </p>
         </div>
@@ -127,20 +127,20 @@ function PainelDeSenha({ senha, aoFechar }: { senha: SenhaTemporaria; aoFechar: 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {/* `select-all` para um clique triplo pegar a senha inteira, e
             `tracking-wider` para não confundir l com 1 nem O com 0 na leitura. */}
-        <code className="flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2.5 font-mono text-[16px] tracking-wider select-all">
+        <code className="flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2.5 font-mono text-base tracking-wider select-all">
           {senha.senha}
         </code>
         <button
           type="button"
           onClick={() => copiar(senha.senha, "Senha")}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-[13px] font-semibold text-white"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-dado font-semibold text-white"
         >
           {copiado ? <IconeCheck className="size-4" /> : <IconeCopiar className="size-4" />}
           {copiado ? "Copiado" : "Copiar"}
         </button>
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[12.5px]">
+      <div className="mt-2.5 flex flex-wrap items-center gap-3 text-meta">
         <button
           type="button"
           onClick={() => copiar(corpoDoEmail, "Texto do e-mail")}
@@ -202,11 +202,11 @@ export function EditarUsuario({
   const situacao = descreverAcesso(usuario);
 
   return (
-    <details className="rounded-xl border border-[var(--rule)] bg-[var(--surface)]">
+    <details className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
       <summary className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 px-5 py-3.5">
         <span>
           <span className="font-medium">{usuario.nome}</span>
-          <span className="block text-[12px] text-[var(--ink-3)]">
+          <span className="block text-meta text-[var(--ink-3)]">
             {usuario.email}
             {/* O acesso já era consultado e nunca exibido. É o que responde
                 "criei o usuário e a pessoa nunca entrou — a senha se perdeu?" */}
@@ -217,7 +217,7 @@ export function EditarUsuario({
           </span>
         </span>
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${
+          className={`rounded-full px-2 py-0.5 text-micro font-semibold tracking-wide uppercase ${
             usuario.ativo
               ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
               : "bg-[var(--accent)]/12 text-[var(--accent)]"
@@ -246,7 +246,7 @@ export function EditarUsuario({
               vazio="Sem setor (só para Admin e Controladoria)"
             />
           </div>
-          <label className="flex items-center gap-2 text-[14px]">
+          <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="ativo" defaultChecked={usuario.ativo} className="size-4" />
             Usuário ativo — desmarque para revogar o acesso sem apagar o histórico
           </label>
@@ -260,7 +260,7 @@ export function EditarUsuario({
           ) : resetando ? (
             <form action={acaoSenha} className="space-y-3">
               <input type="hidden" name="id" value={usuario.id} />
-              <p className="text-[13px] leading-snug text-[var(--ink-2)]">
+              <p className="text-dado leading-snug text-[var(--ink-2)]">
                 Resetar derruba a sessão de <strong>{usuario.nome}</strong> na hora e a deixa sem
                 acesso até você repassar a senha nova. A senha atual não é recuperável.
               </p>
@@ -283,7 +283,7 @@ export function EditarUsuario({
                 <button
                   type="button"
                   onClick={() => setResetando(false)}
-                  className="text-[13px] text-[var(--ink-3)] hover:underline"
+                  className="text-dado text-[var(--ink-3)] hover:underline"
                 >
                   Cancelar
                 </button>

@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db";
 import { Navegacao, type ItemNav } from "@/components/nav";
 import { ProvedorDeAvisos } from "@/components/avisos";
 import { BuscaGlobal } from "@/components/busca";
+import { Marca, NomeDoProduto } from "@/components/marca";
 import { sair } from "./sair";
+import { classesDeBotao } from "@/components/botao";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await exigirSessao();
@@ -43,11 +45,9 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
       <div className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-10 border-b border-[var(--rule)] bg-[var(--ground)]/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
-            <Link
-              href="/"
-              className="mr-1 font-serif text-[17px] font-bold tracking-tight no-underline"
-            >
-              Custos <em className="text-[var(--accent)]">FMP</em>
+            <Link href="/" className="mr-1 flex items-center gap-3 no-underline">
+              <NomeDoProduto />
+              <Marca />
             </Link>
 
             <Navegacao itens={itens} />
@@ -58,31 +58,25 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
               <div className="flex items-center gap-2.5">
                 <span
                   aria-hidden
-                  className="flex size-8 items-center justify-center rounded-full bg-[var(--accent)]/12 text-[12px] font-bold text-[var(--accent)]"
+                  className="flex size-8 items-center justify-center rounded-full bg-[var(--accent)]/12 text-meta font-bold text-[var(--accent)]"
                 >
                   {iniciais}
                 </span>
                 <span className="hidden text-right leading-tight sm:block">
-                  <span className="block max-w-[180px] truncate text-[13px] font-semibold">
+                  <span className="block max-w-[180px] truncate text-dado font-semibold">
                     {usuario.nome}
                   </span>
-                  <span className="block text-[11px] text-[var(--ink-3)]">
+                  <span className="block text-micro text-[var(--ink-3)]">
                     {ROTULO_PAPEL[usuario.papel]}
                     {usuario.setorNome ? ` · ${usuario.setorNome}` : ""}
                   </span>
                 </span>
               </div>
-              <Link
-              href="/trocar-senha"
-              className="rounded-lg px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] no-underline hover:text-[var(--ink)]"
-            >
-              Trocar senha
-            </Link>
-            <form action={sair}>
-                <button
-                  type="submit"
-                  className="rounded-lg border border-[var(--rule)] px-3 py-1.5 text-[13px] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)] hover:text-[var(--ink)]"
-                >
+              <Link href="/trocar-senha" className={classesDeBotao("texto", "sm")}>
+                Trocar senha
+              </Link>
+              <form action={sair}>
+                <button type="submit" className={classesDeBotao("contorno", "sm")}>
                   Sair
                 </button>
               </form>
@@ -93,7 +87,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
         <div className="flex-1">{children}</div>
 
         <footer className="border-t border-[var(--rule)] py-4">
-          <p className="mx-auto max-w-6xl px-6 text-[11px] text-[var(--ink-3)]">
+          <p className="mx-auto max-w-6xl px-6 text-micro text-[var(--ink-3)]">
             FMP · Fundação Escola Superior do Ministério Público — plataforma de inteligência de
             custos
           </p>

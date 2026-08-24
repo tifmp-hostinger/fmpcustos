@@ -10,6 +10,7 @@ import { Campo, Selecao } from "@/components/campos";
 import { IconeEditar, IconeLixeira } from "@/components/icones";
 import { codigoDeNome } from "@/lib/organizacao";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 /**
  * A LISTA DE SETORES E DE CATEGORIAS
@@ -126,10 +127,10 @@ export function ListaOrganizacao({
 
   return (
     <>
-      <table className="mt-6 w-full text-[14px]">
+      <table className="mt-6 w-full text-sm">
         <caption className="sr-only">{rotulos.plural} cadastrados, com o uso de cada um</caption>
         <thead>
-          <tr className="border-b border-[var(--rule)] text-left text-[12px] tracking-[0.08em] text-[var(--ink-3)] uppercase">
+          <tr className="border-b border-[var(--rule)] text-left text-meta tracking-[0.08em] text-[var(--ink-3)] uppercase">
             <th className="py-2 font-medium">Nome</th>
             <th className="py-2 font-medium">Código</th>
             <th className="py-2 text-right font-medium">Custos</th>
@@ -196,16 +197,16 @@ export function ListaOrganizacao({
                     <>
                       <span className="font-medium">{linha.nome}</span>
                       {!linha.ativo && (
-                        <span className="ml-2 text-[11.5px] text-[var(--ink-3)]">inativo</span>
+                        <span className="ml-2 text-micro text-[var(--ink-3)]">inativo</span>
                       )}
-                      <span className="mt-0.5 block text-[12px] text-[var(--ink-3)]">
+                      <span className="mt-0.5 block text-meta text-[var(--ink-3)]">
                         {linha.paiNome ? `dentro de ${linha.paiNome}` : "no topo"}
                         {linha.extras.length > 0 && ` · ${linha.extras.join(" · ")}`}
                       </span>
                     </>
                   )}
                 </td>
-                <td className="py-2.5 pr-3 font-mono text-[12px] text-[var(--ink-3)]">
+                <td className="py-2.5 pr-3 font-mono text-meta text-[var(--ink-3)]">
                   {linha.codigo}
                 </td>
                 <td className="py-2.5 pr-3 text-right tabular-nums">
@@ -231,7 +232,7 @@ export function ListaOrganizacao({
                   {/* Quando os dois números divergem, dizer por quê: senão a
                       pergunta é "por que 11 custos somam o mesmo que 10?". */}
                   {linha.correntes < linha.custos && (
-                    <span className="block text-[11px] text-[var(--ink-3)]">
+                    <span className="block text-micro text-[var(--ink-3)]">
                       {linha.correntes} {linha.correntes === 1 ? "corrente" : "correntes"}
                     </span>
                   )}
@@ -277,7 +278,7 @@ export function ListaOrganizacao({
         <p>
           {`Nunca foi usado: nenhum custo, nenhuma pessoa, nenhum vínculo. Apagar não perde nada.`}
         </p>
-        <p className="text-[13px] text-[var(--ink-3)]">
+        <p className="text-dado text-[var(--ink-3)]">
           Isto não tem desfazer — {rotulos.singular} apagado sai do banco. Se houver dúvida, inative
           em vez de apagar.
         </p>
@@ -316,20 +317,20 @@ function FormaDeRenomear({
             aoCancelar();
           }
         }}
-        className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-2.5 py-1.5 text-[14px] outline-none focus:border-[var(--accent)]"
+        className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
       />
       <button
         type="button"
         disabled={ocupado || nome.trim() === ""}
         onClick={() => aoSalvar(nome.trim())}
-        className="rounded-lg bg-[var(--ink)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--ground)] disabled:opacity-50"
+        className="rounded-lg bg-[var(--ink)] px-2.5 py-1.5 text-meta font-medium text-[var(--ground)] disabled:opacity-50"
       >
         {ocupado ? "Salvando…" : "Salvar"}
       </button>
       <button
         type="button"
         onClick={aoCancelar}
-        className="text-[12.5px] text-[var(--ink-3)] hover:underline"
+        className="text-meta text-[var(--ink-3)] hover:underline"
       >
         Cancelar
       </button>
@@ -360,7 +361,7 @@ function SeletorDePai({
       aria-label={`${rotulo} de ${linha.nome}`}
       data-campo={campo}
       onChange={(e) => aoEscolher(e.target.value)}
-      className="max-w-[150px] rounded-lg border border-[var(--rule)] bg-transparent px-2 py-1 text-[12px] text-[var(--ink-2)] outline-none disabled:opacity-50"
+      className="max-w-[150px] rounded-lg border border-[var(--rule)] bg-transparent px-2 py-1 text-meta text-[var(--ink-2)] outline-none disabled:opacity-50"
     >
       <option value="">no topo</option>
       {opcoes.map((o) => (
@@ -421,9 +422,9 @@ export function FormaDeCriar({
   return (
     <form
       action={enviar}
-      className="space-y-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5"
+      className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
     >
-      <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
         Novo {rotulos.singular}
       </h2>
       <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
@@ -459,7 +460,7 @@ export function FormaDeCriar({
       <button
         type="submit"
         disabled={enviando || nome.trim() === ""}
-        className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+        className={classesDeBotao("primario")}
       >
         {enviando ? "Criando…" : `Criar ${rotulos.singular}`}
       </button>

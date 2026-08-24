@@ -25,6 +25,7 @@ import {
 } from "@/lib/opcoes";
 import type { Moeda, Periodicidade } from "@/generated/prisma/enums";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 export type ValoresCusto = {
   id?: string;
@@ -193,7 +194,7 @@ export function FormularioCusto({
               dica="O custo nasce 100% deste setor. A divisão entre setores é feita depois, no rateio."
             />
           ) : (
-            <p className="text-[13px] text-[var(--ink-3)]">
+            <p className="text-dado text-[var(--ink-3)]">
               Setor responsável: <strong className="text-[var(--ink-2)]">{setorFixo}</strong> — o
               custo é lançado na sua área.
             </p>
@@ -225,8 +226,8 @@ export function FormularioCusto({
         {/* Divulgação progressiva: três campos decidem o cadastro, os outros
             onze são refinamento. Apresentar catorze com o mesmo peso faz a
             pessoa tratar todos como obrigatórios — ou desistir. */}
-        <details className="group rounded-xl border border-[var(--rule)] bg-[var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-[13.5px] font-medium text-[var(--ink-2)] select-none">
+        <details className="group rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
+          <summary className="cursor-pointer list-none px-4 py-3 text-dado font-medium text-[var(--ink-2)] select-none">
             <span className="inline-flex items-center gap-2">
               <span
                 aria-hidden
@@ -293,7 +294,7 @@ export function FormularioCusto({
             continuar.current = false;
           }}
           disabled={enviando}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[15px] font-medium text-white transition-opacity disabled:opacity-50"
+          className={classesDeBotao("primario")}
         >
           {enviando ? "Salvando…" : valores.id ? "Salvar alterações" : "Cadastrar custo"}
         </button>
@@ -305,7 +306,7 @@ export function FormularioCusto({
               continuar.current = true;
             }}
             disabled={enviando}
-            className="rounded-lg border border-[var(--rule)] px-4 py-2 text-[14px] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)] disabled:opacity-50"
+            className="rounded-lg border border-[var(--rule)] px-4 py-2 text-sm text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)] disabled:opacity-50"
           >
             Salvar e cadastrar outro
           </button>
@@ -437,7 +438,7 @@ function Quanto({
       </div>
 
       {estrangeira && (
-        <div className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+        <div className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo
               rotulo={`Cotação — quanto vale 1 ${moeda === "USD" ? "dólar" : "euro"}`}
@@ -464,7 +465,7 @@ function Quanto({
               dica="Em branco: vale hoje."
             />
           </div>
-          <p className="mt-2.5 text-[12.5px] text-[var(--ink-3)]">
+          <p className="mt-2.5 text-meta text-[var(--ink-3)]">
             {sugestao ? (
               <>
                 Cotação registrada: <strong>{sugestao.taxa.replace(".", ",")}</strong> em{" "}
@@ -479,7 +480,7 @@ function Quanto({
               </>
             )}
           </p>
-          <p className="mt-1.5 text-[12.5px] text-[var(--ink-3)]">
+          <p className="mt-1.5 text-meta text-[var(--ink-3)]">
             A taxa fica gravada neste custo. O total do mês passado não muda quando o{" "}
             {moeda === "USD" ? "dólar" : "euro"} mexer.
           </p>
@@ -489,7 +490,7 @@ function Quanto({
       <p
         aria-live="polite"
         data-previa="mensal"
-        className="mt-2 min-h-[18px] text-[12.5px] text-[var(--ink-3)] tabular-nums"
+        className="mt-2 min-h-[18px] text-meta text-[var(--ink-3)] tabular-nums"
       >
         {mensalEmReais !== null && (estrangeira || periodicidade !== "MENSAL") && (
           <>
@@ -570,7 +571,7 @@ function CampoFornecedor({
           className="mt-1.5 rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2.5"
         >
           {candidatos.map((c) => (
-            <p key={c.nome} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+            <p key={c.nome} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta">
               <span className="text-[var(--ink-2)]">{explicar(c, valor)}</span>
               <button
                 type="button"
@@ -591,7 +592,7 @@ function CampoFornecedor({
               </button>
             </p>
           ))}
-          <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">
+          <p className="mt-1.5 text-micro text-[var(--ink-3)]">
             Fornecedor repetido com nomes diferentes divide o total dele em dois no gráfico de
             concentração — e a negociação deixa de aparecer onde ela vale.
           </p>

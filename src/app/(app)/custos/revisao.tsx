@@ -132,7 +132,7 @@ export function ModoRevisao({
           setPosicao(0);
           setAberto(true);
         }}
-        className="rounded-xl border border-[var(--accent)]/40 bg-[var(--surface)] px-3.5 py-2 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8"
+        className="rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--surface)] px-3.5 py-2 text-dado font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8"
       >
         Revisar em sequência ({disponivel.length})
       </button>
@@ -159,7 +159,7 @@ export function ModoRevisao({
           restantes.length === 0 ? (
             <Concluido quantidade={resolvidos.size} aoFechar={encerrar} />
           ) : (
-            <p className="text-[12px] text-[var(--ink-3)]">
+            <p className="text-meta text-[var(--ink-3)]">
               Enter grava e vai ao próximo · Alt+↑ e Alt+↓ trocam de custo · Esc volta para a lista
             </p>
           )
@@ -183,7 +183,7 @@ export function ModoRevisao({
 function Concluido({ quantidade, aoFechar }: { quantidade: number; aoFechar: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="flex items-center gap-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+      <p className="flex items-center gap-2 text-dado font-medium text-emerald-700 dark:text-emerald-400">
         <IconeCheck className="size-4" />
         {quantidade === 0
           ? "Nada faltando nesta fila."
@@ -192,7 +192,7 @@ function Concluido({ quantidade, aoFechar }: { quantidade: number; aoFechar: () 
       <button
         type="button"
         onClick={aoFechar}
-        className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--ground)]"
+        className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-dado font-semibold text-[var(--ground)]"
       >
         Voltar para a lista
       </button>
@@ -295,7 +295,7 @@ function FichaDeRevisao({
 
   if (resolvido) {
     return (
-      <p className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3.5 py-3 text-[13.5px] text-emerald-700 dark:text-emerald-400">
+      <p className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3.5 py-3 text-dado text-emerald-700 dark:text-emerald-400">
         <IconeCheck className="size-4" />
         Resolvido nesta revisão.
       </p>
@@ -304,7 +304,7 @@ function FichaDeRevisao({
 
   return (
     <div className="space-y-5">
-      <p className="text-[12.5px] text-[var(--ink-3)]">
+      <p className="text-meta text-[var(--ink-3)]">
         {/* Só o que falta NESTE item aparece. Repetir os catorze campos a cada
             passo transformaria a revisão em doze formulários completos. */}
         Falta {faltas.map((f) => ROTULO_FALTA[f]).join(", ")}.
@@ -312,7 +312,7 @@ function FichaDeRevisao({
 
       {faltas.includes("valor") && (
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+          <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
             Valor por período
           </span>
           <input
@@ -323,9 +323,9 @@ function FichaDeRevisao({
             inputMode="decimal"
             autoFocus
             placeholder="1.234,56"
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base outline-none focus:border-[var(--accent)]"
           />
-          <span className="mt-1 block min-h-[16px] text-[12px] text-[var(--ink-3)] tabular-nums">
+          <span className="mt-1 block min-h-[16px] text-meta text-[var(--ink-3)] tabular-nums">
             {mensal
               ? `${formatarMoeda(numero, item.moeda)} ${ROTULOS_PERIODICIDADE[item.periodicidade].toLowerCase()} = ${formatarBRL(mensal)}/mês`
               : `Cobrança ${ROTULOS_PERIODICIDADE[item.periodicidade].toLowerCase()}`}
@@ -335,7 +335,7 @@ function FichaDeRevisao({
 
       {faltas.includes("cambio") && (
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+          <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
             Cotação — quanto vale 1 {item.moeda === "USD" ? "dólar" : item.moeda}
           </span>
           <input
@@ -346,9 +346,9 @@ function FichaDeRevisao({
             inputMode="decimal"
             autoFocus={!faltas.includes("valor")}
             placeholder="5,4321"
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] tabular-nums outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base tabular-nums outline-none focus:border-[var(--accent)]"
           />
-          <span className="mt-1 block min-h-[16px] text-[12px] text-[var(--ink-3)] tabular-nums">
+          <span className="mt-1 block min-h-[16px] text-meta text-[var(--ink-3)] tabular-nums">
             {mensal
               ? `${formatarMoeda(item.valorPeriodo, item.moeda)} ${ROTULOS_PERIODICIDADE[
                   item.periodicidade
@@ -361,7 +361,7 @@ function FichaDeRevisao({
       {faltas.includes("data") && (
         <div>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+            <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
               Renova ou vence em
             </span>
             <input
@@ -369,14 +369,14 @@ function FichaDeRevisao({
               value={data}
               onChange={(e) => setData(e.target.value)}
               autoFocus={faltas[0] === "data"}
-              className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] tabular-nums outline-none focus:border-[var(--accent)]"
+              className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base tabular-nums outline-none focus:border-[var(--accent)]"
             />
           </label>
           <button
             type="button"
             onClick={() => void semPrazo()}
             disabled={salvando}
-            className="mt-1.5 text-[12.5px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+            className="mt-1.5 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
           >
             Este contrato não tem prazo determinado
           </button>
@@ -385,15 +385,13 @@ function FichaDeRevisao({
 
       {faltas.includes("categoria") && (
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
-            Categoria
-          </span>
+          <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">Categoria</span>
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             onKeyDown={aoTeclar}
             autoFocus={faltas[0] === "categoria"}
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base outline-none focus:border-[var(--accent)]"
           >
             <option value="">Escolha…</option>
             {categorias.map((c) => (
@@ -410,20 +408,20 @@ function FichaDeRevisao({
           type="button"
           onClick={() => void salvarTudo()}
           disabled={salvando || !temAlgoParaSalvar}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-white disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
         >
           {salvando ? "Salvando…" : "Salvar e ir ao próximo"}
         </button>
         <button
           type="button"
           onClick={aoResolver}
-          className="text-[13px] text-[var(--ink-3)] hover:underline"
+          className="text-dado text-[var(--ink-3)] hover:underline"
         >
           Pular
         </button>
         <Link
           href={`/custos/${item.id}`}
-          className="ml-auto text-[12.5px] text-[var(--ink-3)] no-underline hover:underline"
+          className="ml-auto text-meta text-[var(--ink-3)] no-underline hover:underline"
         >
           Abrir o cadastro completo
         </Link>

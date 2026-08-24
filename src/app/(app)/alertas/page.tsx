@@ -22,11 +22,7 @@ const ABERTOS = ["ABERTO", "RECONHECIDO"] as const;
  * decisões tomadas, e mostrá-las junto do que está pendente é o começo de uma
  * lista que ninguém lê.
  */
-export default async function Alertas({
-  searchParams,
-}: {
-  searchParams: Promise<{ v?: string }>;
-}) {
+export default async function Alertas({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
   const usuario = await exigirSessao();
   const { v } = await searchParams;
   const verIgnorados = v === "ignorados";
@@ -95,13 +91,13 @@ export default async function Alertas({
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <p className="text-[12px] font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
+      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
         {usuario.setorNome ?? "FMP"}
       </p>
-      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">
+      <h1 className="mt-2 titulo-pagina">
         {verIgnorados ? "Alertas ignorados" : "O que precisa de você"}
       </h1>
-      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+      <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         {verIgnorados ? (
           <>
             Marcados como “não se aplica”. Reabrir devolve o alerta à fila —{" "}
@@ -136,7 +132,7 @@ export default async function Alertas({
       )}
 
       {!verIgnorados && ignorados > 0 && (
-        <p className="mt-6 text-[13px] text-[var(--ink-3)]">
+        <p className="mt-6 text-dado text-[var(--ink-3)]">
           <Link href={{ pathname: "/alertas", query: { v: "ignorados" } }}>
             {ignorados} {ignorados === 1 ? "alerta ignorado" : "alertas ignorados"}
           </Link>{" "}

@@ -28,7 +28,7 @@ export function CartaoAceite({
 
   if (resultado?.ok) {
     return (
-      <li className="rounded-lg bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--ink-3)]">
+      <li className="rounded-lg bg-[var(--surface)] px-4 py-3 text-dado text-[var(--ink-3)]">
         {resultado.mensagem}
       </li>
     );
@@ -36,18 +36,17 @@ export function CartaoAceite({
 
   return (
     <li className="rounded-lg bg-[var(--surface)] px-4 py-3.5">
-      <p className="text-[14px]">
+      <p className="text-sm">
         <strong>{parcela.proponente}</strong>
         {parcela.setorProponente ? ` (${parcela.setorProponente})` : ""} propõe que{" "}
         <strong>{parcela.percentual}%</strong> de{" "}
         <Link href={`/custos/${parcela.itemId}`} className="font-medium">
           {parcela.itemDescricao}
         </Link>
-        {parcela.valorMensal ? ` (${parcela.valorMensal}/mês no total)` : ""} passe para a sua
-        área.
+        {parcela.valorMensal ? ` (${parcela.valorMensal}/mês no total)` : ""} passe para a sua área.
       </p>
       {parcela.justificativa && (
-        <p className="mt-1 text-[13px] italic text-[var(--ink-2)]">“{parcela.justificativa}”</p>
+        <p className="mt-1 text-dado italic text-[var(--ink-2)]">“{parcela.justificativa}”</p>
       )}
 
       <form action={acao} className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -56,13 +55,13 @@ export function CartaoAceite({
           type="text"
           name="comentario"
           placeholder="Comentário (opcional)"
-          className="min-w-[180px] flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]"
+          className="min-w-[180px] flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-1.5 text-dado outline-none focus:border-[var(--accent)]"
         />
         <button
           type="submit"
           name="decisao"
           value="aceitar"
-          className="rounded-lg bg-emerald-700 px-3.5 py-1.5 text-[13px] font-semibold text-white"
+          className="rounded-lg bg-emerald-700 px-3.5 py-1.5 text-dado font-semibold text-white"
         >
           Aceitar
         </button>
@@ -70,7 +69,7 @@ export function CartaoAceite({
           type="submit"
           name="decisao"
           value="recusar"
-          className="rounded-lg border border-[var(--rule)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="rounded-lg border border-[var(--rule)] px-3.5 py-1.5 text-dado font-medium text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
           Recusar
         </button>

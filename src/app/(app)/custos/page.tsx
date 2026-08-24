@@ -28,6 +28,7 @@ import { TabelaDeCustos, type LinhaCusto } from "./tabela";
 import { ModoRevisao } from "./revisao";
 import { AplicarAoTrocar } from "./aplicar";
 import { BarraDeVisoes, type VisaoNaTela } from "./barra-visoes";
+import { classesDeBotao } from "@/components/botao";
 
 export const dynamic = "force-dynamic";
 
@@ -222,22 +223,16 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-serif text-3xl font-bold tracking-tight">Custos</h1>
+        <h1 className="titulo-pagina">Custos</h1>
         {podeLancar(usuario.papel) && (
           <div className="flex flex-wrap items-center gap-2">
             {/* Quem já tem os custos numa planilha não deveria descobrir a
                 colagem por acaso: ela vive ao lado do cadastro avulso, com
                 menos peso visual porque é o caminho menos frequente. */}
-            <Link
-              href="/custos/colar"
-              className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-3.5 py-2.5 text-[13.5px] font-medium no-underline hover:border-[var(--ink-3)]"
-            >
+            <Link href="/custos/colar" className={classesDeBotao("contorno")}>
               Colar da planilha
             </Link>
-            <Link
-              href="/custos/novo"
-              className="flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-[14px] font-semibold text-white no-underline"
-            >
+            <Link href="/custos/novo" className={classesDeBotao("primario")}>
               <IconeMais />
               Cadastrar custo
             </Link>
@@ -272,7 +267,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             })}
             aria-current={r.chave === f.natureza ? "page" : undefined}
             data-aba={r.chave}
-            className={`-mb-px border-b-2 px-3.5 py-2 text-[14px] no-underline transition-colors ${
+            className={`-mb-px border-b-2 px-3.5 py-2 text-sm no-underline transition-colors ${
               r.chave === f.natureza
                 ? "border-[var(--accent)] font-semibold text-[var(--accent)]"
                 : "border-transparent text-[var(--ink-3)] hover:text-[var(--ink)]"
@@ -292,7 +287,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           quantidadePeriodo={noPeriodo._count._all}
           ano={ano}
         />
-        <p data-contagem="itens" className="mt-1.5 text-[13.5px] text-[var(--ink-2)]">
+        <p data-contagem="itens" className="mt-1.5 text-dado text-[var(--ink-2)]">
           {itens.length < total ? (
             <>
               Exibindo {itens.length} de {total}
@@ -305,20 +300,20 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           · {situacao.rotulo.toLowerCase()} ·{" "}
           {global ? "todos os setores" : (usuario.setorNome ?? "sua área")}
         </p>
-        <p className="mt-1 max-w-2xl text-[12.5px] text-[var(--ink-3)]">{recorte.resumo}</p>
+        <p className="mt-1 max-w-2xl text-meta text-[var(--ink-3)]">{recorte.resumo}</p>
       </div>
 
       {/* O ano só existe onde o total mede período: numa aba de compromisso
           mensal ele não teria o que recortar. */}
       {recorte.medida === "periodo" && (
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] text-[var(--ink-3)]">Exercício:</span>
+          <span className="text-meta text-[var(--ink-3)]">Exercício:</span>
           {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
             <Link
               key={a}
               href={urlDaLista({ ...f, ano: String(a), destaque: "" })}
               aria-current={ano === String(a) ? "true" : undefined}
-              className={chipClasse(ano === String(a))}
+              className={pilula(ano === String(a))}
             >
               {a}
             </Link>
@@ -326,7 +321,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           <Link
             href={urlDaLista({ ...f, ano: TODOS_OS_ANOS, destaque: "" })}
             aria-current={ano === "" ? "true" : undefined}
-            className={chipClasse(ano === "")}
+            className={pilula(ano === "")}
           >
             todos os anos
           </Link>
@@ -348,11 +343,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
                 destaque: "",
               })}
               aria-current={x.chave === f.situacao ? "true" : undefined}
-              className={`rounded-full px-3.5 py-1.5 text-[13px] no-underline transition-colors ${
-                x.chave === f.situacao
-                  ? "bg-[var(--ink)] font-semibold text-[var(--ground)]"
-                  : "border border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-              }`}
+              className={pilula(x.chave === f.situacao, "principal")}
             >
               {x.rotulo}
             </Link>
@@ -371,7 +362,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           {f.categoria && <input type="hidden" name="categoria" value={f.categoria} />}
           {f.fornecedor && <input type="hidden" name="fornecedor" value={f.fornecedor} />}
           {f.falta && <input type="hidden" name="falta" value={f.falta} />}
-          <label htmlFor="agrupar" className="text-[12px] text-[var(--ink-3)]">
+          <label htmlFor="agrupar" className="text-meta text-[var(--ink-3)]">
             Agrupar:
           </label>
           <select
@@ -379,7 +370,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             name="g"
             defaultValue={f.agrupar}
             data-controle="agrupar"
-            className="rounded-full border border-[var(--rule)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink-2)] outline-none focus:border-[var(--accent)]"
+            className="rounded-full border-[1.5px] border-[var(--rule-2)] bg-[var(--surface)] px-3 py-1 text-meta text-[var(--ink-2)] outline-none focus:border-[var(--accent)]"
           >
             {AGRUPAMENTOS.map((a) => (
               <option key={a.chave} value={a.chave}>
@@ -388,7 +379,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             ))}
           </select>
           <noscript>
-            <button type="submit" className="text-[12px] underline">
+            <button type="submit" className="text-meta underline">
               Aplicar
             </button>
           </noscript>
@@ -414,7 +405,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             defaultValue={f.busca}
             placeholder="Buscar por nome, fornecedor ou observação…"
             aria-label="Buscar custos"
-            className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-2 pr-4 pl-9 text-[14px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-2 pr-4 pl-9 text-sm outline-none focus:border-[var(--accent)]"
           />
         </form>
       </div>
@@ -424,11 +415,11 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           alternar entre data, valor e categoria a cada linha. */}
       {f.situacao === "pendencia" && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] text-[var(--ink-3)]">O que falta:</span>
+          <span className="text-meta text-[var(--ink-3)]">O que falta:</span>
           <Link
             href={urlDaLista({ ...f, falta: "" })}
             aria-current={!f.falta ? "true" : undefined}
-            className={chipClasse(!f.falta)}
+            className={pilula(!f.falta, "aninhado")}
           >
             qualquer coisa
           </Link>
@@ -437,7 +428,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
               key={x.chave}
               href={urlDaLista({ ...f, falta: x.chave })}
               aria-current={f.falta === x.chave ? "true" : undefined}
-              className={chipClasse(f.falta === x.chave)}
+              className={pilula(f.falta === x.chave, "aninhado")}
             >
               {x.rotulo}
             </Link>
@@ -464,7 +455,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           {f.setor && f.setor !== SEM_SETOR && nomes.setores.has(f.setor) && (
             <Link
               href={`/setores/${f.setor}`}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-[12px] font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
+              className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-meta font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
             >
               Panorama de {nomes.setores.get(f.setor)}
               <IconeSeta className="size-3" />
@@ -474,7 +465,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             <Link
               key={c.rotulo}
               href={c.url}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-[12px] text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-meta text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
             >
               {c.rotulo}
               <IconeFechar className="size-3" />
@@ -483,7 +474,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           {temRecorte(f) && chips.length > 1 && (
             <Link
               href={urlDaLista({ situacao: f.situacao, ordem: f.ordem, dir: f.dir })}
-              className="rounded-full px-2.5 py-1 text-[12px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+              className="rounded-full px-2.5 py-1 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
             >
               Limpar filtros
             </Link>
@@ -519,7 +510,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       )}
 
       {itens.length < total && (
-        <p className="mt-3 text-[12px] text-[var(--ink-3)]">
+        <p className="mt-3 text-meta text-[var(--ink-3)]">
           Exibindo os {TETO} maiores de {total}. O total acima conta os {total} —{" "}
           {/* Dito porque a diferença importa: o corte é de exibição, não de
               cálculo, e sem essa frase o número grande pareceria não bater com
@@ -534,7 +525,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
           divergência real e só uma — com escopo de setor, o painel conta a
           FRAÇÃO rateada e a lista conta o item inteiro. */}
       {f.setor && f.setor !== SEM_SETOR && totalMensal.greaterThan(0) && (
-        <p className="mt-3 max-w-3xl text-[12px] leading-relaxed text-[var(--ink-3)]">
+        <p className="mt-3 max-w-3xl text-meta leading-relaxed text-[var(--ink-3)]">
           Este total soma o <strong>valor cheio</strong> de cada custo que passa pelo setor. O
           panorama do setor soma a <strong>fração rateada</strong> a ele — num custo dividido, os
           dois números diferem sem que nenhum esteja errado.
@@ -542,7 +533,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
       )}
 
       {f.situacao === "lixeira" && linhas.length > 0 && (
-        <p className="mt-3 text-[12px] text-[var(--ink-3)]">
+        <p className="mt-3 text-meta text-[var(--ink-3)]">
           Itens excluídos ficam aqui por 30 dias e depois são apagados de vez. Use o menu da linha
           para restaurar.
         </p>
@@ -584,14 +575,12 @@ function Total({
   if (recorte.medida === "mensal") {
     if (mensal.isZero()) return null;
     return (
-      <p className="text-[15px]">
-        <strong className="font-serif text-[26px] leading-none font-bold tabular-nums">
-          {formatarBRL(mensal)}
-        </strong>
+      <p className="text-base">
+        <strong className="numero text-xl">{formatarBRL(mensal)}</strong>
         <span className="ml-1 text-[var(--ink-2)]">/mês</span>
         {/* A projeção não é um segundo total: é o mesmo número na escala em que
             as decisões de contrato são tomadas. */}
-        <span className="ml-2.5 text-[13px] text-[var(--ink-3)]">
+        <span className="ml-2.5 text-dado text-[var(--ink-3)]">
           · <span className="tabular-nums">{formatarBRL(mensal.mul(12))}</span> em 12 meses, ao
           ritmo de hoje
         </span>
@@ -602,12 +591,10 @@ function Total({
   if (recorte.medida === "periodo") {
     if (periodo.isZero()) return null;
     return (
-      <p className="text-[15px]">
-        <strong className="font-serif text-[26px] leading-none font-bold tabular-nums">
-          {formatarBRL(periodo)}
-        </strong>
+      <p className="text-base">
+        <strong className="numero text-xl">{formatarBRL(periodo)}</strong>
         <span className="ml-1.5 text-[var(--ink-2)]">{deQuando}</span>
-        <span className="ml-2.5 text-[13px] text-[var(--ink-3)]">
+        <span className="ml-2.5 text-dado text-[var(--ink-3)]">
           · {quantidadePeriodo} {quantidadePeriodo === 1 ? "lançamento" : "lançamentos"}
         </span>
       </p>
@@ -617,23 +604,19 @@ function Total({
   // "Tudo": dois números com rótulos distintos, lado a lado, nunca somados.
   if (mensal.isZero() && periodo.isZero()) return null;
   return (
-    <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[15px]">
+    <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-base">
       {mensal.greaterThan(0) && (
         <span>
-          <strong className="font-serif text-[22px] leading-none font-bold tabular-nums">
-            {formatarBRL(mensal)}
-          </strong>
-          <span className="ml-1 text-[13px] text-[var(--ink-2)]">
+          <strong className="numero text-xl">{formatarBRL(mensal)}</strong>
+          <span className="ml-1 text-dado text-[var(--ink-2)]">
             /mês em {quantidadeMensal} recorrentes
           </span>
         </span>
       )}
       {periodo.greaterThan(0) && (
         <span>
-          <strong className="font-serif text-[22px] leading-none font-bold tabular-nums">
-            {formatarBRL(periodo)}
-          </strong>
-          <span className="ml-1 text-[13px] text-[var(--ink-2)]">
+          <strong className="numero text-xl">{formatarBRL(periodo)}</strong>
+          <span className="ml-1 text-dado text-[var(--ink-2)]">
             {deQuando} em {quantidadePeriodo} pontuais e investimentos
           </span>
         </span>
@@ -642,12 +625,39 @@ function Total({
   );
 }
 
-function chipClasse(ativo: boolean): string {
-  return `rounded-full px-2.5 py-1 text-[12px] no-underline transition-colors ${
-    ativo
-      ? "bg-[var(--ink-2)] font-medium text-[var(--ground)]"
-      : "border border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-  }`;
+/*
+ * A PÍLULA DE FILTRO, no tratamento do sistema de design.
+ *
+ * A tela tinha três famílias de chip com três desenhos diferentes: preenchido
+ * de preto, preenchido de cinza-escuro, e contornado. Nenhum dos dois
+ * preenchimentos é cor da marca. No kit da FMP o filtro escolhido é vermelho
+ * cheio com texto branco, e o não escolhido é um fio de 1,5px na linha areia.
+ *
+ * Aqui esse par ganha três PESOS, porque as três famílias não são o mesmo
+ * nível de decisão:
+ *
+ *   principal  — a fila de situação. Está sempre visível, sempre tem uma
+ *                escolhida, e é o filtro que mais muda o que a lista mostra.
+ *                Vermelho cheio.
+ *   secundário — o exercício. Recorta o que já foi escolhido acima. Fio
+ *                vermelho e lavagem, sem preenchimento.
+ *   aninhado   — a lacuna, que só existe dentro de "falta dado". Fio fino.
+ *
+ * Três pesos da mesma forma dizem a hierarquia sem inventar três formas.
+ */
+type PesoDaPilula = "principal" | "secundario" | "aninhado";
+
+function pilula(ativo: boolean, peso: PesoDaPilula = "secundario"): string {
+  const tamanho = peso === "principal" ? "px-3.5 py-1.5 text-dado" : "px-3 py-1 text-meta";
+  const base = `rounded-full border-[1.5px] no-underline transition-all duration-200 ease-fmp ${tamanho}`;
+
+  if (!ativo) {
+    return `${base} border-[var(--rule-2)] text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]`;
+  }
+  if (peso === "principal") {
+    return `${base} border-[var(--accent)] bg-[var(--accent)] font-semibold text-white`;
+  }
+  return `${base} border-[var(--accent)] bg-[var(--accent-wash)] font-semibold text-[var(--accent)]`;
 }
 
 /**
@@ -788,7 +798,7 @@ function Vazio({
 
 function Caixa({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-10 rounded-2xl border border-dashed border-[var(--rule)] px-6 py-14 text-center">
+    <div className="mt-10 rounded-fmp-md border border-dashed border-[var(--rule)] px-6 py-14 text-center">
       {children}
     </div>
   );

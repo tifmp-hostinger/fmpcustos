@@ -146,9 +146,9 @@ export function BarraDeSelecao({
           role="toolbar"
           aria-label="Ações para os custos selecionados"
           data-barra="selecao"
-          className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-[var(--rule)] bg-[var(--ink)] px-4 py-3 text-[var(--ground)] shadow-xl shadow-black/20 motion-safe:animate-[surgir_150ms_ease-out]"
+          className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-x-3 gap-y-2 rounded-fmp-md border border-[var(--rule)] bg-[var(--ink)] px-4 py-3 text-[var(--ground)] shadow-xl shadow-black/20 motion-safe:animate-[surgir_150ms_ease-out]"
         >
-          <p className="text-[13.5px] whitespace-nowrap">
+          <p className="text-dado whitespace-nowrap">
             <strong className="tabular-nums">{ids.length}</strong>{" "}
             {ids.length === 1 ? "custo selecionado" : "custos selecionados"}
             {/* O dinheiro é o que faz a pessoa reler a seleção antes de agir. */}
@@ -177,7 +177,7 @@ export function BarraDeSelecao({
             type="button"
             disabled={aplicando}
             onClick={() => pedir({ tipo: "semPrazo", valor: "", rotulo: "sem prazo determinado" })}
-            className="rounded-lg border border-[var(--ground)]/25 px-2.5 py-1.5 text-[12.5px] whitespace-nowrap hover:bg-[var(--ground)]/10 disabled:opacity-50"
+            className="rounded-lg border border-[var(--ground)]/25 px-2.5 py-1.5 text-meta whitespace-nowrap hover:bg-[var(--ground)]/10 disabled:opacity-50"
           >
             Sem prazo determinado
           </button>
@@ -185,7 +185,7 @@ export function BarraDeSelecao({
           <button
             type="button"
             onClick={() => void baixarCsv(ids)}
-            className="rounded-lg border border-[var(--ground)]/25 px-2.5 py-1.5 text-[12.5px] whitespace-nowrap hover:bg-[var(--ground)]/10"
+            className="rounded-lg border border-[var(--ground)]/25 px-2.5 py-1.5 text-meta whitespace-nowrap hover:bg-[var(--ground)]/10"
           >
             Exportar
           </button>
@@ -221,14 +221,14 @@ export function BarraDeSelecao({
           Somam <strong className="tabular-nums">{resumo.mensal}/mês</strong> em itens correntes.
         </p>
         {resumo.descricoes.length > 0 && (
-          <p className="text-[13px] text-[var(--ink-3)]">
+          <p className="text-dado text-[var(--ink-3)]">
             {resumo.descricoes.join(", ")}
             {ids.length > resumo.descricoes.length &&
               ` e mais ${ids.length - resumo.descricoes.length}`}
             .
           </p>
         )}
-        <p className="text-[13px] text-[var(--ink-3)]">
+        <p className="text-dado text-[var(--ink-3)]">
           {pendente?.tipo === "setor"
             ? "Custos compartilhados entre setores não são movidos — o rateio deles é alterado um a um."
             : "Dá para desfazer logo depois, pelo aviso que aparece."}
@@ -267,7 +267,7 @@ function SeletorDeAcao({
         // valor, quando o que houve foi uma ação já concluída.
         e.target.value = "";
       }}
-      className="rounded-lg border border-[var(--ground)]/25 bg-transparent px-2 py-1.5 text-[12.5px] text-[var(--ground)] outline-none disabled:opacity-50 [&>option]:text-[var(--ink)]"
+      className="rounded-lg border border-[var(--ground)]/25 bg-transparent px-2 py-1.5 text-meta text-[var(--ground)] outline-none disabled:opacity-50 [&>option]:text-[var(--ink)]"
     >
       <option value="">{rotulo}…</option>
       {opcoes.map((o) => (

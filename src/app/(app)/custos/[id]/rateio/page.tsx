@@ -84,7 +84,7 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
-      <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
+      <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
           className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
@@ -102,10 +102,10 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
         <span className="text-[var(--ink-2)]">Rateio</span>
       </nav>
 
-      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">
+      <h1 className="mt-2 titulo-pagina">
         Dividir entre <em className="text-[var(--accent)]">setores</em>
       </h1>
-      <p className="mt-2 text-[14px] text-[var(--ink-2)]">
+      <p className="mt-2 text-sm text-[var(--ink-2)]">
         {item.descricao}
         {valorMensal && <> · {formatarBRL(valorMensal)}/mês</>}. Um dos setores absorve o restante,
         então a soma fecha sozinha — não é preciso somar de cabeça.

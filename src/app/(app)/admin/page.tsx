@@ -48,11 +48,11 @@ export default async function Admin() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <p className="text-[12px] font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
+      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
         Administração
       </p>
-      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">O que você mantém</h1>
-      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+      <h1 className="mt-2 titulo-pagina">O que você mantém</h1>
+      <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         As decisões que valem para a FMP inteira. Cada cartão mostra o que está em aberto.
       </p>
 
@@ -135,16 +135,16 @@ function Cartao({
   return (
     <Link
       href={href}
-      className={`block rounded-xl border p-5 no-underline transition-colors ${
+      className={`block rounded-fmp-md border p-5 no-underline transition-colors ${
         atencao
           ? "border-[var(--accent)]/40 bg-[var(--accent)]/5 hover:border-[var(--accent)]"
           : "border-[var(--rule)] bg-[var(--surface)] hover:border-[var(--ink-3)]"
       }`}
     >
-      <h2 className="font-serif text-[19px] font-bold">{titulo}</h2>
-      <p className="mt-1 text-[13.5px] text-[var(--ink-2)]">{descricao}</p>
+      <h2 className="font-serif text-lg font-bold">{titulo}</h2>
+      <p className="mt-1 text-dado text-[var(--ink-2)]">{descricao}</p>
       <p
-        className={`mt-3 text-[12.5px] font-medium tabular-nums ${
+        className={`mt-3 text-meta font-medium tabular-nums ${
           atencao ? "text-[var(--accent)]" : "text-[var(--ink-3)]"
         }`}
       >

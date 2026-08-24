@@ -8,9 +8,7 @@ function derivar(
   opcoes: ScryptOptions,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    scrypt(senha, salt, tamanho, opcoes, (erro, chave) =>
-      erro ? reject(erro) : resolve(chave),
-    );
+    scrypt(senha, salt, tamanho, opcoes, (erro, chave) => (erro ? reject(erro) : resolve(chave)));
   });
 }
 
@@ -27,14 +25,7 @@ const TAMANHO_CHAVE = 64;
 export async function gerarHashSenha(senha: string): Promise<string> {
   const salt = randomBytes(16);
   const derivada = await derivar(senha.normalize("NFKC"), salt, TAMANHO_CHAVE, { N, r, p });
-  return [
-    "scrypt",
-    N,
-    r,
-    p,
-    salt.toString("base64url"),
-    derivada.toString("base64url"),
-  ].join("$");
+  return ["scrypt", N, r, p, salt.toString("base64url"), derivada.toString("base64url")].join("$");
 }
 
 /** Compara em tempo constante. Retorna false para qualquer hash malformado. */

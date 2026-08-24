@@ -9,6 +9,7 @@ import { MenuDeLinha } from "@/components/menu";
 import { IconeLixeira, IconeMais } from "@/components/icones";
 import { enderecoDoRecorte } from "@/lib/filtros";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 export type VisaoNaTela = {
   id: string;
@@ -87,9 +88,7 @@ export function BarraDeVisoes({
   return (
     <>
       <div data-barra="visoes" className="mt-5 flex flex-wrap items-center gap-1.5">
-        {visoes.length > 0 && (
-          <span className="mr-0.5 text-[12px] text-[var(--ink-3)]">Visões:</span>
-        )}
+        {visoes.length > 0 && <span className="sobrancelha mr-1.5">Visões</span>}
 
         {visoes.map((v) => {
           const ativa = v.recorte === recorteAtual;
@@ -98,10 +97,13 @@ export function BarraDeVisoes({
               key={v.id}
               data-visao={v.nome}
               data-ativa={ativa ? "sim" : "nao"}
-              className={`flex items-center rounded-full border text-[12.5px] ${
+              // Mesma pílula das outras da tela, num peso abaixo: a visão ativa
+              // é vermelha de fio e lavagem, não de preenchimento, porque ela
+              // já se anuncia pelo recorte inteiro que a tela está mostrando.
+              className={`flex items-center rounded-full border-[1.5px] text-meta transition-all duration-200 ${
                 ativa
-                  ? "border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--accent)]"
-                  : "border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+                  ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
+                  : "border-[var(--rule-2)] text-[var(--ink-2)] hover:border-[var(--accent)]"
               }`}
             >
               <Link
@@ -148,7 +150,7 @@ export function BarraDeVisoes({
             type="button"
             data-acao="salvar-visao"
             onClick={() => setAbrindo(true)}
-            className="flex items-center gap-1 rounded-full border border-dashed border-[var(--ink-3)]/50 px-3 py-1.5 text-[12.5px] text-[var(--ink-3)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="flex items-center gap-1 rounded-full border-[1.5px] border-dashed border-[var(--rule-2)] px-3 py-1.5 text-meta text-[var(--ink-3)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
             <IconeMais className="size-3.5" />
             Salvar esta visão
@@ -206,9 +208,9 @@ function FormaDeSalvar({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+    <div className="mt-3 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4">
       <label className="block">
-        <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+        <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
           Nome desta visão
         </span>
         <input
@@ -227,11 +229,11 @@ function FormaDeSalvar({
           }}
           placeholder="Ex.: Softwares de TI que renovam este ano"
           maxLength={60}
-          className="w-full max-w-md rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+          className="w-full max-w-md rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-base outline-none focus:border-[var(--accent)]"
         />
       </label>
       {erro && (
-        <p role="alert" className="mt-1.5 text-[12.5px] text-[var(--accent)]">
+        <p role="alert" className="mt-1.5 text-meta text-[var(--accent)]">
           {erro}
         </p>
       )}
@@ -245,9 +247,9 @@ function FormaDeSalvar({
             onChange={(e) => setInstitucional(e.target.checked)}
             className="mt-0.5 size-4 accent-[var(--accent)]"
           />
-          <span className="text-[13px]">
+          <span className="text-dado">
             <span className="font-medium">Visão da instituição</span>
-            <span className="mt-0.5 block text-[12.5px] text-[var(--ink-3)]">
+            <span className="mt-0.5 block text-meta text-[var(--ink-3)]">
               Aparece para todo mundo, não só para você. Cada pessoa vê os custos da própria área
               dentro dela — a visão guarda o recorte, nunca o resultado.
             </span>
@@ -260,15 +262,11 @@ function FormaDeSalvar({
           type="button"
           disabled={enviando || nome.trim() === ""}
           onClick={() => void enviar()}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+          className={classesDeBotao("primario")}
         >
           {enviando ? "Salvando…" : "Salvar"}
         </button>
-        <button
-          type="button"
-          onClick={aoFechar}
-          className="rounded-lg border border-[var(--rule)] px-4 py-2 text-[14px] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-        >
+        <button type="button" onClick={aoFechar} className={classesDeBotao("contorno")}>
           Cancelar
         </button>
       </div>

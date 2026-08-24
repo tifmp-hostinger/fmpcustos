@@ -46,7 +46,7 @@ export function PreferenciaResumo({
   }
 
   return (
-    <div className="mt-8 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+    <div className="mt-8 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4">
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
@@ -56,9 +56,9 @@ export function PreferenciaResumo({
           onChange={(e) => void alternar(e.target.checked)}
           className="mt-0.5 size-4 accent-[var(--accent)]"
         />
-        <span className="text-[13.5px]">
+        <span className="text-dado">
           <span className="font-medium">Receber o resumo semanal por e-mail</span>
-          <span className="mt-0.5 block text-[12.5px] text-[var(--ink-3)]">
+          <span className="mt-0.5 block text-meta text-[var(--ink-3)]">
             {smtpConfigurado
               ? "Uma vez por semana, só quando houver algo pendente. Semana sem novidade não vira e-mail."
               : // Dizer isto é melhor que deixar a caixa marcada prometendo um

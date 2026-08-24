@@ -28,13 +28,15 @@ export function Navegacao({ itens }: { itens: ItemNav[] }) {
       {itens.map((item) => {
         const Icone = ICONES[item.icone];
         const ativo =
-          item.href === "/" ? atual === "/" : atual === item.href || atual.startsWith(item.href + "/");
+          item.href === "/"
+            ? atual === "/"
+            : atual === item.href || atual.startsWith(item.href + "/");
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={ativo ? "page" : undefined}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] no-underline transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm no-underline transition-colors ${
               ativo
                 ? "bg-[var(--accent)]/10 font-semibold text-[var(--accent)]"
                 : "text-[var(--ink-2)] hover:bg-[var(--surface)] hover:text-[var(--ink)]"
@@ -48,7 +50,7 @@ export function Navegacao({ itens }: { itens: ItemNav[] }) {
             {item.contador !== undefined && item.contador > 0 && (
               <span
                 aria-label={`${item.contador} pendentes`}
-                className="ml-0.5 min-w-[1.25rem] rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
+                className="ml-0.5 min-w-[1.25rem] rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-center text-micro font-bold text-white tabular-nums"
               >
                 {item.contador}
               </span>

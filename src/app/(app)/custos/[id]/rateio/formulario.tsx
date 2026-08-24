@@ -288,7 +288,7 @@ export function EditorDeRateio({
             return (
               <div
                 key={linha.chave}
-                className={`rounded-xl border px-3 py-2.5 ${
+                className={`rounded-fmp-md border px-3 py-2.5 ${
                   erro
                     ? "border-[var(--accent)]/50 bg-[var(--accent)]/5"
                     : "border-[var(--rule)] bg-[var(--surface)]"
@@ -308,7 +308,7 @@ export function EditorDeRateio({
                         focarProximo.current = { chave: linha.chave, campo: "pct" };
                       }
                     }}
-                    className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2.5 py-1.5 text-[14px] outline-none focus:border-[var(--accent)]"
+                    className="min-w-0 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
                   >
                     <option value="">Escolha o setor…</option>
                     {setores.map((s) => (
@@ -342,7 +342,7 @@ export function EditorDeRateio({
                       inputMode="decimal"
                       placeholder="0,00"
                       aria-label={`Percentual de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
-                      className={`w-full rounded-lg border py-1.5 pr-6 pl-2 text-right text-[14px] tabular-nums outline-none ${
+                      className={`w-full rounded-lg border py-1.5 pr-6 pl-2 text-right text-sm tabular-nums outline-none ${
                         linha.ancora
                           ? "cursor-default border-transparent bg-[var(--ground)] font-semibold text-[var(--ink-2)]"
                           : "border-[var(--rule)] bg-[var(--ground)] focus:border-[var(--accent)]"
@@ -350,7 +350,7 @@ export function EditorDeRateio({
                     />
                     <span
                       aria-hidden
-                      className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-[12px] text-[var(--ink-3)]"
+                      className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-meta text-[var(--ink-3)]"
                     >
                       %
                     </span>
@@ -359,11 +359,11 @@ export function EditorDeRateio({
                   {/* Reais — a coluna que torna a conversa possível. */}
                   <div className="w-[112px] shrink-0">
                     {valorMensal === null ? (
-                      <p className="py-1.5 text-right text-[13px] text-[var(--ink-3)]">—</p>
+                      <p className="py-1.5 text-right text-dado text-[var(--ink-3)]">—</p>
                     ) : linha.ancora ? (
                       <p
                         key={`r${flash}`}
-                        className="py-1.5 text-right text-[13px] font-semibold tabular-nums motion-safe:animate-[destacar_2s_ease-out]"
+                        className="py-1.5 text-right text-dado font-semibold tabular-nums motion-safe:animate-[destacar_2s_ease-out]"
                       >
                         {formatarBRL(reais[i] ?? 0)}
                       </p>
@@ -373,7 +373,7 @@ export function EditorDeRateio({
                         onChange={(e) => definirReais(linha.chave, e.target.value)}
                         inputMode="decimal"
                         aria-label={`Valor mensal de ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
-                        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2 py-1.5 text-right text-[13px] tabular-nums outline-none focus:border-[var(--accent)]"
+                        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-2 py-1.5 text-right text-dado tabular-nums outline-none focus:border-[var(--accent)]"
                       />
                     )}
                   </div>
@@ -394,7 +394,7 @@ export function EditorDeRateio({
                   {linha.ancora ? (
                     <span
                       key={`a${flash}`}
-                      className="flex items-center gap-1.5 rounded-md px-1 text-[11.5px] font-medium text-[var(--ink-3)] motion-safe:animate-[destacar_2s_ease-out]"
+                      className="flex items-center gap-1.5 rounded-md px-1 text-micro font-medium text-[var(--ink-3)] motion-safe:animate-[destacar_2s_ease-out]"
                     >
                       <IconeAncora className="size-3.5" />
                       absorve o restante
@@ -411,14 +411,14 @@ export function EditorDeRateio({
                       onClick={() => trocarAncora(linha.chave)}
                       disabled={!linha.setorId}
                       title="Troca qual setor fecha a conta. Nenhum percentual muda agora."
-                      className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-[11.5px] text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+                      className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-micro text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
                     >
                       <IconeAncora className="size-3" />
                       passar o restante para cá
                     </button>
                   )}
                   {erro && (
-                    <span role="alert" className="text-[11.5px] font-medium text-[var(--accent)]">
+                    <span role="alert" className="text-micro font-medium text-[var(--accent)]">
                       {erro}
                     </span>
                   )}
@@ -446,9 +446,7 @@ export function EditorDeRateio({
           caminho principal — quem divide um custo só nunca precisa deles. */}
         {(modelos.length > 0 || linhas.length > 1) && (
           <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--rule)] pt-4">
-            {modelos.length > 0 && (
-              <span className="text-[12px] text-[var(--ink-3)]">Modelos:</span>
-            )}
+            {modelos.length > 0 && <span className="text-meta text-[var(--ink-3)]">Modelos:</span>}
             {modelos.map((m) => (
               <button
                 key={m.id}
@@ -460,7 +458,7 @@ export function EditorDeRateio({
                       `${nomes.get(p.setorId) ?? "setor"} ${textoDeUnidades(unidadesDeBanco(p.percentual))}%`,
                   )
                   .join(" · ")}
-                className="rounded-full border border-[var(--rule)] px-3 py-1.5 text-[12.5px] text-[var(--ink-2)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="rounded-full border border-[var(--rule)] px-3 py-1.5 text-meta text-[var(--ink-2)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {m.nome}
               </button>
@@ -469,7 +467,7 @@ export function EditorDeRateio({
               <button
                 type="button"
                 onClick={() => setNomeando(true)}
-                className="ml-auto text-[12.5px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+                className="ml-auto text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
               >
                 Salvar esta divisão como modelo
               </button>
@@ -489,14 +487,14 @@ export function EditorDeRateio({
         )}
 
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+          <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
             {aplicaDireto ? "Motivo (fica no histórico)" : "Justificativa (ajuda quem vai aceitar)"}
           </span>
           <textarea
             name="justificativa"
             rows={2}
             placeholder="Ex.: o CRM é usado pela captação — a operação é do Comercial."
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
         </label>
 
@@ -507,7 +505,7 @@ export function EditorDeRateio({
             // vezes achando que a tela travou; clicável, ele repete o erro e
             // aponta a linha culpada — que é a resposta que ela procurava.
             disabled={enviando}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-white transition-opacity disabled:opacity-50"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
           >
             {enviando ? "Salvando…" : aplicaDireto ? "Aplicar rateio" : "Enviar proposta"}
           </button>
@@ -515,7 +513,7 @@ export function EditorDeRateio({
             <button
               type="button"
               onClick={aoConcluir}
-              className="text-[13px] text-[var(--ink-3)] hover:underline"
+              className="text-dado text-[var(--ink-3)] hover:underline"
             >
               Cancelar
             </button>
@@ -523,7 +521,7 @@ export function EditorDeRateio({
         </div>
 
         {!aplicaDireto && (
-          <p className="text-[12px] leading-relaxed text-[var(--ink-3)]">
+          <p className="text-meta leading-relaxed text-[var(--ink-3)]">
             Cada setor que recebe uma fatia precisa aceitar. A proposta aparece na tela inicial do
             gestor da área, e o rateio de <strong>{descricao}</strong> só entra em vigor quando
             todos aceitarem. Enquanto isso, o rateio atual continua valendo.
@@ -556,7 +554,7 @@ function Chip({
       type="button"
       onClick={aoClicar}
       disabled={desabilitado}
-      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] transition-colors disabled:opacity-40 ${
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-meta transition-colors disabled:opacity-40 ${
         destaque
           ? "border-[var(--accent)]/40 font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8"
           : "border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
@@ -595,7 +593,7 @@ function ResiduoDeclarado({
   if (residuo.isZero()) return null;
 
   return (
-    <p className="text-[12px] text-[var(--ink-3)]">
+    <p className="text-meta text-[var(--ink-3)]">
       {nomes.get(fatias[indiceAncora].setorId) ?? "A âncora"} absorve o arredondamento de{" "}
       <span className="tabular-nums">{formatarBRL(residuo.abs())}</span>, para as fatias somarem
       exatamente {formatarBRL(valorMensal)}.
@@ -627,7 +625,10 @@ function NomearModelo({ linhas, aoFechar }: { linhas: Fatia[]; aoFechar: () => v
   const ancora = linhas.find((l) => l.ancora)?.setorId ?? "";
 
   return (
-    <form action={acao} className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-4">
+    <form
+      action={acao}
+      className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-4"
+    >
       <input type="hidden" name="ancora" value={ancora} />
       {linhas.map((l, i) => (
         <span key={l.setorId || i}>
@@ -638,7 +639,7 @@ function NomearModelo({ linhas, aoFechar }: { linhas: Fatia[]; aoFechar: () => v
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-0 flex-1">
-          <span className="mb-1 block text-[12.5px] font-medium text-[var(--ink-2)]">
+          <span className="mb-1 block text-meta font-medium text-[var(--ink-2)]">
             Nome do modelo
           </span>
           <input
@@ -646,25 +647,25 @@ function NomearModelo({ linhas, aoFechar }: { linhas: Fatia[]; aoFechar: () => v
             autoFocus
             maxLength={80}
             placeholder="Ex.: Infraestrutura compartilhada 70/30"
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
         </label>
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--ground)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-dado font-semibold text-[var(--ground)] disabled:opacity-50"
         >
           {enviando ? "Salvando…" : "Salvar modelo"}
         </button>
         <button
           type="button"
           onClick={aoFechar}
-          className="px-1 py-2 text-[13px] text-[var(--ink-3)] hover:underline"
+          className="px-1 py-2 text-dado text-[var(--ink-3)] hover:underline"
         >
           Cancelar
         </button>
       </div>
-      <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
+      <p className="mt-1.5 text-micro text-[var(--ink-3)]">
         Guarda só os percentuais. Qual setor absorve o restante é decidido a cada uso.
       </p>
     </form>

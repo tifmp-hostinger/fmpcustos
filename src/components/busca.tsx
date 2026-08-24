@@ -75,14 +75,14 @@ export function BuscaGlobal() {
         placeholder="Buscar custo…"
         aria-label="Buscar custos em todas as situações"
         aria-keyshortcuts="/ Control+K"
-        className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-1.5 pr-9 pl-8 text-[13px] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--accent)]"
+        className="w-full rounded-full border border-[var(--rule)] bg-[var(--surface)] py-1.5 pr-9 pl-8 text-dado outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--accent)]"
       />
       {/* A dica do atalho só aparece com o campo vazio: sobre o texto digitado
           ela vira ruído, e some sozinha assim que deixa de ser útil. */}
       {termo === "" && (
         <kbd
           aria-hidden
-          className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-[var(--rule)] px-1.5 py-0.5 font-sans text-[10px] text-[var(--ink-3)]"
+          className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-[var(--rule)] px-1.5 py-0.5 font-sans text-micro text-[var(--ink-3)]"
         >
           /
         </kbd>

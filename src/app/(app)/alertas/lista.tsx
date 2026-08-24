@@ -96,7 +96,7 @@ export function ListaDeAlertas({ alertas }: { alertas: LinhaAlerta[] }) {
 
   if (linhas.length === 0) {
     return (
-      <p className="mt-8 flex items-center gap-2.5 rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-5 py-6 text-[14px] text-[var(--ink-2)]">
+      <p className="mt-8 flex items-center gap-2.5 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-5 py-6 text-sm text-[var(--ink-2)]">
         <IconeCheck className="size-5 text-emerald-600" />
         Nada pendente. Nenhuma renovação a decidir, nenhum cadastro incompleto.
       </p>
@@ -113,7 +113,7 @@ export function ListaDeAlertas({ alertas }: { alertas: LinhaAlerta[] }) {
             key={a.id}
             data-alerta={a.tipo}
             data-status={a.status}
-            className={`rounded-xl border p-4 transition-opacity ${
+            className={`rounded-fmp-md border p-4 transition-opacity ${
               fora || visto ? "opacity-55" : ""
             } ${
               a.severidade >= 4 && !fora && !visto
@@ -126,33 +126,29 @@ export function ListaDeAlertas({ alertas }: { alertas: LinhaAlerta[] }) {
                 <p className="flex flex-wrap items-center gap-2">
                   <Etiqueta severidade={a.severidade} rotulo={a.rotuloTipo} />
                   {a.setores.length > 0 && (
-                    <span className="text-[11.5px] text-[var(--ink-3)]">
-                      {a.setores.join(" · ")}
-                    </span>
+                    <span className="text-micro text-[var(--ink-3)]">{a.setores.join(" · ")}</span>
                   )}
                   {visto && (
-                    <span className="text-[11.5px] font-medium text-[var(--ink-3)]">
+                    <span className="text-micro font-medium text-[var(--ink-3)]">
                       · visto, em andamento
                     </span>
                   )}
                   {fora && (
-                    <span className="text-[11.5px] font-medium text-[var(--ink-3)]">
-                      · ignorado
-                    </span>
+                    <span className="text-micro font-medium text-[var(--ink-3)]">· ignorado</span>
                   )}
                 </p>
                 {a.itemCustoId ? (
                   <Link
                     href={`/custos/${a.itemCustoId}`}
-                    className="mt-1 block text-[15px] font-semibold text-[var(--ink)] no-underline hover:text-[var(--accent)]"
+                    className="mt-1 block text-base font-semibold text-[var(--ink)] no-underline hover:text-[var(--accent)]"
                   >
                     {a.titulo}
                   </Link>
                 ) : (
-                  <p className="mt-1 text-[15px] font-semibold">{a.titulo}</p>
+                  <p className="mt-1 text-base font-semibold">{a.titulo}</p>
                 )}
                 {a.descricao && (
-                  <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">
+                  <p className="mt-1 text-dado leading-relaxed text-[var(--ink-2)]">
                     {a.descricao}
                   </p>
                 )}
@@ -205,7 +201,7 @@ function Botao({
       type="button"
       onClick={onClick}
       disabled={ocupado}
-      className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] font-medium whitespace-nowrap disabled:opacity-50 ${
+      className={`rounded-lg border px-2.5 py-1.5 text-meta font-medium whitespace-nowrap disabled:opacity-50 ${
         discreto
           ? "border-transparent text-[var(--ink-3)] hover:border-[var(--rule)]"
           : "border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
@@ -226,7 +222,7 @@ function Etiqueta({ severidade, rotulo }: { severidade: number; rotulo: string }
   const urgente = severidade >= 4;
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-[0.06em] uppercase ${
+      className={`rounded px-1.5 py-0.5 text-micro font-semibold tracking-[0.06em] uppercase ${
         urgente
           ? "bg-[var(--accent)]/15 text-[var(--accent)]"
           : "bg-[var(--ink)]/8 text-[var(--ink-2)]"

@@ -17,6 +17,7 @@ import { useAviso } from "@/components/avisos";
 import { PainelLateral } from "@/components/painel";
 import { IconeRateio } from "@/components/icones";
 import { parecidos } from "@/lib/fornecedores";
+import { classesDeBotao } from "@/components/botao";
 
 export function PainelDeCategorias({
   linhas,
@@ -53,7 +54,7 @@ export function PainelDeCategorias({
   return (
     <>
       {orfaos.itens > 0 && (
-        <p className="mt-6 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-4 py-3 text-[13.5px]">
+        <p className="mt-6 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-4 py-3 text-dado">
           <strong className="tabular-nums">{orfaos.mensal}/mês</strong> em{" "}
           <Link
             href={{ pathname: "/custos", query: { f: "pendencia", falta: "categoria" } }}
@@ -68,14 +69,14 @@ export function PainelDeCategorias({
       {suspeitas.length > 0 && (
         <div
           role="status"
-          className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-4 py-3"
+          className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-4 py-3"
         >
-          <p className="text-[12px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+          <p className="text-meta font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
             Podem ser a mesma coisa
           </p>
           <ul className="mt-2 space-y-1.5">
             {suspeitas.map((s) => (
-              <li key={s.linha.id} className="text-[13px]">
+              <li key={s.linha.id} className="text-dado">
                 <strong>{s.linha.nome}</strong> e {s.parecidas.map((c) => c.nome).join(", ")} —{" "}
                 <button
                   type="button"
@@ -87,7 +88,7 @@ export function PainelDeCategorias({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-[var(--ink-3)]">
+          <p className="mt-2 text-meta text-[var(--ink-3)]">
             Duas categorias quase iguais partem o gráfico por tipo ao meio sem que nenhuma das duas
             pareça errada.
           </p>
@@ -207,7 +208,7 @@ function PainelDeFusao({
     >
       {origem && (
         <div className="space-y-5">
-          <p className="text-[13.5px] text-[var(--ink-2)]">
+          <p className="text-dado text-[var(--ink-2)]">
             {/* O número é o TOTAL, e não só o corrente: é ele que vai se mover.
                 Dizer "10" e mover 11 é a mentira pequena que corrói a confiança
                 em tudo o mais que a tela afirma. */}
@@ -229,14 +230,14 @@ function PainelDeFusao({
           </p>
 
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+            <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
               Passar para
             </span>
             <select
               value={destinoId}
               onChange={(e) => setDestinoId(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+              className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base outline-none focus:border-[var(--accent)]"
             >
               <option value="">Escolha a categoria que fica…</option>
               {destinos.map((d) => (
@@ -248,7 +249,7 @@ function PainelDeFusao({
           </label>
 
           {destino && (
-            <p className="rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--accent)]/8 px-3.5 py-2.5 text-[13px]">
+            <p className="rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--accent)]/8 px-3.5 py-2.5 text-dado">
               <strong>{destino.nome}</strong> fica com{" "}
               <strong className="tabular-nums">{destino.custos + origem.custos}</strong> custos.{" "}
               <strong>{origem.nome}</strong> é inativada — não apagada, para o histórico de cada
@@ -261,20 +262,16 @@ function PainelDeFusao({
               type="button"
               disabled={enviando || !destinoId}
               onClick={() => void fundir()}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+              className={classesDeBotao("primario")}
             >
               {enviando ? "Fundindo…" : "Fundir"}
             </button>
-            <button
-              type="button"
-              onClick={aoFechar}
-              className="rounded-lg border border-[var(--rule)] px-4 py-2 text-[14px] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-            >
+            <button type="button" onClick={aoFechar} className={classesDeBotao("contorno")}>
               Cancelar
             </button>
           </div>
 
-          <p className="text-[12.5px] text-[var(--ink-3)]">
+          <p className="text-meta text-[var(--ink-3)]">
             Isto não tem desfazer de um clique. Cada custo movido ganha uma linha no histórico
             dizendo de onde veio, então dá para refazer à mão — mas é trabalho.
           </p>

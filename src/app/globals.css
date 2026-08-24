@@ -196,60 +196,68 @@ body {
    ============================================================ */
 
 /*
- * O NÚMERO EM SERIFA ITÁLICA.
- *
- * É o gesto assinatura da FMP, e era o que faltava aqui: a plataforma inteira
- * escrevia seus números na mesma fonte de interface dos rótulos, então o total
- * de R$ 138 mil pesava o mesmo que a palavra "Filtros" ao lado dele.
- *
- * `tabular-nums` porque números que mudam sozinhos — um total que recalcula ao
- * trocar de aba — não podem dançar de largura enquanto mudam.
+ * Dentro de `@layer components` — e não solto — porque uma classe sem camada
+ * vence QUALQUER utilitário do Tailwind, que mora em `@layer utilities`.
+ * Solto, `className="titulo-pagina text-lg"` continuava em 32px, e o cabeçalho
+ * ficava do tamanho do título da página.
  */
-.numero {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  line-height: 1;
-}
+@layer components {
+  /*
+   * O NÚMERO EM SERIFA ITÁLICA.
+   *
+   * É o gesto assinatura da FMP, e era o que faltava aqui: a plataforma inteira
+   * escrevia seus números na mesma fonte de interface dos rótulos, então o total
+   * de R$ 138 mil pesava o mesmo que a palavra "Filtros" ao lado dele.
+   *
+   * `tabular-nums` porque números que mudam sozinhos — um total que recalcula ao
+   * trocar de aba — não podem dançar de largura enquanto mudam.
+   */
+  .numero {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
 
-/*
- * A SOBRANCELHA.
- *
- * Rótulo de seção em caixa alta com entrelinha larga e vermelho da marca. É o
- * que dá hierarquia a uma tela densa sem gastar tamanho: diz "começa aqui uma
- * seção" em 11px, onde um título gastaria 32.
- */
-.sobrancelha {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: var(--text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--accent);
-}
+  /*
+   * A SOBRANCELHA.
+   *
+   * Rótulo de seção em caixa alta com entrelinha larga e vermelho da marca. É o
+   * que dá hierarquia a uma tela densa sem gastar tamanho: diz "começa aqui uma
+   * seção" em 11px, onde um título gastaria 32.
+   */
+  .sobrancelha {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-micro);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+  }
 
-/*
- * O TÍTULO DE PÁGINA.
- *
- * Noto Serif itálico, como manda o sistema. O sistema pede 60px para manchete
- * institucional; aqui são 32, porque uma ferramenta de trabalho que gasta um
- * sexto da tela dizendo o próprio nome está gastando a tela do usuário para
- * falar de si. O itálico é o que carrega a marca — o tamanho não precisa.
- */
-.titulo-pagina {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 600;
-  font-size: var(--text-2xl);
-  line-height: 1.06;
-  letter-spacing: -0.015em;
-}
-.titulo-pagina em,
-.titulo-pagina .destaque {
-  color: var(--accent);
-  font-style: italic;
+  /*
+   * O TÍTULO DE PÁGINA.
+   *
+   * Noto Serif itálico, como manda o sistema. O sistema pede 60px para manchete
+   * institucional; aqui são 32, porque uma ferramenta de trabalho que gasta um
+   * sexto da tela dizendo o próprio nome está gastando a tela do usuário para
+   * falar de si. O itálico é o que carrega a marca — o tamanho não precisa.
+   */
+  .titulo-pagina {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 600;
+    font-size: var(--text-2xl);
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+  }
+  .titulo-pagina em,
+  .titulo-pagina .destaque {
+    color: var(--accent);
+    font-style: italic;
+  }
 }
 
 /*

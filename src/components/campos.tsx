@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { classesDeBotao } from "@/components/botao";
 
 /**
  * Campo de senha com botão de mostrar/ocultar.
@@ -30,7 +31,7 @@ export function CampoSenha({
   return (
     <div>
       <label className="block">
-        <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+        <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
           {rotulo}
           {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
         </span>
@@ -41,7 +42,7 @@ export function CampoSenha({
             required={obrigatorio}
             autoComplete={autoComplete}
             aria-describedby={dica ? idDica : undefined}
-            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] py-2 pl-3 pr-11 text-[15px] outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] py-2 pl-3 pr-11 text-base outline-none focus:border-[var(--accent)]"
           />
           <button
             type="button"
@@ -117,7 +118,7 @@ export function Campo({
   const controlado = resto.onChange !== undefined;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+      <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
         {rotulo}
         {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
       </span>
@@ -136,7 +137,7 @@ export function Campo({
         list={lista}
         placeholder={placeholder}
         {...(controlado ? { value: valor ?? "" } : { defaultValue: valor ?? undefined })}
-        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none ${
+        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-base outline-none ${
           erro
             ? "border-[var(--accent)] focus:border-[var(--accent)]"
             : "border-[var(--rule)] focus:border-[var(--accent)]"
@@ -189,7 +190,7 @@ export function Selecao({
 
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+      <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
         {rotulo}
         {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
       </span>
@@ -200,7 +201,7 @@ export function Selecao({
         aria-describedby={erro || legado ? idErro : undefined}
         defaultValue={atual}
         onChange={onChange}
-        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)] ${
+        className={`w-full rounded-lg border bg-[var(--surface)] px-3 py-2 text-base outline-none focus:border-[var(--accent)] ${
           erro || legado ? "border-[var(--accent)]" : "border-[var(--rule)]"
         }`}
       >
@@ -240,12 +241,12 @@ export function AreaTexto({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">{rotulo}</span>
+      <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">{rotulo}</span>
       <textarea
         name={nome}
         rows={3}
         defaultValue={valor ?? undefined}
-        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:border-[var(--accent)]"
+        className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2 text-base outline-none focus:border-[var(--accent)]"
       />
       {dica && <span className="mt-1 block text-xs text-[var(--ink-3)]">{dica}</span>}
     </label>
@@ -255,11 +256,7 @@ export function AreaTexto({
 export function Enviar({ children = "Salvar" }: { children?: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[15px] font-medium text-white transition-opacity disabled:opacity-50"
-    >
+    <button type="submit" disabled={pending} className={classesDeBotao("primario")}>
       {pending ? "Salvando…" : children}
     </button>
   );

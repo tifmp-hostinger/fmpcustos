@@ -321,14 +321,14 @@ export function TabelaDeCustos({
   if (linhas.length === 0) return null;
 
   return (
-    <div className="mt-5 overflow-x-auto rounded-xl border border-[var(--rule)] bg-[var(--surface)]">
+    <div className="mt-5 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
       <table className="w-full min-w-[860px] text-sm">
         <caption className="sr-only">
           Custos cadastrados. Use o menu de cada linha para editar, duplicar, dividir entre setores
           ou encerrar.
         </caption>
         <thead>
-          <tr className="border-b border-[var(--rule)] text-[11px] tracking-[0.1em] text-[var(--ink-3)] uppercase">
+          <tr className="border-b border-[var(--rule)] text-micro tracking-[0.1em] text-[var(--ink-3)] uppercase">
             {emLote && (
               <th className="w-10 px-3 py-3">
                 <input
@@ -409,12 +409,12 @@ export function TabelaDeCustos({
                           fechado ? "" : "rotate-90"
                         }`}
                       />
-                      <span className="text-[13.5px] font-semibold">{grupo.rotulo}</span>
-                      <span className="text-[12px] text-[var(--ink-3)]">
+                      <span className="text-dado font-semibold">{grupo.rotulo}</span>
+                      <span className="text-meta text-[var(--ink-3)]">
                         {grupo.itens.length} {grupo.itens.length === 1 ? "custo" : "custos"}
                       </span>
                       {grupo.subtotal && (
-                        <span className="ml-auto text-[13px] font-medium tabular-nums">
+                        <span className="ml-auto text-dado font-medium tabular-nums">
                           {formatarBRL(grupo.subtotal)}
                           {colunas.mensal && (
                             <span className="font-normal text-[var(--ink-3)]">/mês</span>
@@ -640,7 +640,7 @@ function Linha({
         >
           {item.descricao}
         </Link>
-        <span className="block text-[11px] text-[var(--ink-3)]">
+        <span className="block text-micro text-[var(--ink-3)]">
           {item.fornecedor ?? "sem fornecedor"}
           {item.categoria ? ` · ${item.categoria}` : ""}
         </span>
@@ -657,13 +657,13 @@ function Linha({
           R$ 500 porque as duas colunas diziam "R$". */}
       <td data-celula="cobranca" className="px-4 py-3 text-right tabular-nums">
         {item.valorPeriodo ? formatarMoeda(item.valorPeriodo, item.moeda) : "—"}
-        <span className="block text-[11px] text-[var(--ink-3)]">
+        <span className="block text-micro text-[var(--ink-3)]">
           {ROTULOS_PERIODICIDADE[item.periodicidade]}
         </span>
       </td>
 
       {colunas.natureza && (
-        <td data-celula="natureza" className="px-4 py-3 text-[12.5px] text-[var(--ink-2)]">
+        <td data-celula="natureza" className="px-4 py-3 text-meta text-[var(--ink-2)]">
           {ROTULO_CURTO_NATUREZA[item.natureza] ?? item.natureza}
         </td>
       )}
@@ -675,7 +675,7 @@ function Linha({
               {formatarBRL(item.valorMensal)}
               {item.moeda !== "BRL" && (
                 <span
-                  className="block text-[11px] font-normal text-[var(--ink-3)]"
+                  className="block text-micro font-normal text-[var(--ink-3)]"
                   title={`Convertido de ${item.moeda} a ${item.cambio ? formatarCambio(item.cambio) : "—"}`}
                 >
                   a {formatarCambio(item.cambio)}
@@ -689,7 +689,7 @@ function Linha({
             <Link
               href={`/custos/${item.id}`}
               data-falta="cambio"
-              className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+              className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
             >
               sem cotação
             </Link>
@@ -702,7 +702,7 @@ function Linha({
           <>
             {formatarBRL(item.valorEmReais)}
             {item.moeda !== "BRL" && (
-              <span className="block text-[11px] font-normal text-[var(--ink-3)]">
+              <span className="block text-micro font-normal text-[var(--ink-3)]">
                 a {formatarCambio(item.cambio)}
               </span>
             )}
@@ -711,7 +711,7 @@ function Linha({
           <Link
             href={`/custos/${item.id}`}
             data-falta="cambio"
-            className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+            className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
           >
             sem cotação
           </Link>
@@ -721,7 +721,7 @@ function Linha({
       </td>
 
       {colunas.aquisicao && (
-        <td data-celula="aquisicao" className="px-4 py-3 text-[13px] tabular-nums">
+        <td data-celula="aquisicao" className="px-4 py-3 text-dado tabular-nums">
           {item.dataInicio ? (
             formatarData(item.dataInicio)
           ) : (
@@ -730,7 +730,7 @@ function Linha({
             <Link
               href={`/custos/${item.id}`}
               data-falta="aquisicao"
-              className="text-[12px] font-medium text-[var(--accent)] no-underline hover:underline"
+              className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
             >
               sem data
             </Link>
@@ -849,7 +849,7 @@ function Setores({ setores }: { setores: Array<{ nome: string; percentual: strin
           />
         ))}
       </span>
-      <span className="mt-1 block text-[11px] text-[var(--ink-3)]">
+      <span className="mt-1 block text-micro text-[var(--ink-3)]">
         {setores.length} setores · {setores[0].nome} {Number(setores[0].percentual).toFixed(0)}%
       </span>
     </span>
@@ -914,7 +914,7 @@ function CelulaData({
             setEditando(false);
           }
         }}
-        className="w-[150px] rounded-lg border border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-[13px] tabular-nums outline-none"
+        className="w-[150px] rounded-lg border border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-dado tabular-nums outline-none"
       />
     );
   }
@@ -1039,7 +1039,7 @@ function BotaoDeCelula({
       type="button"
       onClick={aoAtivar}
       {...atributos}
-      className={`rounded-md border border-dashed px-1.5 py-1 text-left text-[13px] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] ${
+      className={`rounded-md border border-dashed px-1.5 py-1 text-left text-dado transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] ${
         pendente
           ? "border-[var(--ink-3)]/50 text-[var(--ink-3)]"
           : "border-transparent text-[var(--ink-2)]"
@@ -1062,7 +1062,7 @@ function Selo({ status, title }: { status: StatusItem; title?: string }) {
     // impresso em preto e branco, e daltonismo existe.
     <span
       title={title}
-      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${estilo}`}
+      className={`rounded-full px-2 py-0.5 text-micro font-semibold tracking-wide uppercase ${estilo}`}
     >
       {ROTULOS_STATUS[status]}
     </span>
@@ -1110,7 +1110,10 @@ function Cabecalho({
         {/* Triângulo cheio para ordenação; a célula de situação usa um chevron
             de traço para abrir o menu. Se os dois fossem a mesma seta, a mesma
             forma significaria duas coisas na mesma tabela. */}
-        <span aria-hidden className={`text-[8px] ${ativo ? "" : "opacity-25"}`}>
+        {/* Em `em`, e não num tamanho escolhido: o triângulo é acessório do
+            rótulo e precisa ficar menor que ele qualquer que seja a escala.
+            Uma proporção sobrevive a uma mudança de escala; um `8px` não. */}
+        <span aria-hidden className={`text-[0.7em] ${ativo ? "" : "opacity-25"}`}>
           {ativo ? (filtros.dir === "asc" ? "\u25b2" : "\u25bc") : "\u25bc"}
         </span>
       </Link>

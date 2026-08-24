@@ -11,10 +11,7 @@ import {
 } from "./tipos";
 
 /** Realizado quando existe; previsto como fallback. */
-function valorDoLancamento(l: {
-  valorRealizado: unknown;
-  valorPrevisto: unknown;
-}): Decimal {
+function valorDoLancamento(l: { valorRealizado: unknown; valorPrevisto: unknown }): Decimal {
   const realizado = l.valorRealizado as { toString(): string } | null;
   const previsto = l.valorPrevisto as { toString(): string } | null;
   if (realizado !== null && realizado !== undefined) return new Decimal(realizado.toString());
@@ -22,14 +19,14 @@ function valorDoLancamento(l: {
   return new Decimal(0);
 }
 
-function participacoes(itens: Array<{ chave: string; rotulo: string; valor: Decimal }>): ValorPorChave[] {
+function participacoes(
+  itens: Array<{ chave: string; rotulo: string; valor: Decimal }>,
+): ValorPorChave[] {
   const total = somar(itens.map((i) => i.valor));
   return itens
     .map((i) => ({
       ...i,
-      participacao: total.isZero()
-        ? new Decimal(0)
-        : arredondar(i.valor.div(total).mul(100)),
+      participacao: total.isZero() ? new Decimal(0) : arredondar(i.valor.div(total).mul(100)),
     }))
     .sort((a, b) => b.valor.comparedTo(a.valor));
 }

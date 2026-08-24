@@ -84,7 +84,7 @@ export function Colador({
       <input type="hidden" name="mapa" value={JSON.stringify(leitura?.mapa ?? {})} />
 
       <label className="block">
-        <span className="mb-1.5 block text-[13px] font-medium text-[var(--ink-2)]">
+        <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
           Cole aqui as linhas da planilha
         </span>
         <textarea
@@ -98,7 +98,7 @@ export function Colador({
           rows={colado ? 5 : 8}
           spellCheck={false}
           placeholder={`Selecione as células no Excel, copie e cole aqui. Exemplo:\n\n${EXEMPLO}`}
-          className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2.5 font-mono text-[12.5px] leading-relaxed outline-none focus:border-[var(--accent)]"
+          className="w-full rounded-lg border border-[var(--rule)] bg-[var(--surface)] px-3 py-2.5 font-mono text-meta leading-relaxed outline-none focus:border-[var(--accent)]"
         />
         <span className="mt-1 block text-xs text-[var(--ink-3)]">
           Pode colar com ou sem a linha de cabeçalho. Até {MAXIMO_LINHAS} linhas por vez.
@@ -109,7 +109,7 @@ export function Colador({
         <button
           type="button"
           onClick={() => setColado(EXEMPLO)}
-          className="text-[13px] text-[var(--accent)] underline underline-offset-4"
+          className="text-dado text-[var(--accent)] underline underline-offset-4"
         >
           Ver com um exemplo
         </button>
@@ -118,10 +118,10 @@ export function Colador({
       {leitura && leitura.linhas.length > 0 && (
         <>
           <section>
-            <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+            <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
               O que cada coluna é
             </h2>
-            <p className="mt-1 text-[12px] text-[var(--ink-3)]">
+            <p className="mt-1 text-meta text-[var(--ink-3)]">
               {leitura.cabecalho
                 ? "Detectado pelo cabeçalho da planilha. Corrija se alguma coluna caiu no lugar errado."
                 : "Sem cabeçalho na colagem — escolha a que cada coluna corresponde."}{" "}
@@ -152,10 +152,10 @@ export function Colador({
 
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+              <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
                 Prévia
               </h2>
-              <p className="text-[12.5px] text-[var(--ink-2)]">
+              <p className="text-meta text-[var(--ink-2)]">
                 <strong className="text-emerald-700 dark:text-emerald-400">{prontas.length}</strong>{" "}
                 {prontas.length === 1 ? "pronta" : "prontas"}
                 {comProblema.length > 0 && (
@@ -169,10 +169,10 @@ export function Colador({
               </p>
             </div>
 
-            <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--rule)] bg-[var(--surface)]">
-              <table className="w-full min-w-[720px] text-[13px]">
+            <div className="mt-3 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
+              <table className="w-full min-w-[720px] text-dado">
                 <thead>
-                  <tr className="border-b border-[var(--rule)] text-[11px] tracking-[0.1em] text-[var(--ink-3)] uppercase">
+                  <tr className="border-b border-[var(--rule)] text-micro tracking-[0.1em] text-[var(--ink-3)] uppercase">
                     <th className="w-10 px-3 py-2.5 text-right font-semibold">#</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Custo</th>
                     <th className="px-3 py-2.5 text-right font-semibold">Valor</th>
@@ -190,23 +190,23 @@ export function Colador({
                           ruim ? "bg-[var(--accent)]/[0.05]" : ""
                         }`}
                       >
-                        <td className="px-3 py-2 text-right text-[11px] tabular-nums text-[var(--ink-3)]">
+                        <td className="px-3 py-2 text-right text-micro tabular-nums text-[var(--ink-3)]">
                           {linha.numero}
                         </td>
                         <td className="px-3 py-2">
                           <span className="font-medium">{linha.descricao || "—"}</span>
-                          <span className="block text-[11px] text-[var(--ink-3)]">
+                          <span className="block text-micro text-[var(--ink-3)]">
                             {linha.fornecedor ?? "sem fornecedor"}
                             {linha.categoria ? ` · ${linha.categoria}` : ""}
                           </span>
                           {ruim && (
-                            <span className="mt-1 flex items-start gap-1.5 text-[11.5px] text-[var(--accent)]">
+                            <span className="mt-1 flex items-start gap-1.5 text-micro text-[var(--accent)]">
                               <IconeAlerta className="mt-px size-3.5 shrink-0" />
                               {linha.problemas.join(" · ")}
                             </span>
                           )}
                           {!ruim && linha.avisos.length > 0 && (
-                            <span className="mt-0.5 block text-[11px] text-[var(--ink-3)]">
+                            <span className="mt-0.5 block text-micro text-[var(--ink-3)]">
                               {linha.avisos.join(" · ")}
                             </span>
                           )}
@@ -230,7 +230,7 @@ export function Colador({
             </div>
 
             {comProblema.length > 0 && (
-              <p className="mt-2.5 text-[12px] text-[var(--ink-3)]">
+              <p className="mt-2.5 text-meta text-[var(--ink-3)]">
                 As linhas com problema não são importadas e não impedem as outras. Corrija na
                 planilha e cole de novo, ou importe estas {prontas.length} agora e trate o resto
                 depois.
@@ -238,7 +238,7 @@ export function Colador({
             )}
           </section>
 
-          <section className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
+          <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
             {podeEscolherSetor ? (
               <Selecao
                 rotulo="Setor responsável por estes custos"
@@ -249,7 +249,7 @@ export function Colador({
                 dica="Todos entram 100% neste setor. O rateio entre áreas é feito depois, custo a custo."
               />
             ) : (
-              <p className="text-[13px] text-[var(--ink-3)]">
+              <p className="text-dado text-[var(--ink-3)]">
                 Setor responsável: <strong className="text-[var(--ink-2)]">{setorFixo}</strong> —
                 todos os custos entram na sua área.
               </p>
@@ -259,14 +259,14 @@ export function Colador({
               <button
                 type="submit"
                 disabled={enviando || prontas.length === 0}
-                className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-[14px] font-semibold text-white disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               >
                 <IconeCheck className="size-4" />
                 {enviando
                   ? "Importando…"
                   : `Importar ${prontas.length} ${prontas.length === 1 ? "custo" : "custos"}`}
               </button>
-              <p className="text-[12px] text-[var(--ink-3)]">
+              <p className="text-meta text-[var(--ink-3)]">
                 Entram como <strong>em análise</strong> — nada soma no total da FMP antes de você
                 conferir.
               </p>

@@ -133,16 +133,16 @@ export function PainelLateral({
       >
         <header className="flex items-start gap-3 border-b border-[var(--rule)] px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h2 id={idTitulo} className="font-serif text-[19px] leading-tight font-bold">
+            <h2 id={idTitulo} className="font-serif text-lg leading-tight font-bold">
               {titulo}
             </h2>
-            {subtitulo && <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{subtitulo}</div>}
+            {subtitulo && <div className="mt-1 text-meta text-[var(--ink-3)]">{subtitulo}</div>}
           </div>
 
           {(aoAnterior || aoProximo) && (
             <div className="flex shrink-0 items-center gap-0.5">
               {posicao && (
-                <span className="mr-1 text-[11px] tabular-nums text-[var(--ink-3)]">{posicao}</span>
+                <span className="mr-1 text-micro tabular-nums text-[var(--ink-3)]">{posicao}</span>
               )}
               <button
                 type="button"

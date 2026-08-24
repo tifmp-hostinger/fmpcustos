@@ -16,6 +16,7 @@ import { useAviso } from "@/components/avisos";
 import { PainelLateral } from "@/components/painel";
 import { Selecao } from "@/components/campos";
 import { IconeUsuarios } from "@/components/icones";
+import { classesDeBotao } from "@/components/botao";
 
 type Pessoa = { id: string; nome: string };
 
@@ -139,24 +140,16 @@ function PainelDeResponsaveis({
             vazio="Sem responsável definido"
             dica="Quem mantém os custos do setor em dia. Pode ser a mesma pessoa."
           />
-          <p className="text-[12.5px] leading-relaxed text-[var(--ink-3)]">
+          <p className="text-meta leading-relaxed text-[var(--ink-3)]">
             São papéis diferentes de propósito. O gestor decide; o responsável pelo dado é quem faz
             o número existir — e um setor sem ele é um setor cujo custo envelhece sem que ninguém
             sinta falta.
           </p>
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={enviando}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
-            >
+            <button type="submit" disabled={enviando} className={classesDeBotao("primario")}>
               {enviando ? "Salvando…" : "Salvar"}
             </button>
-            <button
-              type="button"
-              onClick={aoFechar}
-              className="rounded-lg border border-[var(--rule)] px-4 py-2 text-[14px] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-            >
+            <button type="button" onClick={aoFechar} className={classesDeBotao("contorno")}>
               Cancelar
             </button>
           </div>

@@ -91,7 +91,7 @@ export async function Historico({ itemId }: { itemId: string }) {
 
   return (
     <section id="historico" className="mt-10 scroll-mt-20">
-      <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
         Histórico
       </h2>
 
@@ -112,7 +112,7 @@ export async function Historico({ itemId }: { itemId: string }) {
               key={r.id}
               className="border-l-2 border-[var(--rule)] py-2.5 pl-4 last:border-l-transparent"
             >
-              <p className="text-[13px]">
+              <p className="text-dado">
                 <strong className="font-medium">{autor}</strong>{" "}
                 <span className="text-[var(--ink-2)]">
                   {r.acao === "CRIACAO"
@@ -123,15 +123,13 @@ export async function Historico({ itemId }: { itemId: string }) {
                         ? "salvou sem alterar nenhum campo"
                         : "alterou"}
                 </span>
-                <span className="ml-2 text-[11.5px] tabular-nums text-[var(--ink-3)]">
-                  {quando}
-                </span>
+                <span className="ml-2 text-micro tabular-nums text-[var(--ink-3)]">{quando}</span>
               </p>
 
               {lista.length > 0 && (
                 <ul className="mt-1 space-y-0.5">
                   {lista.map((m) => (
-                    <li key={m.rotulo} className="text-[12.5px] text-[var(--ink-2)]">
+                    <li key={m.rotulo} className="text-meta text-[var(--ink-2)]">
                       <span className="text-[var(--ink-3)]">{m.rotulo}:</span>{" "}
                       <span className="line-through opacity-60">{m.de}</span>{" "}
                       <span aria-hidden>→</span> <strong className="font-medium">{m.para}</strong>
@@ -145,7 +143,7 @@ export async function Historico({ itemId }: { itemId: string }) {
       </ol>
 
       {registros.length === 40 && (
-        <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">
+        <p className="mt-2 text-micro text-[var(--ink-3)]">
           Exibindo as 40 alterações mais recentes.
         </p>
       )}

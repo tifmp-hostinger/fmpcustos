@@ -51,8 +51,8 @@ export function BotaoDeRotina({
       disabled={ocupado}
       className={
         primario
-          ? "rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
-          : "rounded-lg border border-[var(--rule)] px-3.5 py-2 text-[13.5px] font-medium text-[var(--ink-2)] hover:border-[var(--ink-3)] disabled:opacity-50"
+          ? "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          : "rounded-lg border border-[var(--rule)] px-3.5 py-2 text-dado font-medium text-[var(--ink-2)] hover:border-[var(--ink-3)] disabled:opacity-50"
       }
     >
       {ocupado ? ocupadoRotulo : rotulo}

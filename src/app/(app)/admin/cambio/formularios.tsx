@@ -5,6 +5,7 @@ import { converterPendentes, registrarCotacao } from "./acoes";
 import { useAviso } from "@/components/avisos";
 import { Campo, Selecao } from "@/components/campos";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 const MOEDAS_ESTRANGEIRAS = [
   { valor: "USD", rotulo: "Dólar (US$)" },
@@ -39,8 +40,11 @@ export function NovaCotacao({ hoje }: { hoje: string }) {
   const v = resultado && !resultado.ok ? (resultado.valores ?? {}) : {};
 
   return (
-    <form action={acao} className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
-      <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+    <form
+      action={acao}
+      className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
+    >
+      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
         Registrar cotação
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -78,11 +82,11 @@ export function NovaCotacao({ hoje }: { hoje: string }) {
       <button
         type="submit"
         disabled={enviando}
-        className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+        className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {enviando ? "Registrando…" : "Registrar"}
       </button>
-      <p className="mt-3 text-[12.5px] text-[var(--ink-3)]">
+      <p className="mt-3 text-meta text-[var(--ink-3)]">
         Isto não altera nenhum custo já cadastrado. Cada custo guarda a taxa com que foi convertido,
         para que o total de um mês fechado não mude quando a moeda mexer.
       </p>
@@ -108,27 +112,20 @@ export function ConverterPendentes({
   taxa: string;
 }) {
   const avisar = useAviso();
-  const [, acao, enviando] = useActionState<Resultado | null, FormData>(
-    async (anterior, dados) => {
-      const r = await converterPendentes(anterior, dados);
-      avisar(
-        r.ok
-          ? { mensagem: r.mensagem ?? "Pronto.", detalhe: r.detalhe, duracao: 12_000 }
-          : { mensagem: r.erro, tom: "erro" },
-      );
-      return r;
-    },
-    null,
-  );
+  const [, acao, enviando] = useActionState<Resultado | null, FormData>(async (anterior, dados) => {
+    const r = await converterPendentes(anterior, dados);
+    avisar(
+      r.ok
+        ? { mensagem: r.mensagem ?? "Pronto.", detalhe: r.detalhe, duracao: 12_000 }
+        : { mensagem: r.erro, tom: "erro" },
+    );
+    return r;
+  }, null);
 
   return (
     <form action={acao} className="mt-3">
       <input type="hidden" name="moeda" value={moeda} />
-      <button
-        type="submit"
-        disabled={enviando}
-        className="rounded-lg border border-[var(--accent)] px-3 py-1.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8 disabled:opacity-50"
-      >
+      <button type="submit" disabled={enviando} className={classesDeBotao("perigo", "sm")}>
         {enviando
           ? "Convertendo…"
           : `Converter ${quantidade} ${quantidade === 1 ? "custo" : "custos"} a ${taxa}`}

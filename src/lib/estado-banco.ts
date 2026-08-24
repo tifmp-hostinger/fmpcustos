@@ -30,8 +30,7 @@ export async function verificarBanco(): Promise<EstadoBanco> {
     return {
       ok: false,
       motivo: "DATABASE_URL não está definida",
-      detalhe:
-        "O serviço subiu sem a variável de conexão, então nenhuma consulta é possível.",
+      detalhe: "O serviço subiu sem a variável de conexão, então nenhuma consulta é possível.",
       causas: [
         "Defina DATABASE_URL nas variáveis de ambiente do serviço, no painel.",
         "Use o hostname interno do serviço Postgres do projeto, nunca localhost nem IP público.",

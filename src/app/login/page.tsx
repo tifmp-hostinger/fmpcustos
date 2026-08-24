@@ -10,10 +10,10 @@ export default function Login() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-3)]">
+      <p className="text-micro font-semibold uppercase tracking-[0.16em] text-[var(--ink-3)]">
         FMP · Inteligência de custos
       </p>
-      <h1 className="mt-3 font-serif text-3xl font-bold tracking-tight">
+      <h1 className="mt-3 titulo-pagina">
         Entrar no <em className="text-[var(--accent)]">sistema</em>
       </h1>
 
@@ -32,8 +32,8 @@ export default function Login() {
       </form>
 
       <p className="mt-8 text-xs text-[var(--ink-3)]">
-        Sem acesso? Peça ao administrador do sistema para criar o seu usuário e
-        vincular ao seu setor.
+        Sem acesso? Peça ao administrador do sistema para criar o seu usuário e vincular ao seu
+        setor.
       </p>
     </main>
   );

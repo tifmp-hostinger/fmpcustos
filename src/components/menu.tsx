@@ -211,7 +211,7 @@ export function MenuDeLinha({
                 ? window.innerHeight - posicao.y + 6
                 : posicao.y + 6,
             }}
-            className="z-50 w-[232px] rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-1.5 shadow-xl shadow-black/10"
+            className="z-50 w-[232px] rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-1.5 shadow-xl shadow-black/10"
           >
             {itens.map((item, n) => (
               <div key={item.rotulo}>
@@ -244,7 +244,7 @@ function ItemDoMenu({
   aoEscolher: () => void;
   aoFocar: () => void;
 }) {
-  const classe = `flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px] no-underline transition-colors ${
+  const classe = `flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-dado no-underline transition-colors ${
     item.desabilitado
       ? "cursor-not-allowed text-[var(--ink-3)]"
       : item.perigoso
@@ -264,7 +264,7 @@ function ItemDoMenu({
         {/* A recusa é escrita no próprio item. Item desabilitado e mudo faz a
             pessoa clicar três vezes achando que a tela travou. */}
         {item.desabilitado && item.motivo && (
-          <span className="mt-0.5 block text-[11px] leading-snug">{item.motivo}</span>
+          <span className="mt-0.5 block text-micro leading-snug">{item.motivo}</span>
         )}
       </span>
     </>

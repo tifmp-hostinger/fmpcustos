@@ -139,7 +139,7 @@ function Faixa({
         onMouseLeave={() => setPausado(false)}
         onFocusCapture={() => setPausado(true)}
         onBlurCapture={() => setPausado(false)}
-        className={`pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border px-4 py-3 shadow-lg shadow-black/5 backdrop-blur ${cor} motion-safe:animate-[surgir_180ms_ease-out]`}
+        className={`pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-fmp-md border px-4 py-3 shadow-lg shadow-black/5 backdrop-blur ${cor} motion-safe:animate-[surgir_180ms_ease-out]`}
       >
         <span aria-hidden className="mt-0.5 shrink-0">
           {tom === "erro" ? (
@@ -152,9 +152,9 @@ function Faixa({
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] leading-snug font-medium">{aviso.mensagem}</p>
+          <p className="text-sm leading-snug font-medium">{aviso.mensagem}</p>
           {aviso.detalhe && (
-            <p className="mt-0.5 text-[12px] leading-snug text-[var(--ink-3)]">{aviso.detalhe}</p>
+            <p className="mt-0.5 text-meta leading-snug text-[var(--ink-3)]">{aviso.detalhe}</p>
           )}
         </div>
 
@@ -163,7 +163,7 @@ function Faixa({
             type="button"
             onClick={desfazer}
             disabled={desfazendo}
-            className="shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-semibold text-[var(--accent)] underline-offset-2 hover:underline disabled:opacity-50"
+            className="shrink-0 rounded-lg px-2.5 py-1 text-dado font-semibold text-[var(--accent)] underline-offset-2 hover:underline disabled:opacity-50"
           >
             {desfazendo ? "Desfazendo…" : "Desfazer"}
           </button>

@@ -15,10 +15,9 @@ export async function entrar(_anterior: Resultado | null, dados: FormData): Prom
   if (!email || !senha) return falha("Informe e-mail e senha.", { email });
 
   if (!tentativaPermitida(`login:${email}`)) {
-    return falha(
-      "Muitas tentativas para este e-mail. Aguarde 15 minutos e tente de novo.",
-      { email },
-    );
+    return falha("Muitas tentativas para este e-mail. Aguarde 15 minutos e tente de novo.", {
+      email,
+    });
   }
 
   const usuario = await prisma.usuario.findFirst({

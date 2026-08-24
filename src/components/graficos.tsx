@@ -39,11 +39,11 @@ export function BarrasRanqueadas({
   const largura = (v: Decimal) => (maior.isZero() ? 0 : Number(v.div(maior).mul(100).toFixed(2)));
 
   return (
-    <section className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
-      <h3 className="text-[13px] font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+    <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
+      <h3 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
         {titulo}
       </h3>
-      {descricao && <p className="mt-1 text-[12px] text-[var(--ink-3)]">{descricao}</p>}
+      {descricao && <p className="mt-1 text-meta text-[var(--ink-3)]">{descricao}</p>}
 
       {visiveis.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--ink-3)]">{vazio}</p>
@@ -52,12 +52,12 @@ export function BarrasRanqueadas({
           {visiveis.map((f) => {
             const conteudo = (
               <>
-                <span className="truncate text-[13px] text-[var(--ink-2)]" title={f.rotulo}>
+                <span className="truncate text-dado text-[var(--ink-2)]" title={f.rotulo}>
                   {f.rotulo}
                 </span>
-                <span className="text-right text-[13px] tabular-nums">
+                <span className="text-right text-dado tabular-nums">
                   {formatarBRL(f.valor)}
-                  <span className="ml-2 text-[11px] text-[var(--ink-3)]">
+                  <span className="ml-2 text-micro text-[var(--ink-3)]">
                     {f.participacao.toFixed(0)}%
                   </span>
                 </span>
@@ -91,7 +91,7 @@ export function BarrasRanqueadas({
       )}
 
       {resto.length > 0 && (
-        <p className="mt-3 border-t border-[var(--rule)] pt-2.5 text-[12px] text-[var(--ink-3)]">
+        <p className="mt-3 border-t border-[var(--rule)] pt-2.5 text-meta text-[var(--ink-3)]">
           Mais {resto.length} {resto.length === 1 ? "item somando" : "itens somando"}{" "}
           {formatarBRL(resto.reduce((s, f) => s.plus(f.valor), new Decimal(0)))} por mês.
         </p>
@@ -116,15 +116,12 @@ export function Indicador({
 }) {
   const corpo = (
     <>
-      <p
-        className={`text-2xl font-semibold tracking-tight tabular-nums ${
-          alerta ? "text-[var(--accent)]" : ""
-        }`}
-      >
-        {valor}
-      </p>
+      {/* O número em serifa itálica — o gesto assinatura da FMP. A plataforma
+          escrevia seus números na mesma fonte de interface dos rótulos, então
+          R$ 138 mil pesava o mesmo que a palavra ao lado dele. */}
+      <p className={`numero text-2xl ${alerta ? "text-[var(--accent)]" : ""}`}>{valor}</p>
       <p className="mt-1.5 text-xs leading-snug text-[var(--ink-3)]">{rotulo}</p>
-      {nota && <p className="mt-1 text-[11px] leading-snug text-[var(--ink-3)]">{nota}</p>}
+      {nota && <p className="mt-1 text-micro leading-snug text-[var(--ink-3)]">{nota}</p>}
     </>
   );
 

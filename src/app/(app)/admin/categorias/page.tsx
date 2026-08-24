@@ -109,11 +109,11 @@ export default async function Categorias() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <p className="text-[12px] font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
+      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
         Administração
       </p>
-      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">Categorias</h1>
-      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+      <h1 className="mt-2 titulo-pagina">Categorias</h1>
+      <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         Como o custo da FMP é agrupado por tipo. {linhas.filter((l) => l.ativo).length} ativas,
         somando <strong className="tabular-nums">{formatarBRL(total)}/mês</strong>.
       </p>

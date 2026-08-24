@@ -71,7 +71,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
+      <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link href="/" className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]">
           Início
         </Link>
@@ -81,8 +81,8 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
 
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight">{setor.nome}</h1>
-          <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+          <h1 className="titulo-pagina">{setor.nome}</h1>
+          <p className="mt-1.5 text-sm text-[var(--ink-2)]">
             Custo recorrente, já com o rateio aplicado
             {participacao && (
               <>
@@ -95,13 +95,13 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
         </div>
         <Link
           href={daLista({ situacao: "ativos" })}
-          className="flex items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-medium no-underline hover:border-[var(--ink-3)]"
+          className="flex items-center gap-1.5 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium no-underline hover:border-[var(--ink-3)]"
         >
           Ver todos os custos <IconeSeta className="size-4" />
         </Link>
       </div>
 
-      <section className="mt-7 grid gap-px overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-7 grid gap-px overflow-hidden rounded-fmp-md border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4">
         <Indicador
           rotulo="Custo por mês"
           valor={formatarBRL(mensal)}
@@ -132,8 +132,8 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
       </section>
 
       {totalPendencias > 0 && (
-        <section className="mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+        <section className="mt-4 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
+          <h2 className="flex items-center gap-2 text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
             <IconeAlerta />O que falta para o número estar completo
           </h2>
           <ul className="mt-3 flex flex-wrap gap-2">
@@ -148,7 +148,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                 <li key={x.falta}>
                   <Link
                     href={daLista({ natureza: "tudo", situacao: "pendencia", falta: x.falta })}
-                    className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--surface)] px-3 py-1.5 text-[13px] no-underline hover:bg-[var(--accent)]/10"
+                    className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--surface)] px-3 py-1.5 text-dado no-underline hover:bg-[var(--accent)]/10"
                   >
                     <strong className="tabular-nums">{x.n}</strong>
                     <span className="text-[var(--ink-2)]">{x.rotulo}</span>
@@ -161,11 +161,11 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
       )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
-          <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+        <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
+          <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
             Maiores custos
           </h2>
-          <p className="mt-1 text-[12px] text-[var(--ink-3)]">
+          <p className="mt-1 text-meta text-[var(--ink-3)]">
             Já pela fatia que cabe a {setor.nome}, não pelo valor cheio do contrato.
           </p>
           {maiores.length === 0 ? (
@@ -179,12 +179,12 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                     className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent)]"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[14px] font-medium">{m.descricao}</span>
-                      <span className="block text-[11px] text-[var(--ink-3)]">
+                      <span className="block truncate text-sm font-medium">{m.descricao}</span>
+                      <span className="block text-micro text-[var(--ink-3)]">
                         {m.fornecedor?.nome ?? "sem fornecedor"}
                       </span>
                     </span>
-                    <span className="shrink-0 text-[14px] tabular-nums">
+                    <span className="shrink-0 text-sm tabular-nums">
                       {m.valorMensalDoEscopo.isZero()
                         ? "—"
                         : `${formatarBRL(m.valorMensalDoEscopo)}/mês`}
@@ -196,12 +196,12 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
           )}
         </section>
 
-        <section className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+        <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
+          <h2 className="flex items-center gap-2 text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
             <IconeCalendario className="size-4" />
             Renovações nos próximos 90 dias
           </h2>
-          <p className="mt-1 text-[12px] text-[var(--ink-3)]">
+          <p className="mt-1 text-meta text-[var(--ink-3)]">
             Renovar por inércia é a forma mais cara de decidir.
           </p>
           {renovacoes.length === 0 ? (
@@ -228,17 +228,17 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                 <li key={r.id}>
                   <Link
                     href={`/custos/${r.id}`}
-                    className="flex items-baseline justify-between gap-3 text-[13px] no-underline hover:text-[var(--accent)]"
+                    className="flex items-baseline justify-between gap-3 text-dado no-underline hover:text-[var(--accent)]"
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{r.descricao}</span>
-                      <span className="block text-[11px] text-[var(--ink-3)]">
+                      <span className="block text-micro text-[var(--ink-3)]">
                         {r.fornecedor?.nome ?? "sem fornecedor"}
                       </span>
                     </span>
                     <span className="shrink-0 text-right tabular-nums">
                       {r.dataFim?.toLocaleDateString("pt-BR", { timeZone: "UTC" })}
-                      <span className="block text-[11px] text-[var(--ink-3)]">
+                      <span className="block text-micro text-[var(--ink-3)]">
                         {r.valorMensalNormalizado
                           ? `${formatarBRL(r.valorMensalNormalizado.toString())}/mês`
                           : "sem valor"}
@@ -276,7 +276,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
       {/* Reconciliação declarada: os dois números desta página medem coisas
           diferentes e vão divergir do total da lista. Duas telas com duas
           verdades e nenhuma explicação destroem a confiança nas duas. */}
-      <p className="mt-5 text-[12px] leading-relaxed text-[var(--ink-3)]">
+      <p className="mt-5 text-meta leading-relaxed text-[var(--ink-3)]">
         Os totais desta página contam <strong>só custos recorrentes</strong>, e cada custo entra
         pela fração rateada a {setor.nome} — um item dividido meio a meio com outra área entra pela
         metade. A lista de custos soma o valor cheio de cada item, incluindo os pontuais, então os

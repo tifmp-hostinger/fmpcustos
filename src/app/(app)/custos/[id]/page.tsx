@@ -76,7 +76,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <nav aria-label="Você está em" className="text-[12px] text-[var(--ink-3)]">
+      <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
           className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
@@ -87,8 +87,8 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
         <span className="text-[var(--ink-2)]">Editar</span>
       </nav>
 
-      <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">{item.descricao}</h1>
-      <p className="mt-1.5 text-[14px] text-[var(--ink-2)]">
+      <h1 className="mt-2 titulo-pagina">{item.descricao}</h1>
+      <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         {valorMensal ? (
           <>
             <strong className="tabular-nums">{formatarBRL(valorMensal)}/mês</strong>
@@ -97,7 +97,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
             {item.moeda !== "BRL" && item.cambio && (
               <>
                 {" "}
-                <span className="text-[13px] text-[var(--ink-3)]">
+                <span className="text-dado text-[var(--ink-3)]">
                   (convertido de {item.moeda} a {formatarCambio(item.cambio)}
                   {item.cambioEm ? ` de ${item.cambioEm.toLocaleDateString("pt-BR")}` : ""})
                 </span>
@@ -190,15 +190,15 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
           />
         </section>
       ) : (
-        <section className="mt-10 rounded-xl border border-[var(--rule)] bg-[var(--surface)] p-5">
+        <section className="mt-10 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[13px] font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+            <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
               Rateio entre setores
             </h2>
             {podeRatear && (
               <Link
                 href={`/custos/${item.id}/rateio`}
-                className="text-[13px] font-medium text-[var(--accent)] no-underline hover:underline"
+                className="text-dado font-medium text-[var(--accent)] no-underline hover:underline"
               >
                 {item.rateios.length > 1 ? "Alterar rateio" : "Dividir entre setores"}
               </Link>
@@ -207,7 +207,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
 
           <ul className="mt-3 space-y-1.5">
             {item.rateios.map((r) => (
-              <li key={r.setorId} className="flex items-baseline justify-between gap-3 text-[14px]">
+              <li key={r.setorId} className="flex items-baseline justify-between gap-3 text-sm">
                 <span>{r.setor.nome}</span>
                 <span className="tabular-nums text-[var(--ink-2)]">
                   {Number(r.percentual).toFixed(2).replace(".", ",")}%
@@ -221,14 +221,12 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
               </li>
             ))}
             {item.rateios.length === 0 && (
-              <li className="text-[14px] text-[var(--ink-3)]">
-                Sem setor responsável — não rateado.
-              </li>
+              <li className="text-sm text-[var(--ink-3)]">Sem setor responsável — não rateado.</li>
             )}
           </ul>
 
           {!podeRatear && !global && (
-            <p className="mt-3 text-[12px] text-[var(--ink-3)]">
+            <p className="mt-3 text-meta text-[var(--ink-3)]">
               {item.rateios.length > 1
                 ? "Custo compartilhado: alterações de rateio são feitas pela Controladoria ou pelo administrador."
                 : "Só o gestor da área responsável (ou a Controladoria) pode propor um rateio."}

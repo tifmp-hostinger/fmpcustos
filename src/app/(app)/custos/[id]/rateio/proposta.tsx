@@ -7,6 +7,7 @@ import { useAviso } from "@/components/avisos";
 import { formatarBRL } from "@/lib/dinheiro";
 import { IconeAlerta, IconeCheck, IconeFechar } from "@/components/icones";
 import type { Resultado } from "@/lib/acoes";
+import { classesDeBotao } from "@/components/botao";
 
 /**
  * A proposta de rateio enquanto ela está de pé.
@@ -87,17 +88,17 @@ export function PropostaEmAberto({
   const total = valorMensal ? new Decimal(valorMensal) : null;
 
   return (
-    <section className="rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.04] p-5">
+    <section className="rounded-fmp-md border border-[var(--accent)]/30 bg-[var(--accent)]/[0.04] p-5">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[19px] font-bold">Proposta aguardando aceite</h2>
-        <p className="text-[12px] text-[var(--ink-3)]">
+        <h2 className="font-serif text-lg font-bold">Proposta aguardando aceite</h2>
+        <p className="text-meta text-[var(--ink-3)]">
           {proposta.souOAutor ? "Você propôs" : `${proposta.autor} propôs`} em{" "}
           {new Date(proposta.criadoEm).toLocaleDateString("pt-BR")}
         </p>
       </header>
 
       {proposta.justificativa && (
-        <p className="mt-2.5 border-l-2 border-[var(--rule)] pl-3 text-[13.5px] leading-relaxed text-[var(--ink-2)] italic">
+        <p className="mt-2.5 border-l-2 border-[var(--rule)] pl-3 text-dado leading-relaxed text-[var(--ink-2)] italic">
           “{proposta.justificativa}”
         </p>
       )}
@@ -110,7 +111,7 @@ export function PropostaEmAberto({
           return (
             <li
               key={p.id}
-              className="rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-3.5 py-3"
+              className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-3.5 py-3"
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="font-medium">{p.setorNome}</span>
@@ -119,7 +120,7 @@ export function PropostaEmAberto({
                 </span>
                 {/* O percentual não se discute numa reunião; o real, sim. */}
                 {emReais && (
-                  <span className="tabular-nums text-[13px] text-[var(--ink-3)]">
+                  <span className="tabular-nums text-dado text-[var(--ink-3)]">
                     {formatarBRL(emReais)}/mês
                   </span>
                 )}
@@ -129,7 +130,7 @@ export function PropostaEmAberto({
               </div>
 
               {p.comentario && (
-                <p className="mt-2 text-[12.5px] leading-snug text-[var(--ink-2)]">
+                <p className="mt-2 text-meta leading-snug text-[var(--ink-2)]">
                   <span className="text-[var(--ink-3)]">Comentário:</span> {p.comentario}
                 </p>
               )}
@@ -141,7 +142,7 @@ export function PropostaEmAberto({
                       <input type="hidden" name="parcelaId" value={p.id} />
                       <input type="hidden" name="decisao" value="recusar" />
                       <label className="block">
-                        <span className="mb-1 block text-[12px] font-medium text-[var(--ink-2)]">
+                        <span className="mb-1 block text-meta font-medium text-[var(--ink-2)]">
                           Por que esta fatia não cabe ao {p.setorNome}?
                         </span>
                         <textarea
@@ -149,12 +150,12 @@ export function PropostaEmAberto({
                           rows={2}
                           autoFocus
                           placeholder="Ex.: quem usa a ferramenta é o Jurídico, não a nossa equipe."
-                          className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-[14px] outline-none focus:border-[var(--accent)]"
+                          className="w-full rounded-lg border border-[var(--rule)] bg-[var(--ground)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
                         />
                       </label>
                       {/* O botão diz a verdade sobre o efeito. Recusar não
                           devolve só esta fatia — derruba a proposta inteira. */}
-                      <p className="text-[12px] leading-snug text-[var(--ink-3)]">
+                      <p className="text-meta leading-snug text-[var(--ink-3)]">
                         Recusar devolve a proposta inteira para {proposta.autor} — as outras fatias
                         caem junto e o rateio atual continua valendo.
                       </p>
@@ -162,14 +163,14 @@ export function PropostaEmAberto({
                         <button
                           type="submit"
                           disabled={decidindo}
-                          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
+                          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-dado font-semibold text-white disabled:opacity-50"
                         >
                           {decidindo ? "Recusando…" : "Recusar proposta"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setRecusando(null)}
-                          className="text-[13px] text-[var(--ink-3)] hover:underline"
+                          className="text-dado text-[var(--ink-3)] hover:underline"
                         >
                           Voltar
                         </button>
@@ -183,7 +184,7 @@ export function PropostaEmAberto({
                         <button
                           type="submit"
                           disabled={decidindo}
-                          className="flex items-center gap-1.5 rounded-lg bg-[var(--ink)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ground)] disabled:opacity-50"
+                          className="flex items-center gap-1.5 rounded-lg bg-[var(--ink)] px-3 py-1.5 text-dado font-semibold text-[var(--ground)] disabled:opacity-50"
                         >
                           <IconeCheck className="size-3.5" />
                           Aceitar {emReais ? formatarBRL(emReais) : `${p.percentual}%`}
@@ -192,7 +193,7 @@ export function PropostaEmAberto({
                       <button
                         type="button"
                         onClick={() => setRecusando(p.id)}
-                        className="rounded-lg border border-[var(--rule)] px-3 py-1.5 text-[13px] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+                        className={classesDeBotao("contorno", "sm")}
                       >
                         Recusar
                       </button>
@@ -206,7 +207,7 @@ export function PropostaEmAberto({
       </ul>
 
       <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="text-[12px] text-[var(--ink-3)]">
+        <p className="text-meta text-[var(--ink-3)]">
           {pendentes.length === 0
             ? "Todas as fatias foram decididas."
             : `Faltam ${pendentes.length} ${pendentes.length === 1 ? "aceite" : "aceites"}: ${pendentes.map((p) => p.setorNome).join(", ")}.`}
@@ -217,7 +218,7 @@ export function PropostaEmAberto({
             <button
               type="submit"
               disabled={cancelando}
-              className="text-[12.5px] text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+              className="text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
             >
               {cancelando ? "Cancelando…" : "Cancelar proposta e refazer"}
             </button>
@@ -231,7 +232,7 @@ export function PropostaEmAberto({
 function Selo({ aceite }: { aceite: Parcela["aceite"] }) {
   if (aceite === "ACEITO") {
     return (
-      <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+      <span className="flex items-center gap-1 text-meta font-semibold text-emerald-700 dark:text-emerald-400">
         <IconeCheck className="size-3.5" />
         aceito
       </span>
@@ -239,14 +240,14 @@ function Selo({ aceite }: { aceite: Parcela["aceite"] }) {
   }
   if (aceite === "REJEITADO") {
     return (
-      <span className="flex items-center gap-1 text-[12px] font-semibold text-[var(--accent)]">
+      <span className="flex items-center gap-1 text-meta font-semibold text-[var(--accent)]">
         <IconeFechar className="size-3.5" />
         recusado
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-[12px] text-[var(--ink-3)]">
+    <span className="flex items-center gap-1 text-meta text-[var(--ink-3)]">
       <IconeAlerta className="size-3.5" />
       aguardando
     </span>
