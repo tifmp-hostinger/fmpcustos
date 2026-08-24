@@ -104,6 +104,48 @@ reais = valoresEmReais(balancear(fatias).fatias, "1234.57");
 soma = reais.reduce<Decimal>((s, v) => s.plus(v ?? 0), new Decimal(0));
 ok("R$ 1.234,57 em três também fecha", soma.toFixed(2) === "1234.57", `soma=${soma.toFixed(2)}`);
 
+console.log("\n— Os treze setores da FMP, o caso do custo institucional —");
+// Energia, limpeza, vigilância: o custo é da casa inteira. O atalho "Dividir
+// entre os 13 setores" tem de fechar em 100% exatos e em reais exatos, senão a
+// prestação de contas de treze áreas não bate por causa de um centavo.
+const treze = dividirIgualmente(13);
+ok("treze fatias somam exatamente 100%", treze.reduce((a, x) => a + x, 0) === TOTAL);
+ok(
+  "e a sobra do maior resto vai para UMA linha só",
+  treze.filter((u) => u !== treze[treze.length - 1]).length === 1,
+  treze.map(textoDeUnidades).join(" / "),
+);
+ok(
+  "exibidas como 7,69% em todas as treze",
+  treze.every((u) => textoDeUnidades(u) === "7,69"),
+  [...new Set(treze.map(textoDeUnidades))].join(" / "),
+);
+
+// Com a âncora na frente — que é como o editor monta — o maior resto cai nela.
+fatias = [
+  { setorId: "Infraestrutura", unidades: 0, ancora: true },
+  ...treze.slice(1).map((u, i) => ({ setorId: `S${i}`, unidades: u, ancora: false })),
+];
+b = balancear(fatias);
+ok(
+  "a âncora fica com a sobra, não com a fatia menor",
+  b.ancora === treze[0],
+  `âncora=${textoDeUnidades(b.ancora)}% · demais=${textoDeUnidades(treze[1])}%`,
+);
+
+reais = valoresEmReais(b.fatias, "22400.00");
+soma = reais.reduce<Decimal>((s, v) => s.plus(v ?? 0), new Decimal(0));
+ok(
+  "R$ 22.400,00 de energia em treze fecha ao centavo",
+  soma.toFixed(2) === "22400.00",
+  `soma=${soma.toFixed(2)} · cada=${reais[1]?.toFixed(2)} · âncora=${reais[0]?.toFixed(2)}`,
+);
+
+// Um valor que não divide redondo por treze é onde o centavo costuma sumir.
+reais = valoresEmReais(b.fatias, "1000.01");
+soma = reais.reduce<Decimal>((s, v) => s.plus(v ?? 0), new Decimal(0));
+ok("R$ 1.000,01 em treze também fecha", soma.toFixed(2) === "1000.01", `soma=${soma.toFixed(2)}`);
+
 console.log("\n— Leitura do que a pessoa digita —");
 ok('"60" → 60,00%', textoDeUnidades(unidadesDeTexto("60")!) === "60,00");
 ok('"60,5" → 60,50%', textoDeUnidades(unidadesDeTexto("60,5")!) === "60,50");

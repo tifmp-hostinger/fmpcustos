@@ -22,11 +22,7 @@ const semTaxa = valorMensalEmReais("500.00", "MENSAL", "USD", null);
 ok("US$ 500/mês sem cotação NÃO vira R$ 500", semTaxa === null, String(semTaxa));
 
 const comTaxa = valorMensalEmReais("500.00", "MENSAL", "USD", "5.4321");
-ok(
-  "US$ 500/mês a 5,4321 vira R$ 2.716,05",
-  comTaxa?.toFixed(2) === "2716.05",
-  comTaxa?.toFixed(2),
-);
+ok("US$ 500/mês a 5,4321 vira R$ 2.716,05", comTaxa?.toFixed(2) === "2716.05", comTaxa?.toFixed(2));
 
 console.log("\n— Real continua sendo real —");
 ok(

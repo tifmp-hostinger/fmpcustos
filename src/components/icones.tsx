@@ -210,3 +210,13 @@ export const IconeSair = ({ className }: Props) => (
     <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
+
+/** A casa inteira — usado no atalho que divide um custo entre todos os setores. */
+export const IconePredio = ({ className }: Props) => (
+  <svg {...base} className={className}>
+    <path d="M3 21h18" />
+    <path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
+    <path d="M15 21v-9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v9" />
+    <path d="M9 7h2M9 11h2M9 15h2" />
+  </svg>
+);

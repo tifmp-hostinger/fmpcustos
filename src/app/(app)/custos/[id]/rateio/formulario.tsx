@@ -20,7 +20,7 @@ import {
   unidadesDeBanco,
   type Fatia,
 } from "@/lib/rateio";
-import { IconeAncora, IconeFechar, IconeMais } from "@/components/icones";
+import { IconeAncora, IconeFechar, IconeMais, IconePredio } from "@/components/icones";
 import type { Resultado } from "@/lib/acoes";
 import { classesDeBotao } from "@/components/botao";
 
@@ -217,16 +217,46 @@ export function EditorDeRateio({
   }
 
   function igualmente() {
-    mexer((ls) => {
-      const partes = dividirIgualmente(ls.length);
-      // O maior resto vai para a âncora: ela é a linha que já absorve sobras
-      // por contrato, então o centavo extra cai onde a tela promete que cai.
-      const ordem = [...ls.keys()].sort((a, b) =>
-        ls[a].ancora === ls[b].ancora ? 0 : ls[a].ancora ? -1 : 1,
-      );
-      const atribuido = new Map(ordem.map((indice, i) => [indice, partes[i]]));
-      return ls.map((l, i) => ({ ...l, unidades: atribuido.get(i) ?? l.unidades, rascunho: null }));
-    });
+    mexer((ls) => repartir(ls));
+  }
+
+  /**
+   * TRAZER TODOS OS SETORES E DIVIDIR ENTRE ELES.
+   *
+   * Existe para o custo que é da casa inteira — energia, limpeza, vigilância,
+   * seguro predial. Montar isso à mão custava treze cliques em "Adicionar
+   * setor", treze escolhas num seletor e a certeza de errar um: o rateio de um
+   * custo institucional é justamente aquele em que ninguém quer conferir
+   * treze linhas.
+   *
+   * Substitui o que está na tela em vez de somar a ele, pela mesma razão que
+   * aplicar um modelo substitui: o atalho diz "a divisão é esta", não "some
+   * isto ao que já está aí". O que havia antes volta em "Descartar alterações",
+   * e nada foi gravado até salvar.
+   *
+   * A âncora atual é preservada quando o setor dela continua na lista. Trocar
+   * a âncora sem motivo mudaria de quem é o centavo do arredondamento, e a
+   * tela inteira é construída sobre a promessa de que isso nunca acontece em
+   * silêncio.
+   */
+  function todosOsSetores() {
+    const ancoraAtual = linhas.find((l) => l.ancora)?.setorId;
+    const idDaAncora = setores.some((s) => s.valor === ancoraAtual)
+      ? ancoraAtual
+      : setores[0]?.valor;
+
+    proximaChave.current = setores.length;
+    mexer(() =>
+      repartir(
+        setores.map((s, i) => ({
+          chave: i,
+          setorId: s.valor,
+          unidades: 0,
+          ancora: s.valor === idDaAncora,
+          rascunho: null,
+        })),
+      ),
+    );
   }
 
   /**
@@ -267,6 +297,20 @@ export function EditorDeRateio({
       (f, i) => f.setorId !== inicial[i]?.setorId || f.unidades !== inicial[i]?.unidades,
     );
   const podeAdicionar = linhas.length < MAXIMO_FATIAS && linhas.length < setores.length;
+
+  /*
+   * O atalho de "todos" só aparece quando ainda falta alguém na tela: com os
+   * treze já lá, o que se quer é "Dividir igualmente", que está do lado. Dois
+   * botões que fazem a mesma coisa em estados diferentes é como se aprende que
+   * um deles não faz nada.
+   *
+   * E ele some quando há mais setores cadastrados do que o rateio comporta —
+   * `MAXIMO_FATIAS` é o teto de linhas. Um botão chamado "todos" que entrega
+   * treze de quinze mente no rótulo; nesse caso resta "Adicionar setor", que
+   * não promete o que não pode cumprir.
+   */
+  const podeDividirEntreTodos =
+    setores.length > 1 && setores.length <= MAXIMO_FATIAS && linhas.length < setores.length;
   const setorAncora = balanco.indiceAncora >= 0 ? linhas[balanco.indiceAncora].setorId : "";
 
   return (
@@ -289,6 +333,10 @@ export function EditorDeRateio({
             return (
               <div
                 key={linha.chave}
+                // Pontos de referência estáveis: a posição da linha muda a cada
+                // adição e remoção, e contar posições quebra a cada ajuste.
+                data-linha-rateio={linha.setorId || "vazia"}
+                data-ancora={linha.ancora ? "sim" : "nao"}
                 className={`rounded-fmp-md border px-3 py-2.5 ${
                   erro
                     ? "border-[var(--accent)]/50 bg-[var(--accent)]/5"
@@ -399,10 +447,15 @@ export function EditorDeRateio({
                     >
                       <IconeAncora className="size-3.5" />
                       absorve o restante
+                      {/* "p.p." e não "%": o delta é uma diferença ENTRE
+                          percentuais, e a linha ao lado está cheia de reais. Um
+                          "(−92,31)" solo ali dentro lê como dinheiro — e
+                          −92,31 pontos percentuais num custo de R$ 22.400 seria
+                          um erro de vinte mil reais de leitura. */}
                       {deltaAncora !== 0 && (
                         <strong className="tabular-nums text-[var(--ink-2)]">
                           ({deltaAncora > 0 ? "+" : "−"}
-                          {textoDeUnidades(Math.abs(deltaAncora))})
+                          {textoDeUnidades(Math.abs(deltaAncora))} p.p.)
                         </strong>
                       )}
                     </span>
@@ -429,11 +482,46 @@ export function EditorDeRateio({
           })}
         </div>
 
+        {/* A SOMA, ESCRITA.
+            Com duas ou três linhas, "a soma fecha sozinha" se vê: a âncora se
+            mexe na tela quando se digita. Com treze linhas mostrando 7,69% cada,
+            não se vê nada — e quem somar de cabeça chega a 99,97%, porque
+            7,6924% não cabe em duas casas decimais.
+
+            O percentual exibido arredonda; o real, não. Então é o real que se
+            escreve aqui: se este número bate com o valor do custo lá em cima, o
+            centavo do arredondamento tem dono e ninguém perdeu nada. É a única
+            conferência que alguém de fato faz. */}
+        {valorMensal !== null && linhas.length > 1 && (
+          <p className="flex flex-wrap items-baseline justify-between gap-x-3 border-t border-[var(--rule)] pt-3 text-dado text-[var(--ink-3)]">
+            <span data-rateio="contagem">{linhas.length} setores</span>
+            <span>
+              soma{" "}
+              <strong data-rateio="soma" className="tabular-nums text-[var(--ink)]">
+                {formatarBRL(
+                  reais.reduce<Decimal>((acumulado, v) => acumulado.plus(v ?? 0), new Decimal(0)),
+                )}
+              </strong>
+              /mês
+            </span>
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-1.5">
           <Chip aoClicar={adicionar} desabilitado={!podeAdicionar} destaque>
             <IconeMais className="size-3.5" />
             Adicionar setor
           </Chip>
+          {/* O rótulo carrega o número: "Dividir entre os 13 setores" diz o que
+              vai acontecer antes do clique, e "Todos os setores" não diz. Num
+              atalho que substitui a tela inteira, saber antes é o que dispensa
+              a caixa de confirmação. */}
+          {podeDividirEntreTodos && (
+            <Chip aoClicar={todosOsSetores} destaque>
+              <IconePredio className="size-3.5" />
+              Dividir entre os {setores.length} setores
+            </Chip>
+          )}
           {linhas.length > 1 && <Chip aoClicar={umSetorSo}>Voltar a um setor só</Chip>}
           {linhas.length > 1 && <Chip aoClicar={igualmente}>Dividir igualmente</Chip>}
           {podeArredondar(linhas) && (
@@ -537,6 +625,22 @@ export function EditorDeRateio({
       )}
     </>
   );
+}
+
+/**
+ * Divide o todo em partes iguais entre as linhas dadas.
+ *
+ * O maior resto vai para a âncora: ela é a linha que já absorve sobras por
+ * contrato, então o centavo extra cai exatamente onde a tela promete que cai —
+ * e não numa linha qualquer que por acaso ficou em primeiro.
+ */
+function repartir(ls: Linha[]): Linha[] {
+  const partes = dividirIgualmente(ls.length);
+  const ordem = [...ls.keys()].sort((a, b) =>
+    ls[a].ancora === ls[b].ancora ? 0 : ls[a].ancora ? -1 : 1,
+  );
+  const atribuido = new Map(ordem.map((indice, i) => [indice, partes[i]]));
+  return ls.map((l, i) => ({ ...l, unidades: atribuido.get(i) ?? l.unidades, rascunho: null }));
 }
 
 function Chip({

@@ -43,8 +43,14 @@ comAmbiente({ ROTINAS_TOKEN: SEGREDO }, () => {
   ok("com espaços em volta também", tokenAutorizado(`Bearer   ${SEGREDO}   `) === true);
   ok("sem o prefixo Bearer também", tokenAutorizado(SEGREDO) === true);
   ok("bearer minúsculo também", tokenAutorizado(`bearer ${SEGREDO}`) === true);
-  ok("um token errado do mesmo tamanho não passa", tokenAutorizado(`Bearer ${"x".repeat(SEGREDO.length)}`) === false);
-  ok("um prefixo do token certo não passa", tokenAutorizado(`Bearer ${SEGREDO.slice(0, -1)}`) === false);
+  ok(
+    "um token errado do mesmo tamanho não passa",
+    tokenAutorizado(`Bearer ${"x".repeat(SEGREDO.length)}`) === false,
+  );
+  ok(
+    "um prefixo do token certo não passa",
+    tokenAutorizado(`Bearer ${SEGREDO.slice(0, -1)}`) === false,
+  );
   ok("cabeçalho ausente não passa", tokenAutorizado(null) === false);
   ok("cabeçalho vazio não passa", tokenAutorizado("Bearer ") === false);
 });
@@ -77,7 +83,12 @@ comAmbiente(
 );
 
 comAmbiente(
-  { SMTP_HOST: "smtp.exemplo.com", SMTP_USUARIO: "custos@fmp.com.br", SMTP_SENHA: "x", SMTP_PORTA: "465" },
+  {
+    SMTP_HOST: "smtp.exemplo.com",
+    SMTP_USUARIO: "custos@fmp.com.br",
+    SMTP_SENHA: "x",
+    SMTP_PORTA: "465",
+  },
   () => {
     ok("465 usa TLS implícito", configuracaoSmtp()?.seguro === true);
   },
@@ -87,7 +98,12 @@ comAmbiente(
 // padrão produzia `Custos FMP <custos01>` — recusado com "bad sender address
 // syntax" no primeiro envio de verdade, depois de tudo parecer configurado.
 comAmbiente(
-  { SMTP_HOST: "smtp.exemplo.com", SMTP_USUARIO: "custos01", SMTP_SENHA: "x", SMTP_REMETENTE: undefined },
+  {
+    SMTP_HOST: "smtp.exemplo.com",
+    SMTP_USUARIO: "custos01",
+    SMTP_SENHA: "x",
+    SMTP_REMETENTE: undefined,
+  },
   () => {
     ok("usuário que NÃO é endereço não vira remetente", configuracaoSmtp()?.remetente === null);
   },
@@ -112,7 +128,8 @@ console.log("\n— Escape do HTML do e-mail —");
 // Uma descrição de custo com "<" viraria tag no cliente de e-mail.
 ok(
   "sinais de tag são escapados",
-  escapar('Contrato <Microsoft> & "Adobe"') === "Contrato &lt;Microsoft&gt; &amp; &quot;Adobe&quot;",
+  escapar('Contrato <Microsoft> & "Adobe"') ===
+    "Contrato &lt;Microsoft&gt; &amp; &quot;Adobe&quot;",
   escapar('Contrato <Microsoft> & "Adobe"'),
 );
 ok("o & vem primeiro, senão escaparia o próprio escape", escapar("&lt;") === "&amp;lt;");
