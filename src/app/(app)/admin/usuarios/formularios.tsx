@@ -24,9 +24,7 @@ export function NovoUsuario({ setores }: { setores: Opcao[] }) {
         action={acao}
         className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
       >
-        <h2 className="text-sm font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-          Novo usuário
-        </h2>
+        <h2 className="rotulo-secao">Novo usuário</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo rotulo="Nome" nome="nome" obrigatorio placeholder="Nome completo" />
           <Campo
@@ -106,9 +104,7 @@ function PainelDeSenha({ senha, aoFechar }: { senha: SenhaTemporaria; aoFechar: 
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
-            Senha temporária de {senha.nome}
-          </h3>
+          <h3 className="sobrancelha">Senha temporária de {senha.nome}</h3>
           <p className="mt-1 text-meta text-[var(--ink-3)]">
             Aparece uma vez só. Repasse por um canal seguro — ela será trocada no primeiro acesso.
           </p>

@@ -40,9 +40,7 @@ export function BarrasRanqueadas({
 
   return (
     <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-      <h3 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
-        {titulo}
-      </h3>
+      <h3 className="rotulo-secao">{titulo}</h3>
       {descricao && <p className="mt-1 text-meta text-[var(--ink-3)]">{descricao}</p>}
 
       {visiveis.length === 0 ? (

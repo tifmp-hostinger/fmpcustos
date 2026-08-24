@@ -42,9 +42,7 @@ export default async function Notificacoes() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
-        Administração
-      </p>
+      <p className="sobrancelha">Administração</p>
       <h1 className="mt-2 titulo-pagina">Notificações</h1>
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         Um sistema de custo que só funciona quando alguém lembra de abri-lo não funciona. Duas
@@ -59,9 +57,7 @@ export default async function Notificacoes() {
             : "border-[var(--accent)]/40 bg-[var(--accent)]/5"
         }`}
       >
-        <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-          Envio de e-mail
-        </h2>
+        <h2 className="rotulo-secao">Envio de e-mail</h2>
         {smtp ? (
           <>
             <p className="mt-2 text-sm">
@@ -106,9 +102,7 @@ export default async function Notificacoes() {
 
       <section className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-            Alertas em aberto
-          </h2>
+          <h2 className="rotulo-secao">Alertas em aberto</h2>
           <Link
             href="/alertas"
             className="text-dado font-medium text-[var(--accent)] no-underline hover:underline"
@@ -148,9 +142,7 @@ export default async function Notificacoes() {
       </section>
 
       <section className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-        <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-          Agendamento
-        </h2>
+        <h2 className="rotulo-secao">Agendamento</h2>
         <p className="mt-2 text-dado text-[var(--ink-2)]">
           O sistema não agenda a si mesmo — quem agenda é o servidor. Aponte duas tarefas para as
           rotas abaixo, com o cabeçalho <Var>Authorization: Bearer $ROTINAS_TOKEN</Var>:

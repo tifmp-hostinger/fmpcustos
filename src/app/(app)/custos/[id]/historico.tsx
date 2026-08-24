@@ -91,9 +91,7 @@ export async function Historico({ itemId }: { itemId: string }) {
 
   return (
     <section id="historico" className="mt-10 scroll-mt-20">
-      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-        Histórico
-      </h2>
+      <h2 className="rotulo-secao">Histórico</h2>
 
       <ol className="mt-3 space-y-0">
         {registros.map((r) => {

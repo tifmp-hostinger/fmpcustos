@@ -48,9 +48,7 @@ export default async function Admin() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
-        Administração
-      </p>
+      <p className="sobrancelha">Administração</p>
       <h1 className="mt-2 titulo-pagina">O que você mantém</h1>
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         As decisões que valem para a FMP inteira. Cada cartão mostra o que está em aberto.

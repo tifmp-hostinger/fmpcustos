@@ -91,7 +91,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         {valorMensal ? (
           <>
-            <strong className="tabular-nums">{formatarBRL(valorMensal)}/mês</strong>
+            <strong className="numero text-base">{formatarBRL(valorMensal)}/mês</strong>
             {/* A procedência anda junto do número convertido. Um real sem
                 dizer de que taxa veio não é conferível contra a fatura. */}
             {item.moeda !== "BRL" && item.cambio && (
@@ -192,9 +192,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
       ) : (
         <section className="mt-10 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-              Rateio entre setores
-            </h2>
+            <h2 className="rotulo-secao">Rateio entre setores</h2>
             {podeRatear && (
               <Link
                 href={`/custos/${item.id}/rateio`}

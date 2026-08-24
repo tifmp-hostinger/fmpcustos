@@ -328,7 +328,7 @@ export function TabelaDeCustos({
           ou encerrar.
         </caption>
         <thead>
-          <tr className="border-b border-[var(--rule)] text-micro tracking-[0.1em] text-[var(--ink-3)] uppercase">
+          <tr className="border-b border-[var(--rule)] rotulo-coluna">
             {emLote && (
               <th className="w-10 px-3 py-3">
                 <input
@@ -414,7 +414,7 @@ export function TabelaDeCustos({
                         {grupo.itens.length} {grupo.itens.length === 1 ? "custo" : "custos"}
                       </span>
                       {grupo.subtotal && (
-                        <span className="ml-auto text-dado font-medium tabular-nums">
+                        <span className="numero ml-auto text-sm">
                           {formatarBRL(grupo.subtotal)}
                           {colunas.mensal && (
                             <span className="font-normal text-[var(--ink-3)]">/mês</span>

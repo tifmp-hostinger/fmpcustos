@@ -26,9 +26,7 @@ export default async function Usuarios() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <p className="text-meta font-semibold uppercase tracking-[0.14em] text-[var(--ink-3)]">
-        Administração
-      </p>
+      <p className="sobrancelha">Administração</p>
       <h1 className="mt-2 titulo-pagina">Usuários</h1>
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         Cada pessoa entra com o próprio e-mail e enxerga apenas o setor ao qual está vinculada.
@@ -60,7 +58,7 @@ export default async function Usuarios() {
         <NovoUsuario setores={setores} />
       </div>
 
-      <h2 className="mt-10 text-sm font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+      <h2 className="mt-10 rotulo-secao">
         {usuarios.length} {usuarios.length === 1 ? "usuário" : "usuários"}
       </h2>
       <div className="mt-3 space-y-2">

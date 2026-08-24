@@ -91,9 +91,7 @@ export default async function Alertas({ searchParams }: { searchParams: Promise<
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
-        {usuario.setorNome ?? "FMP"}
-      </p>
+      <p className="sobrancelha">{usuario.setorNome ?? "FMP"}</p>
       <h1 className="mt-2 titulo-pagina">
         {verIgnorados ? "Alertas ignorados" : "O que precisa de você"}
       </h1>

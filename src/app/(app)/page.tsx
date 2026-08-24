@@ -85,7 +85,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <p className="text-meta font-semibold uppercase tracking-[0.14em] text-[var(--ink-3)]">
+      <p className="sobrancelha">
         {lanca ? "Você mantém os custos desta área" : "Você consulta os custos desta área"}
       </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -103,7 +103,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
 
       {aceites.length > 0 && (
         <section className="mt-5 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
-          <h2 className="flex items-center gap-2 text-dado font-semibold uppercase tracking-[0.11em] text-[var(--accent)]">
+          <h2 className="flex items-center gap-2 sobrancelha">
             <IconeAlerta />
             Aceites aguardando você
           </h2>
@@ -127,9 +127,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
 
       {propostas.length > 0 && (
         <section className="mt-5 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-          <h2 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
-            Suas propostas de rateio
-          </h2>
+          <h2 className="rotulo-secao">Suas propostas de rateio</h2>
           <ul className="mt-3 space-y-2 text-dado">
             {propostas.map((pr) => (
               <li key={pr.id} className="flex flex-wrap items-baseline justify-between gap-2">
@@ -174,7 +172,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
           {lanca && totalPendencias > 0 && (
             <section className="mt-5 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="flex items-center gap-2 text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+                <h2 className="flex items-center gap-2 sobrancelha">
                   <IconeAlerta />
                   Para resolver — deixa seu número completo
                 </h2>
@@ -221,9 +219,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-              <h2 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
-                Maiores custos da área
-              </h2>
+              <h2 className="rotulo-secao">Maiores custos da área</h2>
               {maiores.length === 0 ? (
                 <p className="mt-4 text-sm text-[var(--ink-3)]">Nenhum custo cadastrado ainda.</p>
               ) : (
@@ -326,7 +322,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <p className="text-meta font-semibold uppercase tracking-[0.14em] text-[var(--ink-3)]">
+      <p className="sobrancelha">
         {admin ? "Você administra a plataforma" : "Você consulta todos os setores"}
       </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -458,9 +454,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
       })()}
 
       <section className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-        <h2 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
-          O que falta para o número estar completo
-        </h2>
+        <h2 className="rotulo-secao">O que falta para o número estar completo</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
           <PendenciaResumo
             n={pendencias.semValor}
@@ -532,7 +526,7 @@ function GuiaInicial({
 
   return (
     <section className="mt-6 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-      <h2 className="text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+      <h2 className="rotulo-secao">
         Comece por aqui — {pendentes} {pendentes === 1 ? "passo pendente" : "passos pendentes"}
       </h2>
       <ol className="mt-4 grid gap-3 md:grid-cols-3">
@@ -585,7 +579,7 @@ function CartaoRenovacoes({
 }) {
   return (
     <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-      <h2 className="flex items-center gap-2 text-dado font-semibold uppercase tracking-[0.11em] text-[var(--ink-3)]">
+      <h2 className="flex items-center gap-2 rotulo-secao">
         <IconeCalendario className="size-4" />
         Renovações nos próximos 90 dias
       </h2>

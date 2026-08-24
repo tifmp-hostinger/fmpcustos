@@ -44,9 +44,7 @@ export function NovaCotacao({ hoje }: { hoje: string }) {
       action={acao}
       className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
     >
-      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-        Registrar cotação
-      </h2>
+      <h2 className="rotulo-secao">Registrar cotação</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Selecao
           rotulo="Moeda"

@@ -71,9 +71,7 @@ export function PainelDeCategorias({
           role="status"
           className="mt-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] px-4 py-3"
         >
-          <p className="text-meta font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-            Podem ser a mesma coisa
-          </p>
+          <p className="rotulo-secao">Podem ser a mesma coisa</p>
           <ul className="mt-2 space-y-1.5">
             {suspeitas.map((s) => (
               <li key={s.linha.id} className="text-dado">

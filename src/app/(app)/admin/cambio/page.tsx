@@ -48,9 +48,7 @@ export default async function Cambio() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
-        Administração
-      </p>
+      <p className="sobrancelha">Administração</p>
       <h1 className="mt-2 titulo-pagina">Câmbio</h1>
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         Custos em dólar e euro entram nos totais convertidos em real. A cotação registrada aqui é a{" "}
@@ -60,7 +58,7 @@ export default async function Cambio() {
 
       {totalPendente > 0 && (
         <section className="mt-6 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
-          <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+          <h2 className="sobrancelha">
             {totalPendente} {totalPendente === 1 ? "custo está" : "custos estão"} fora dos totais
           </h2>
           <p className="mt-1.5 text-dado text-[var(--ink-2)]">
@@ -103,9 +101,7 @@ export default async function Cambio() {
       </div>
 
       <section className="mt-8">
-        <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-          Situação por moeda
-        </h2>
+        <h2 className="rotulo-secao">Situação por moeda</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {ESTRANGEIRAS.map((moeda) => {
             const cotacao = maisRecente.get(moeda);
@@ -136,9 +132,7 @@ export default async function Cambio() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-          Cotações registradas
-        </h2>
+        <h2 className="rotulo-secao">Cotações registradas</h2>
         {cotacoes.length === 0 ? (
           <p className="mt-3 text-dado text-[var(--ink-3)]">
             Nenhuma ainda. Enquanto não houver, quem cadastrar um custo em dólar precisa digitar a
@@ -147,7 +141,7 @@ export default async function Cambio() {
         ) : (
           <table className="mt-3 w-full text-dado">
             <thead>
-              <tr className="border-b border-[var(--rule)] text-left text-meta tracking-[0.08em] text-[var(--ink-3)] uppercase">
+              <tr className="border-b border-[var(--rule)] text-left rotulo-coluna">
                 <th className="py-2 font-medium">Data</th>
                 <th className="py-2 font-medium">Moeda</th>
                 <th className="py-2 text-right font-medium">Taxa</th>

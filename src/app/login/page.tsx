@@ -10,9 +10,7 @@ export default function Login() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <p className="text-micro font-semibold uppercase tracking-[0.16em] text-[var(--ink-3)]">
-        FMP · Inteligência de custos
-      </p>
+      <p className="sobrancelha">FMP · Inteligência de custos</p>
       <h1 className="mt-3 titulo-pagina">
         Entrar no <em className="text-[var(--accent)]">sistema</em>
       </h1>

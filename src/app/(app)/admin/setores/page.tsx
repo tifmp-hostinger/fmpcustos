@@ -139,9 +139,7 @@ export default async function Setores() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <p className="text-meta font-semibold tracking-[0.14em] text-[var(--ink-3)] uppercase">
-        Administração
-      </p>
+      <p className="sobrancelha">Administração</p>
       <h1 className="mt-2 titulo-pagina">Setores</h1>
       <p className="mt-1.5 text-sm text-[var(--ink-2)]">
         A estrutura pela qual o custo da FMP é dividido. {linhas.filter((l) => l.ativo).length}{" "}

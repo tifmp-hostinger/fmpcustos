@@ -211,6 +211,13 @@ body {
    *
    * `tabular-nums` porque números que mudam sozinhos — um total que recalcula ao
    * trocar de aba — não podem dançar de largura enquanto mudam.
+   *
+   * ONDE SE USA: no número que é MANCHETE — o total da lista, o indicador do
+   * painel, o subtotal de um grupo, a cifra sob o título de um custo. Não na
+   * célula da tabela. Quinhentas linhas em serifa itálica não seriam ênfase:
+   * seriam uma tabela ilegível, e a ênfase que vale para tudo não vale para
+   * nada. A coluna continua em Outfit com `tabular-nums`, que é o que uma
+   * coluna de dinheiro precisa para alinhar a vírgula.
    */
   .numero {
     font-family: var(--font-serif);
@@ -235,6 +242,44 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.16em;
     color: var(--accent);
+  }
+
+  /*
+   * O RÓTULO DE SEÇÃO.
+   *
+   * Irmão neutro da sobrancelha, para os títulos estruturais DENTRO do
+   * conteúdo: "Quanto custa", "Custo por setor", "Quem mantém". Existiam nove
+   * combinações escritas à mão para o mesmo papel — quatro entrelinhas (0,08 /
+   * 0,11 / 0,14 / 0,16em), três tamanhos e duas cores — e nenhuma delas dizia
+   * por que era diferente da anterior.
+   *
+   * Não é vermelho, e isso é a decisão. O sistema usa vermelho na sobrancelha
+   * que anuncia UM assunto acima de um título; um formulário com seis seções
+   * vermelhas não tem seis ênfases, não tem nenhuma.
+   */
+  .rotulo-secao {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-meta);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+
+  /*
+   * O RÓTULO DE COLUNA.
+   *
+   * A mesma família, um passo mais discreta, para o `<th>` de uma tabela. A
+   * entrelinha é menor porque uma linha de cabeçalho tem sete rótulos lado a
+   * lado: a abertura da sobrancelha empurraria "RENOVA EM" contra "SITUAÇÃO".
+   */
+  .rotulo-coluna {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-micro);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
   }
 
   /*

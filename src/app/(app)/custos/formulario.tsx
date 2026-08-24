@@ -159,9 +159,7 @@ export function FormularioCusto({
 
       <div key={chave} className="space-y-6">
         <fieldset className="space-y-4">
-          <legend className="mb-1 text-sm font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-            O que é
-          </legend>
+          <legend className="mb-1 rotulo-secao">O que é</legend>
           <Campo
             rotulo="Descrição"
             nome="descricao"
@@ -202,9 +200,7 @@ export function FormularioCusto({
         </fieldset>
 
         <fieldset className="space-y-4">
-          <legend className="mb-1 text-sm font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-            Quanto custa
-          </legend>
+          <legend className="mb-1 rotulo-secao">Quanto custa</legend>
           <Quanto
             valorInicial={v.valorPeriodo ?? ""}
             periodicidadeInicial={(v.periodicidade as Periodicidade) ?? "MENSAL"}

@@ -118,9 +118,7 @@ export function Colador({
       {leitura && leitura.linhas.length > 0 && (
         <>
           <section>
-            <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-              O que cada coluna é
-            </h2>
+            <h2 className="rotulo-secao">O que cada coluna é</h2>
             <p className="mt-1 text-meta text-[var(--ink-3)]">
               {leitura.cabecalho
                 ? "Detectado pelo cabeçalho da planilha. Corrija se alguma coluna caiu no lugar errado."
@@ -152,9 +150,7 @@ export function Colador({
 
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-                Prévia
-              </h2>
+              <h2 className="rotulo-secao">Prévia</h2>
               <p className="text-meta text-[var(--ink-2)]">
                 <strong className="text-emerald-700 dark:text-emerald-400">{prontas.length}</strong>{" "}
                 {prontas.length === 1 ? "pronta" : "prontas"}
@@ -172,7 +168,7 @@ export function Colador({
             <div className="mt-3 overflow-x-auto rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)]">
               <table className="w-full min-w-[720px] text-dado">
                 <thead>
-                  <tr className="border-b border-[var(--rule)] text-micro tracking-[0.1em] text-[var(--ink-3)] uppercase">
+                  <tr className="border-b border-[var(--rule)] rotulo-coluna">
                     <th className="w-10 px-3 py-2.5 text-right font-semibold">#</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Custo</th>
                     <th className="px-3 py-2.5 text-right font-semibold">Valor</th>

@@ -133,7 +133,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
 
       {totalPendencias > 0 && (
         <section className="mt-4 rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5">
-          <h2 className="flex items-center gap-2 text-dado font-semibold tracking-[0.11em] text-[var(--accent)] uppercase">
+          <h2 className="flex items-center gap-2 sobrancelha">
             <IconeAlerta />O que falta para o número estar completo
           </h2>
           <ul className="mt-3 flex flex-wrap gap-2">
@@ -162,9 +162,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-          <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-            Maiores custos
-          </h2>
+          <h2 className="rotulo-secao">Maiores custos</h2>
           <p className="mt-1 text-meta text-[var(--ink-3)]">
             Já pela fatia que cabe a {setor.nome}, não pelo valor cheio do contrato.
           </p>
@@ -197,7 +195,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
         </section>
 
         <section className="rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5">
-          <h2 className="flex items-center gap-2 text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
+          <h2 className="flex items-center gap-2 rotulo-secao">
             <IconeCalendario className="size-4" />
             Renovações nos próximos 90 dias
           </h2>

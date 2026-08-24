@@ -130,7 +130,7 @@ export function ListaOrganizacao({
       <table className="mt-6 w-full text-sm">
         <caption className="sr-only">{rotulos.plural} cadastrados, com o uso de cada um</caption>
         <thead>
-          <tr className="border-b border-[var(--rule)] text-left text-meta tracking-[0.08em] text-[var(--ink-3)] uppercase">
+          <tr className="border-b border-[var(--rule)] text-left rotulo-coluna">
             <th className="py-2 font-medium">Nome</th>
             <th className="py-2 font-medium">Código</th>
             <th className="py-2 text-right font-medium">Custos</th>
@@ -424,9 +424,7 @@ export function FormaDeCriar({
       action={enviar}
       className="space-y-4 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-5"
     >
-      <h2 className="text-dado font-semibold tracking-[0.11em] text-[var(--ink-3)] uppercase">
-        Novo {rotulos.singular}
-      </h2>
+      <h2 className="rotulo-secao">Novo {rotulos.singular}</h2>
       <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
         <Campo
           rotulo="Nome"
