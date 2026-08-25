@@ -99,7 +99,7 @@ export default async function Alertas({ searchParams }: { searchParams: Promise<
         {verIgnorados ? (
           <>
             Marcados como “não se aplica”. Reabrir devolve o alerta à fila —{" "}
-            <Link href="/alertas" className="font-medium text-[var(--accent)]">
+            <Link href="/alertas" className="font-medium text-[var(--accent-texto)]">
               voltar aos pendentes
             </Link>
             .

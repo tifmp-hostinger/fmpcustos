@@ -69,7 +69,7 @@ export function CartaoAceite({
           type="submit"
           name="decisao"
           value="recusar"
-          className="rounded-lg border border-[var(--rule)] px-3.5 py-1.5 text-dado font-medium text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="rounded-lg border border-[var(--rule)] px-3.5 py-1.5 text-dado font-medium text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent-texto)]"
         >
           Recusar
         </button>

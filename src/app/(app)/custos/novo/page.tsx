@@ -24,7 +24,7 @@ export default async function NovoCusto() {
       <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
-          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
         >
           Custos
         </Link>
@@ -39,7 +39,7 @@ export default async function NovoCusto() {
       </p>
       <p className="mt-2 text-dado text-[var(--ink-3)]">
         Tem vários custos já numa planilha?{" "}
-        <Link href="/custos/colar" className="font-medium text-[var(--accent)]">
+        <Link href="/custos/colar" className="font-medium text-[var(--accent-texto)]">
           Cole todos de uma vez
         </Link>{" "}
         em vez de cadastrar um por um.

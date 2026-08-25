@@ -141,13 +141,13 @@ function PainelDeSenha({ senha, aoFechar }: { senha: SenhaTemporaria; aoFechar: 
         <button
           type="button"
           onClick={() => copiar(corpoDoEmail, "Texto do e-mail")}
-          className="text-[var(--ink-2)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+          className="text-[var(--ink-2)] underline-offset-2 hover:text-[var(--accent-texto)] hover:underline"
         >
           Copiar o e-mail pronto
         </button>
         <a
           href={`mailto:${senha.email}?subject=${encodeURIComponent("Seu acesso à plataforma de custos da FMP")}&body=${encodeURIComponent(corpoDoEmail)}`}
-          className="text-[var(--ink-2)] no-underline underline-offset-2 hover:text-[var(--accent)] hover:underline"
+          className="text-[var(--ink-2)] no-underline underline-offset-2 hover:text-[var(--accent-texto)] hover:underline"
         >
           Abrir no cliente de e-mail
         </a>
@@ -207,7 +207,7 @@ export function EditarUsuario({
             {usuario.email}
             {/* O acesso já era consultado e nunca exibido. É o que responde
                 "criei o usuário e a pessoa nunca entrou — a senha se perdeu?" */}
-            <span className={situacao.alerta ? "text-[var(--accent)]" : ""}>
+            <span className={situacao.alerta ? "text-[var(--accent-texto)]" : ""}>
               {" "}
               · {situacao.texto}
             </span>
@@ -217,7 +217,7 @@ export function EditarUsuario({
           className={`rounded-full px-2 py-0.5 text-micro font-semibold tracking-wide uppercase ${
             usuario.ativo
               ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
-              : "bg-[var(--accent)]/12 text-[var(--accent)]"
+              : "bg-[var(--accent)]/12 text-[var(--accent-texto)]"
           }`}
         >
           {usuario.ativo ? "Ativo" : "Inativo"}
@@ -290,7 +290,7 @@ export function EditarUsuario({
             <button
               type="button"
               onClick={() => setResetando(true)}
-              className="text-sm text-[var(--accent)] underline underline-offset-4"
+              className="text-sm text-[var(--accent-texto)] underline underline-offset-4"
             >
               Gerar nova senha temporária
             </button>

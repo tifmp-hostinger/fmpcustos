@@ -110,7 +110,7 @@ export function Colador({
         <button
           type="button"
           onClick={() => setColado(EXEMPLO)}
-          className="text-dado text-[var(--accent)] underline underline-offset-4"
+          className="text-dado text-[var(--accent-texto)] underline underline-offset-4"
         >
           Ver com um exemplo
         </button>
@@ -158,7 +158,7 @@ export function Colador({
                 {comProblema.length > 0 && (
                   <>
                     {" · "}
-                    <strong className="text-[var(--accent)]">{comProblema.length}</strong> com
+                    <strong className="text-[var(--accent-texto)]">{comProblema.length}</strong> com
                     problema
                   </>
                 )}
@@ -197,7 +197,7 @@ export function Colador({
                             {linha.categoria ? ` · ${linha.categoria}` : ""}
                           </span>
                           {ruim && (
-                            <span className="mt-1 flex items-start gap-1.5 text-micro text-[var(--accent)]">
+                            <span className="mt-1 flex items-start gap-1.5 text-micro text-[var(--accent-texto)]">
                               <IconeAlerta className="mt-px size-3.5 shrink-0" />
                               {linha.problemas.join(" · ")}
                             </span>

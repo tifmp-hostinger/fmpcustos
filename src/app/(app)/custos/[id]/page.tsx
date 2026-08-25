@@ -79,7 +79,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
       <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
-          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
         >
           Custos
         </Link>
@@ -124,7 +124,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
           em nenhum total. Ele é apagado de vez 30 dias depois disso —{" "}
           <Link
             href={{ pathname: "/custos", query: { f: "lixeira" } }}
-            className="text-[var(--accent)]"
+            className="text-[var(--accent-texto)]"
           >
             restaure pela lixeira
           </Link>{" "}
@@ -196,7 +196,7 @@ export default async function EditarCusto({ params }: { params: Promise<{ id: st
             {podeRatear && (
               <Link
                 href={`/custos/${item.id}/rateio`}
-                className="text-dado font-medium text-[var(--accent)] no-underline hover:underline"
+                className="text-dado font-medium text-[var(--accent-texto)] no-underline hover:underline"
               >
                 {item.rateios.length > 1 ? "Alterar rateio" : "Dividir entre setores"}
               </Link>

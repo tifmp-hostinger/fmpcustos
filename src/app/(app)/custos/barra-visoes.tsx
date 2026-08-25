@@ -102,7 +102,7 @@ export function BarraDeVisoes({
               // já se anuncia pelo recorte inteiro que a tela está mostrando.
               className={`flex items-center rounded-full border-[1.5px] text-meta transition-all duration-200 ${
                 ativa
-                  ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
+                  ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent-texto)]"
                   : "border-[var(--rule-2)] text-[var(--ink-2)] hover:border-[var(--accent)]"
               }`}
             >
@@ -112,7 +112,7 @@ export function BarraDeVisoes({
                 // de que se desconfia não é clicado.
                 title={`${v.descricao}${v.institucional ? " · da instituição" : ""}`}
                 className={`py-1.5 pl-3 no-underline ${v.podeApagar ? "pr-1.5" : "pr-3"} ${
-                  ativa ? "font-semibold text-[var(--accent)]" : "text-[var(--ink-2)]"
+                  ativa ? "font-semibold text-[var(--accent-texto)]" : "text-[var(--ink-2)]"
                 }`}
               >
                 {v.nome}
@@ -150,7 +150,7 @@ export function BarraDeVisoes({
             type="button"
             data-acao="salvar-visao"
             onClick={() => setAbrindo(true)}
-            className="flex items-center gap-1 rounded-full border-[1.5px] border-dashed border-[var(--rule-2)] px-3 py-1.5 text-meta text-[var(--ink-3)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="flex items-center gap-1 rounded-full border-[1.5px] border-dashed border-[var(--rule-2)] px-3 py-1.5 text-meta text-[var(--ink-3)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent-texto)]"
           >
             <IconeMais className="size-3.5" />
             Salvar esta visão
@@ -233,7 +233,7 @@ function FormaDeSalvar({
         />
       </label>
       {erro && (
-        <p role="alert" className="mt-1.5 text-meta text-[var(--accent)]">
+        <p role="alert" className="mt-1.5 text-meta text-[var(--accent-texto)]">
           {erro}
         </p>
       )}

@@ -433,7 +433,7 @@ export function EditorDeRateio({
                     disabled={linhas.length === 1}
                     aria-label={`Remover ${nomes.get(linha.setorId) ?? `linha ${i + 1}`}`}
                     title="Remover linha"
-                    className="shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--ground)] hover:text-[var(--accent)] disabled:opacity-25"
+                    className="shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] hover:bg-[var(--ground)] hover:text-[var(--accent-texto)] disabled:opacity-25"
                   >
                     <IconeFechar className="size-4" />
                   </button>
@@ -465,14 +465,17 @@ export function EditorDeRateio({
                       onClick={() => trocarAncora(linha.chave)}
                       disabled={!linha.setorId}
                       title="Troca qual setor fecha a conta. Nenhum percentual muda agora."
-                      className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-micro text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+                      className="flex items-center gap-1 rounded-md border border-dashed border-[var(--rule)] px-1.5 py-0.5 text-micro text-[var(--ink-3)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent-texto)] disabled:opacity-40"
                     >
                       <IconeAncora className="size-3" />
                       passar o restante para cá
                     </button>
                   )}
                   {erro && (
-                    <span role="alert" className="text-micro font-medium text-[var(--accent)]">
+                    <span
+                      role="alert"
+                      className="text-micro font-medium text-[var(--accent-texto)]"
+                    >
                       {erro}
                     </span>
                   )}
@@ -547,7 +550,7 @@ export function EditorDeRateio({
                       `${nomes.get(p.setorId) ?? "setor"} ${textoDeUnidades(unidadesDeBanco(p.percentual))}%`,
                   )
                   .join(" · ")}
-                className="rounded-full border border-[var(--rule)] px-3 py-1.5 text-meta text-[var(--ink-2)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="rounded-full border border-[var(--rule)] px-3 py-1.5 text-meta text-[var(--ink-2)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent-texto)]"
               >
                 {m.nome}
               </button>
@@ -556,7 +559,7 @@ export function EditorDeRateio({
               <button
                 type="button"
                 onClick={() => setNomeando(true)}
-                className="ml-auto text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+                className="ml-auto text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent-texto)] hover:underline"
               >
                 Salvar esta divisão como modelo
               </button>
@@ -661,7 +664,7 @@ function Chip({
       disabled={desabilitado}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-meta transition-colors disabled:opacity-40 ${
         destaque
-          ? "border-[var(--accent)]/40 font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8"
+          ? "border-[var(--accent)]/40 font-medium text-[var(--accent-texto)] hover:bg-[var(--accent)]/8"
           : "border-[var(--rule)] text-[var(--ink-2)] hover:border-[var(--ink-3)]"
       }`}
     >

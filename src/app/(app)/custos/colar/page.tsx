@@ -18,7 +18,7 @@ export default async function ColarDaPlanilha() {
       <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
-          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
         >
           Custos
         </Link>
@@ -27,7 +27,7 @@ export default async function ColarDaPlanilha() {
       </nav>
 
       <h1 className="mt-2 titulo-pagina">
-        Colar da <em className="text-[var(--accent)]">planilha</em>
+        Colar da <em className="text-[var(--accent-texto)]">planilha</em>
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-[var(--ink-2)]">
         Se os custos da sua área já estão numa aba de Excel, o caminho curto é este: selecione as

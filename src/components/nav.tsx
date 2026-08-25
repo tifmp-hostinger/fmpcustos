@@ -73,7 +73,7 @@ export function Navegacao({
                   href={item.href}
                   aria-current={ativo ? "page" : undefined}
                   className={`relative flex flex-col items-center gap-1 py-2.5 text-micro no-underline transition-colors ${
-                    ativo ? "font-semibold text-[var(--accent)]" : "text-[var(--ink-3)]"
+                    ativo ? "font-semibold text-[var(--accent-texto)]" : "text-[var(--ink-3)]"
                   }`}
                 >
                   <Icone className="shrink-0" />
@@ -112,7 +112,7 @@ export function Navegacao({
             title={item.rotulo}
             className={`flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors sm:px-3 ${
               ativo
-                ? "bg-[var(--accent)]/10 font-semibold text-[var(--accent)]"
+                ? "bg-[var(--accent)]/10 font-semibold text-[var(--accent-texto)]"
                 : "text-[var(--ink-2)] hover:bg-[var(--surface)] hover:text-[var(--ink)]"
             }`}
           >

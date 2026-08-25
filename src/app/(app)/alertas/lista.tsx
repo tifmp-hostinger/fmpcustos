@@ -140,7 +140,7 @@ export function ListaDeAlertas({ alertas }: { alertas: LinhaAlerta[] }) {
                 {a.itemCustoId ? (
                   <Link
                     href={`/custos/${a.itemCustoId}`}
-                    className="mt-1 block text-base font-semibold text-[var(--ink)] no-underline hover:text-[var(--accent)]"
+                    className="mt-1 block text-base font-semibold text-[var(--ink)] no-underline hover:text-[var(--accent-texto)]"
                   >
                     {a.titulo}
                   </Link>
@@ -224,7 +224,7 @@ function Etiqueta({ severidade, rotulo }: { severidade: number; rotulo: string }
     <span
       className={`rounded px-1.5 py-0.5 text-micro font-semibold tracking-[0.06em] uppercase ${
         urgente
-          ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+          ? "bg-[var(--accent)]/15 text-[var(--accent-texto)]"
           : "bg-[var(--ink)]/8 text-[var(--ink-2)]"
       }`}
     >

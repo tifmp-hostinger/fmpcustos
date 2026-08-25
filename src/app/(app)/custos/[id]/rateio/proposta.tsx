@@ -218,7 +218,7 @@ export function PropostaEmAberto({
             <button
               type="submit"
               disabled={cancelando}
-              className="text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+              className="text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent-texto)] hover:underline disabled:opacity-50"
             >
               {cancelando ? "Cancelando…" : "Cancelar proposta e refazer"}
             </button>
@@ -240,7 +240,7 @@ function Selo({ aceite }: { aceite: Parcela["aceite"] }) {
   }
   if (aceite === "REJEITADO") {
     return (
-      <span className="flex items-center gap-1 text-meta font-semibold text-[var(--accent)]">
+      <span className="flex items-center gap-1 text-meta font-semibold text-[var(--accent-texto)]">
         <IconeFechar className="size-3.5" />
         recusado
       </span>

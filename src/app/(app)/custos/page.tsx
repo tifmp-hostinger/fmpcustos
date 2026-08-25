@@ -316,7 +316,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             data-aba={r.chave}
             className={`-mb-px border-b-2 px-3.5 py-2 text-sm no-underline transition-colors ${
               r.chave === f.natureza
-                ? "border-[var(--accent)] font-semibold text-[var(--accent)]"
+                ? "border-[var(--accent)] font-semibold text-[var(--accent-texto)]"
                 : "border-transparent text-[var(--ink-3)] hover:text-[var(--ink)]"
             }`}
           >
@@ -473,7 +473,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             <Link
               href={urlDaLista({ ...f, falta: "" })}
               aria-current={!f.falta ? "true" : undefined}
-              className={pilula(!f.falta, "aninhado")}
+              className={pilula(!f.falta)}
             >
               qualquer coisa
             </Link>
@@ -482,7 +482,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
                 key={x.chave}
                 href={urlDaLista({ ...f, falta: x.chave })}
                 aria-current={f.falta === x.chave ? "true" : undefined}
-                className={pilula(f.falta === x.chave, "aninhado")}
+                className={pilula(f.falta === x.chave)}
               >
                 {x.rotulo}
               </Link>
@@ -509,7 +509,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             {f.setor && f.setor !== SEM_SETOR && nomes.setores.has(f.setor) && (
               <Link
                 href={`/setores/${f.setor}`}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-meta font-medium text-[var(--accent)] no-underline hover:bg-[var(--accent)]/8"
+                className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 px-3 py-1 text-meta font-medium text-[var(--accent-texto)] no-underline hover:bg-[var(--accent)]/8"
               >
                 Panorama de {nomes.setores.get(f.setor)}
                 <IconeSeta className="size-3" />
@@ -519,7 +519,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
               <Link
                 key={c.rotulo}
                 href={c.url}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-meta text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="flex items-center gap-1.5 rounded-full border border-[var(--ink-3)]/40 bg-[var(--surface)] py-1 pr-1.5 pl-3 text-meta text-[var(--ink-2)] no-underline hover:border-[var(--accent)] hover:text-[var(--accent-texto)]"
               >
                 {c.rotulo}
                 <IconeFechar className="size-3" />
@@ -528,7 +528,7 @@ export default async function Custos({ searchParams }: { searchParams: Promise<P
             {temRecorte(f) && chips.length > 1 && (
               <Link
                 href={urlDaLista({ situacao: f.situacao, ordem: f.ordem, dir: f.dir })}
-                className="rounded-full px-2.5 py-1 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline"
+                className="rounded-full px-2.5 py-1 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent-texto)] hover:underline"
               >
                 Limpar filtros
               </Link>
@@ -690,31 +690,32 @@ function Total({
  * preenchimentos é cor da marca. No kit da FMP o filtro escolhido é vermelho
  * cheio com texto branco, e o não escolhido é um fio de 1,5px na linha areia.
  *
- * Aqui esse par ganha três PESOS, porque as três famílias não são o mesmo
- * nível de decisão:
+ * Aqui esse par ganha DOIS pesos, porque há dois níveis de decisão na tela:
  *
  *   principal  — a fila de situação. Está sempre visível, sempre tem uma
  *                escolhida, e é o filtro que mais muda o que a lista mostra.
- *                Vermelho cheio.
- *   secundário — o exercício. Recorta o que já foi escolhido acima. Fio
- *                vermelho e lavagem, sem preenchimento.
- *   aninhado   — a lacuna, que só existe dentro de "falta dado". Fio fino.
+ *                Vermelho cheio, e um degrau maior de tamanho.
+ *   secundario — o exercício e a lacuna. Recortam o que já foi escolhido
+ *                acima. Fio vermelho e lavagem, sem preenchimento.
  *
- * Três pesos da mesma forma dizem a hierarquia sem inventar três formas.
+ * (Uma versão anterior deste comentário prometia TRÊS pesos e chamava a lacuna
+ * de "aninhado" — mas o código devolvia exatamente as mesmas classes do
+ * secundário. Um comentário que descreve um desenho que não existe é pior que
+ * comentário nenhum: manda quem lê procurar uma diferença que não está lá.)
  */
-type PesoDaPilula = "principal" | "secundario" | "aninhado";
+type PesoDaPilula = "principal" | "secundario";
 
 function pilula(ativo: boolean, peso: PesoDaPilula = "secundario"): string {
   const tamanho = peso === "principal" ? "px-3.5 py-1.5 text-dado" : "px-3 py-1 text-meta";
   const base = `rounded-full border-[1.5px] no-underline transition-all duration-200 ease-fmp ${tamanho}`;
 
   if (!ativo) {
-    return `${base} border-[var(--rule-2)] text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]`;
+    return `${base} border-[var(--rule-2)] text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent-texto)]`;
   }
   if (peso === "principal") {
     return `${base} border-[var(--accent)] bg-[var(--accent)] font-semibold text-white`;
   }
-  return `${base} border-[var(--accent)] bg-[var(--accent-wash)] font-semibold text-[var(--accent)]`;
+  return `${base} border-[var(--accent)] bg-[var(--accent-wash)] font-semibold text-[var(--accent-texto)]`;
 }
 
 /**
@@ -778,7 +779,7 @@ function Vazio({
           Tente outro termo, ou{" "}
           <Link
             href={urlDaLista({ situacao: "todos", busca: filtros.busca })}
-            className="text-[var(--accent)]"
+            className="text-[var(--accent-texto)]"
           >
             procure em todas as situações e setores
           </Link>
@@ -820,7 +821,10 @@ function Vazio({
       <Caixa>
         <p className="font-medium">Nenhum custo com esse recorte.</p>
         <p className="mt-1.5 text-sm text-[var(--ink-3)]">
-          <Link href={urlDaLista({ situacao: filtros.situacao })} className="text-[var(--accent)]">
+          <Link
+            href={urlDaLista({ situacao: filtros.situacao })}
+            className="text-[var(--accent-texto)]"
+          >
             Limpe os filtros
           </Link>{" "}
           para ver todos os custos em “{rotuloSituacao.toLowerCase()}”.
@@ -840,7 +844,7 @@ function Vazio({
           <>
             Cadastre o primeiro: comece pelos contratos e assinaturas pagos todo mês. Se já tem tudo
             numa planilha,{" "}
-            <Link href="/custos/colar" className="text-[var(--accent)]">
+            <Link href="/custos/colar" className="text-[var(--accent-texto)]">
               cole de uma vez
             </Link>
             .

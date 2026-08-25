@@ -38,6 +38,8 @@ const TELAS = [
   ["os alertas", "/alertas"],
   ["cadastrar custo", "/custos/novo"],
   ["colar da planilha", "/custos/colar"],
+  ["o detalhe de um custo", "/custos/__ID__"],
+  ["o rateio de um custo", "/custos/__ID__/rateio"],
   ["a administração", "/admin"],
   ["os setores", "/admin/setores"],
   ["as categorias", "/admin/categorias"],
@@ -67,8 +69,21 @@ async function medir(largura) {
   await p.click('form button[type="submit"]');
   await p.waitForURL((u) => !u.pathname.includes("login"), { timeout: 20000 });
 
+  // As telas de um custo específico precisam de um id real. Sem elas a varredura
+  // deixava de fora justamente o rateio, que é a tela mais densa do sistema.
+  //
+  // O id sai do `href`, não de clicar e esperar a navegação: num telefone há
+  // botões flutuantes por cima da lista, e um teste de LAYOUT que depende de um
+  // clique não interceptado falha por um motivo que não é o que ele mede.
+  await p.goto(`${URL}/custos`);
+  await p.waitForSelector('[data-celula="descricao"] a');
+  const href = await p.locator('[data-celula="descricao"] a').first().getAttribute("href");
+  const id = (href ?? "").split("/").pop();
+  if (!id) throw new Error("não achei o id de um custo para varrer as telas dele");
+
   console.log(`\n═══ ${largura}px ═══`);
-  for (const [nome, rota] of TELAS) {
+  for (const [nome, bruto] of TELAS) {
+    const rota = bruto.replace("__ID__", id);
     await p.goto(URL + rota);
     await p.waitForLoadState("networkidle");
     await p.waitForTimeout(200);

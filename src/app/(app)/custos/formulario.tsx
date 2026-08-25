@@ -502,7 +502,7 @@ function Quanto({
             contado, e descobrir isso pelo total errado três meses depois é o
             que este sistema existe para evitar. */}
         {estrangeira && taxa === null && numero !== null && !semEquivalente && (
-          <span className="text-[var(--accent)]">
+          <span className="text-[var(--accent-texto)]">
             Sem a cotação, {formatarMoeda(numero, moeda)} não vira real e este custo fica de fora de
             todos os totais.
           </span>
@@ -575,7 +575,7 @@ function CampoFornecedor({
                   setValor(c.nome);
                   setIgnorados([]);
                 }}
-                className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+                className="font-medium text-[var(--accent-texto)] underline-offset-2 hover:underline"
               >
                 Usar “{c.nome}”
               </button>

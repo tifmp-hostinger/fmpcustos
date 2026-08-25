@@ -105,7 +105,7 @@ export default async function Notificacoes() {
           <h2 className="rotulo-secao">Alertas em aberto</h2>
           <Link
             href="/alertas"
-            className="text-dado font-medium text-[var(--accent)] no-underline hover:underline"
+            className="text-dado font-medium text-[var(--accent-texto)] no-underline hover:underline"
           >
             Ver a lista
           </Link>

@@ -58,7 +58,7 @@ export function PainelDeCategorias({
           <strong className="tabular-nums">{orfaos.mensal}/mês</strong> em{" "}
           <Link
             href={{ pathname: "/custos", query: { f: "pendencia", falta: "categoria" } }}
-            className="font-medium text-[var(--accent)]"
+            className="font-medium text-[var(--accent-texto)]"
           >
             {orfaos.itens} {orfaos.itens === 1 ? "custo sem categoria" : "custos sem categoria"}
           </Link>{" "}
@@ -79,7 +79,7 @@ export function PainelDeCategorias({
                 <button
                   type="button"
                   onClick={() => setFundindo(s.linha)}
-                  className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+                  className="font-medium text-[var(--accent-texto)] underline-offset-2 hover:underline"
                 >
                   fundir
                 </button>

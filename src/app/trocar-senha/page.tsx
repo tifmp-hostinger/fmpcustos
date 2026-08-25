@@ -12,7 +12,7 @@ export default function TrocarSenha() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <p className="sobrancelha">FMP · Inteligência de custos</p>
       <h1 className="mt-3 titulo-pagina">
-        Definir uma <em className="text-[var(--accent)]">nova senha</em>
+        Definir uma <em className="text-[var(--accent-texto)]">nova senha</em>
       </h1>
       <p className="mt-3 text-sm text-[var(--ink-2)]">
         Sua senha atual é temporária. Escolha uma nova para continuar.

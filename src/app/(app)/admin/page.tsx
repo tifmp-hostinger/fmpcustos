@@ -143,7 +143,7 @@ function Cartao({
       <p className="mt-1 text-dado text-[var(--ink-2)]">{descricao}</p>
       <p
         className={`mt-3 text-meta font-medium tabular-nums ${
-          atencao ? "text-[var(--accent)]" : "text-[var(--ink-3)]"
+          atencao ? "text-[var(--accent-texto)]" : "text-[var(--ink-3)]"
         }`}
       >
         {nota}

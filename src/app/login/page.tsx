@@ -12,7 +12,7 @@ export default function Login() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <p className="sobrancelha">FMP · Inteligência de custos</p>
       <h1 className="mt-3 titulo-pagina">
-        Entrar no <em className="text-[var(--accent)]">sistema</em>
+        Entrar no <em className="text-[var(--accent-texto)]">sistema</em>
       </h1>
 
       <form action={acao} className="mt-8 space-y-4">

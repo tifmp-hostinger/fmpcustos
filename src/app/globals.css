@@ -147,6 +147,34 @@
      escurecido à mão que não existe na paleta — passa a ser o vermelho oficial,
      com os estados de interação vindo do sistema em vez do olho. */
   --accent: var(--fmp-red);
+  /*
+   * O VERMELHO DE PREENCHER E O DE ESCREVER SÃO O MESMO — MAS NÃO NA MESMA
+   * MEDIDA.
+   *
+   * `#EE2A42` sobre o creme dá 3,59:1. Como PREENCHIMENTO isso passa: a WCAG
+   * pede 3:1 para componente de interface, e um botão vermelho cheio é um
+   * componente. Como TEXTO PEQUENO reprova — o AA pede 4,5:1, e esta plataforma
+   * escreve em vermelho a sobrancelha de 11px, a mensagem de erro, o "sem
+   * cotação" e o rótulo da pílula ligada.
+   *
+   * Foi uma regressão introduzida aqui mesmo: o `--accent` anterior era
+   * `#c81e33`, um vermelho escurecido à mão que não existe na paleta mas dava
+   * 4,90:1. Trocá-lo pelo vermelho oficial acertou a marca e derrubou a
+   * legibilidade, e o número não foi conferido antes da troca.
+   *
+   * A saída não é abandonar o vermelho da marca: é usar, onde o texto é
+   * pequeno, o escurecido que o PRÓPRIO sistema já define para estado
+   * pressionado (`--fmp-red-700`, 5,53:1). Não é cor nova — é derivação
+   * autorizada, do mesmo matiz, e o olho lê como o mesmo vermelho.
+   *
+   * No escuro o problema não existe: `#EE2A42` sobre `#0d0b0c` dá 4,71:1. Lá o
+   * token volta a ser o vermelho da marca, sem derivação nenhuma.
+   *
+   * Número grande continua em `--accent`: a partir de 24px a WCAG pede 3:1, e o
+   * total em serifa itálica vermelha é o gesto da marca. Escurecê-lo seria
+   * pagar legibilidade que não estava faltando.
+   */
+  --accent-texto: var(--fmp-red-700);
   --accent-hover: var(--fmp-red-600);
   --accent-press: var(--fmp-red-700);
   --accent-wash: var(--fmp-red-tint);
@@ -178,6 +206,9 @@
     --ink-3: var(--fmp-on-dark-2);
     --rule: var(--fmp-dark-line);
     --rule-2: rgba(191, 186, 164, 0.42);
+    /* Sobre `#0d0b0c` o vermelho da marca dá 4,71:1 e passa em AA: no escuro
+       não há o que derivar, e o texto volta a ser o vermelho de verdade. */
+    --accent-texto: var(--fmp-red);
     --accent-wash: rgba(238, 42, 66, 0.14);
   }
 }
@@ -241,7 +272,7 @@ body {
     font-size: var(--text-micro);
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    color: var(--accent);
+    color: var(--accent-texto);
   }
 
   /*
@@ -387,6 +418,31 @@ body {
   margin-right: 0;
   padding-left: 0;
   padding-right: 0;
+}
+
+/*
+ * NO TELEFONE, TODO CAMPO TEM 16px — E ISSO NÃO É ESCOLHA DE DESENHO.
+ *
+ * O Safari do iOS dá zoom na página inteira quando o campo que recebe foco tem
+ * fonte menor que 16px. Não é configurável, não depende de `user-scalable`, e o
+ * zoom não volta sozinho ao sair do campo: a pessoa toca na busca, a tela salta,
+ * e ela termina de digitar num layout deslocado que precisa desfazer com dois
+ * dedos.
+ *
+ * Está aqui como regra única, e não como classe em cada campo, porque é uma
+ * propriedade do APARELHO e não do componente — vale para os seis campos de
+ * hoje e para o próximo que alguém escrever sem saber disto. E está FORA de
+ * `@layer` de propósito: precisa vencer o `text-sm` que os componentes
+ * declaram, e utilitário do Tailwind vence qualquer camada.
+ *
+ * Acima de `sm` nada muda: a densidade da tela de trabalho fica como está.
+ */
+@media (max-width: 39.999rem) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 1rem;
+  }
 }
 
 /* Foco visível forte: a lista inteira é navegável por teclado. */

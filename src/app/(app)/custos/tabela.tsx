@@ -307,6 +307,23 @@ export function TabelaDeCustos({
   const todosMarcados =
     selecionaveis.length > 0 && selecionaveis.every((l) => selecionados.has(l.id));
   const algunsMarcados = selecionaveis.some((l) => selecionados.has(l.id));
+  /*
+   * AÇÕES EM LOTE SÃO TRABALHO DE MESA.
+   *
+   * A coluna de seleção e a barra de ações existem para "preencher doze datas
+   * seguidas" — varredura com Shift, teclado, muitas linhas de uma vez. Nada
+   * disso tem gesto num telefone: não há Shift, a lista mostra três colunas, e
+   * a barra flutuante de lote colidia com a navegação do rodapé (`z-30` contra
+   * `z-40`, as duas em `bottom-0`), ficando ATRÁS dela — selecionar um custo no
+   * celular abria uma barra invisível.
+   *
+   * A alternativa seria empilhar três faixas fixas no pé de uma tela de 390px:
+   * navegação, botões flutuantes e ações de lote. Isso é pior que a doença.
+   *
+   * Então a seleção passa a existir só a partir de `md`, pela mesma via das
+   * outras colunas secundárias: escondida por CSS, nunca removida do HTML —
+   * girar o aparelho ou abrir no computador devolve tudo sem recarregar.
+   */
   const emLote = podeLancar && selecionaveis.length > 0;
 
   const quantidadeDeColunas =
@@ -341,7 +358,9 @@ export function TabelaDeCustos({
         <thead>
           <tr className="border-b border-[var(--rule)] rotulo-coluna">
             {emLote && (
-              <th className="w-10 px-3 py-3">
+              /* A seleção só existe a partir de `md`, junto com as colunas que
+                 ela serve. Ver o comentário de `emLote` acima. */
+              <th className="hidden w-10 px-3 py-3 md:table-cell">
                 <input
                   type="checkbox"
                   checked={todosMarcados}
@@ -624,7 +643,7 @@ function Linha({
       }}
     >
       {emLote && (
-        <td className="px-3 py-3">
+        <td className="hidden px-3 py-3 md:table-cell">
           {item.podeEditar && !item.naLixeira ? (
             <input
               type="checkbox"
@@ -651,7 +670,7 @@ function Linha({
       <td data-celula="descricao" className="px-4 py-3">
         <Link
           href={`/custos/${item.id}`}
-          className="font-medium no-underline hover:text-[var(--accent)]"
+          className="font-medium no-underline hover:text-[var(--accent-texto)]"
         >
           {item.descricao}
         </Link>
@@ -717,7 +736,7 @@ function Linha({
             <Link
               href={`/custos/${item.id}`}
               data-falta="cambio"
-              className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
+              className="text-meta font-medium text-[var(--accent-texto)] no-underline hover:underline"
             >
               sem cotação
             </Link>
@@ -739,7 +758,7 @@ function Linha({
           <Link
             href={`/custos/${item.id}`}
             data-falta="cambio"
-            className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
+            className="text-meta font-medium text-[var(--accent-texto)] no-underline hover:underline"
           >
             sem cotação
           </Link>
@@ -761,7 +780,7 @@ function Linha({
             <Link
               href={`/custos/${item.id}`}
               data-falta="aquisicao"
-              className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
+              className="text-meta font-medium text-[var(--accent-texto)] no-underline hover:underline"
             >
               sem data
             </Link>
@@ -1070,7 +1089,7 @@ function BotaoDeCelula({
       type="button"
       onClick={aoAtivar}
       {...atributos}
-      className={`rounded-md border border-dashed px-1.5 py-1 text-left text-dado transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] ${
+      className={`rounded-md border border-dashed px-1.5 py-1 text-left text-dado transition-colors hover:border-[var(--accent)] hover:text-[var(--accent-texto)] ${
         pendente
           ? "border-[var(--ink-3)]/50 text-[var(--ink-3)]"
           : "border-transparent text-[var(--ink-2)]"
@@ -1087,7 +1106,7 @@ function Selo({ status, title }: { status: StatusItem; title?: string }) {
       ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
       : status === "CANCELADO" || status === "SUBSTITUIDO"
         ? "bg-[var(--ink-3)]/15 text-[var(--ink-3)]"
-        : "bg-[var(--accent)]/12 text-[var(--accent)]";
+        : "bg-[var(--accent)]/12 text-[var(--accent-texto)]";
   return (
     // O rótulo textual anda sempre junto da cor: relatório de fundação é
     // impresso em preto e branco, e daltonismo existe.

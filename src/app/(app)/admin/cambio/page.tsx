@@ -74,7 +74,7 @@ export default async function Cambio() {
                 <li key={moeda}>
                   <Link
                     href={urlDaLista({ natureza: "tudo", situacao: "pendencia", falta: "cambio" })}
-                    className="text-dado font-medium text-[var(--accent)] no-underline hover:underline"
+                    className="text-dado font-medium text-[var(--accent-texto)] no-underline hover:underline"
                   >
                     Ver {n} em {moeda}
                   </Link>

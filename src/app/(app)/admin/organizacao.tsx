@@ -223,7 +223,7 @@ export function ListaOrganizacao({
                             [rotulos.campoPai === "setorPaiId" ? "setor" : "categoria"]: linha.id,
                           },
                         }}
-                        className="text-[var(--ink)] no-underline hover:text-[var(--accent)]"
+                        className="text-[var(--ink)] no-underline hover:text-[var(--accent-texto)]"
                       >
                         {linha.custos}
                       </Link>

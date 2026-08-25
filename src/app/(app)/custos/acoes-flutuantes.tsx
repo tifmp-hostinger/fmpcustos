@@ -64,16 +64,33 @@ export function AcoesFlutuantes({
     if (aberta) setAberta(false);
   }
 
-  // Esc fecha, e com a folha aberta a página atrás não rola — senão o dedo
-  // arrasta a lista por baixo e a folha parece descolada do que está fazendo.
+  /*
+   * Esc fecha, e com a folha aberta a página atrás não rola — senão o dedo
+   * arrasta a lista por baixo e a folha parece descolada do que está fazendo.
+   *
+   * E fecha também ao passar de `sm`. Sem isso havia uma armadilha real: girar
+   * o telefone para paisagem com a folha aberta manda o véu, o botão de fechar
+   * e o gatilho todos para `sm:hidden` — some tudo que sabia fechar — enquanto
+   * `overflow: hidden` no corpo e o `aria-modal` continuam valendo. A página
+   * fica sem rolagem, anunciada como diálogo, e sem nenhuma saída visível.
+   */
   useEffect(() => {
     if (!aberta) return;
+
     const tecla = (e: KeyboardEvent) => e.key === "Escape" && setAberta(false);
     document.addEventListener("keydown", tecla);
+
+    // 40rem é o `sm` do Tailwind. Em `rem` e não em `px` para acompanhar quem
+    // aumentou o corpo de texto no sistema operacional.
+    const largura = window.matchMedia("(min-width: 40rem)");
+    const cresceu = () => largura.matches && setAberta(false);
+    largura.addEventListener("change", cresceu);
+
     const antes = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", tecla);
+      largura.removeEventListener("change", cresceu);
       document.body.style.overflow = antes;
     };
   }, [aberta]);

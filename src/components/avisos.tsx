@@ -143,7 +143,7 @@ function Faixa({
       >
         <span aria-hidden className="mt-0.5 shrink-0">
           {tom === "erro" ? (
-            <IconeAlerta className="size-[18px] text-[var(--accent)]" />
+            <IconeAlerta className="size-[18px] text-[var(--accent-texto)]" />
           ) : tom === "neutro" ? (
             <IconeVoltar className="size-[18px] text-[var(--ink-3)]" />
           ) : (
@@ -163,7 +163,7 @@ function Faixa({
             type="button"
             onClick={desfazer}
             disabled={desfazendo}
-            className="shrink-0 rounded-lg px-2.5 py-1 text-dado font-semibold text-[var(--accent)] underline-offset-2 hover:underline disabled:opacity-50"
+            className="shrink-0 rounded-lg px-2.5 py-1 text-dado font-semibold text-[var(--accent-texto)] underline-offset-2 hover:underline disabled:opacity-50"
           >
             {desfazendo ? "Desfazendo…" : "Desfazer"}
           </button>

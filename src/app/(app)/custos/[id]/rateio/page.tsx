@@ -87,14 +87,14 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
       <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
         <Link
           href="/custos"
-          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
         >
           Custos
         </Link>
         <span className="mx-1.5">/</span>
         <Link
           href={`/custos/${id}`}
-          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
         >
           {item.descricao}
         </Link>
@@ -103,7 +103,7 @@ export default async function PaginaRateio({ params }: { params: Promise<{ id: s
       </nav>
 
       <h1 className="mt-2 titulo-pagina">
-        Dividir entre <em className="text-[var(--accent)]">setores</em>
+        Dividir entre <em className="text-[var(--accent-texto)]">setores</em>
       </h1>
       <p className="mt-2 text-sm text-[var(--ink-2)]">
         {item.descricao}

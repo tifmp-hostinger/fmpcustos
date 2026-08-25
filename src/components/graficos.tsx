@@ -122,6 +122,11 @@ export function Indicador({
       {/* O número em serifa itálica — o gesto assinatura da FMP. A plataforma
           escrevia seus números na mesma fonte de interface dos rótulos, então
           R$ 138 mil pesava o mesmo que a palavra ao lado dele. */}
+      {/* Aqui o vermelho da MARCA, não o derivado de texto pequeno: 32px é
+          texto grande pela WCAG, que pede 3:1 — e `#EE2A42` sobre o creme dá
+          3,59:1. Escurecer o número grande seria pagar legibilidade que não
+          estava faltando, e perder o gesto da marca justamente onde ele mais
+          aparece. */}
       <p className={`numero text-2xl ${alerta ? "text-[var(--accent)]" : ""}`}>{valor}</p>
       <p className="mt-1.5 text-xs leading-snug text-[var(--ink-3)]">{rotulo}</p>
       {nota && <p className="mt-1 text-micro leading-snug text-[var(--ink-3)]">{nota}</p>}

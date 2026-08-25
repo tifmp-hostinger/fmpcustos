@@ -138,7 +138,12 @@ export function BarraDeSelecao({
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-5">
+      {/* `sm:flex` e não `flex`: a seleção só existe a partir de `md` (ver
+          `emLote` em tabela.tsx), então esta barra não tem o que mostrar num
+          telefone — e em `bottom-0` com `z-30` ela ficava ATRÁS da navegação
+          do rodapé, que é `z-40`. Uma barra de ações invisível é pior do que
+          nenhuma: a pessoa seleciona, nada acontece, e ela clica de novo. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden justify-center px-4 pb-5 sm:flex">
         <div
           // Barra de ferramentas de verdade: agrupa comandos que valem para a
           // seleção, e o leitor de tela anuncia isso em vez de ler seis

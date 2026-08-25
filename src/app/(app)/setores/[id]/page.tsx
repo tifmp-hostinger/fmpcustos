@@ -72,7 +72,10 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <nav aria-label="Você está em" className="text-meta text-[var(--ink-3)]">
-        <Link href="/" className="text-[var(--ink-3)] no-underline hover:text-[var(--accent)]">
+        <Link
+          href="/"
+          className="text-[var(--ink-3)] no-underline hover:text-[var(--accent-texto)]"
+        >
           Início
         </Link>
         <span className="mx-1.5">/</span>
@@ -152,7 +155,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                   >
                     <strong className="tabular-nums">{x.n}</strong>
                     <span className="text-[var(--ink-2)]">{x.rotulo}</span>
-                    <IconeSeta className="size-3.5 text-[var(--accent)]" />
+                    <IconeSeta className="size-3.5 text-[var(--accent-texto)]" />
                   </Link>
                 </li>
               ))}
@@ -174,7 +177,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                 <li key={m.id}>
                   <Link
                     href={`/custos/${m.id}`}
-                    className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent)]"
+                    className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent-texto)]"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{m.descricao}</span>
@@ -210,7 +213,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                   Atenção:{" "}
                   <Link
                     href={daLista({ natureza: "tudo", situacao: "pendencia", falta: "data" })}
-                    className="text-[var(--accent)]"
+                    className="text-[var(--accent-texto)]"
                   >
                     {pendencias.semVigencia}{" "}
                     {pendencias.semVigencia === 1 ? "item não tem" : "itens não têm"} data
@@ -226,7 +229,7 @@ export default async function PaginaSetor({ params }: { params: Promise<{ id: st
                 <li key={r.id}>
                   <Link
                     href={`/custos/${r.id}`}
-                    className="flex items-baseline justify-between gap-3 text-dado no-underline hover:text-[var(--accent)]"
+                    className="flex items-baseline justify-between gap-3 text-dado no-underline hover:text-[var(--accent-texto)]"
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{r.descricao}</span>

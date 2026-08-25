@@ -38,7 +38,7 @@ export function MenuDoUsuario({
         <>
           <span
             aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/12 text-meta font-bold text-[var(--accent)]"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/12 text-meta font-bold text-[var(--accent-texto)]"
           >
             {iniciais}
           </span>
@@ -48,15 +48,26 @@ export function MenuDoUsuario({
           </span>
         </>
       }
+      /*
+       * O nome vai no CABEÇALHO do menu, não na lista de itens.
+       *
+       * A primeira versão o punha como item `desabilitado` — e isso quebrava o
+       * teclado: o menu foca o item 0 ao abrir, botão desabilitado não recebe
+       * foco, e com todos os itens em `tabIndex={-1}` não sobrava caminho para
+       * "Trocar senha" nem para "Sair". Duas ações que antes eram controles
+       * focáveis no cabeçalho ficaram inalcançáveis sem mouse.
+       *
+       * O erro conceitual estava antes disso: `desabilitado` quer dizer "ação
+       * que você não pode tomar agora", e um nome não é ação.
+       */
+      cabecalho={
+        <>
+          <span className="block font-semibold text-[var(--ink)]">{nome}</span>
+          {papel}
+        </>
+      }
       itens={[
         {
-          // No telefone o nome não cabe ao lado da sigla; aqui dentro ele cabe,
-          // e o menu abre dizendo de quem é a conta antes de oferecer sair dela.
-          rotulo: `${nome} · ${papel}`,
-          desabilitado: true,
-        },
-        {
-          separadorAntes: true,
           rotulo: "Trocar senha",
           icone: <IconeChave className="size-4" />,
           href: "/trocar-senha",

@@ -48,11 +48,27 @@ export function classesDeBotao(
 
   switch (variante) {
     case "primario":
+      /*
+       * Branco sobre `#EE2A42` dá 4,16:1. O preenchimento contra o fundo passa
+       * (3,59:1, e a WCAG pede 3:1 para componente); o RÓTULO fica 0,34 abaixo
+       * do 4,5:1 que o AA pede para texto normal.
+       *
+       * Fica assim de propósito, e não por descuido: este par exato — vermelho
+       * da marca com rótulo branco de ~14px — é o que o kit da FMP especifica
+       * para o botão primário. Trocar por `--fmp-red-600` resolveria o número
+       * (5,18:1) ao custo de pintar o elemento mais visível da plataforma com
+       * um vermelho que não é o da marca. Essa é uma decisão de identidade, de
+       * quem responde pela marca, não de quem escreve o CSS.
+       *
+       * O texto vermelho pequeno, esse sim, foi corrigido: ver `--accent-texto`
+       * em globals.css. A diferença é que lá não havia decisão de marca a
+       * tomar — o sistema já traz o escurecido pronto para uso em interface.
+       */
       return `${base} border-[1.5px] border-transparent bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] active:bg-[var(--accent-press)]`;
     case "perigo":
-      return `${base} border-[1.5px] border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white active:bg-[var(--accent-press)] active:text-white`;
+      return `${base} border-[1.5px] border-[var(--accent)] text-[var(--accent-texto)] hover:bg-[var(--accent)] hover:text-white active:bg-[var(--accent-press)] active:text-white`;
     case "texto":
-      return `${base} border-[1.5px] border-transparent px-2 text-[var(--ink-2)] hover:text-[var(--accent)]`;
+      return `${base} border-[1.5px] border-transparent px-2 text-[var(--ink-2)] hover:text-[var(--accent-texto)]`;
     case "contorno":
     default:
       return `${base} border-[1.5px] border-[var(--rule-2)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink)]`;

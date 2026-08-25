@@ -133,7 +133,7 @@ export function ModoRevisao({
           setPosicao(0);
           setAberto(true);
         }}
-        className="rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--surface)] px-3.5 py-2 text-dado font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8"
+        className="rounded-fmp-md border border-[var(--accent)]/40 bg-[var(--surface)] px-3.5 py-2 text-dado font-medium text-[var(--accent-texto)] hover:bg-[var(--accent)]/8"
       >
         Revisar em sequência ({disponivel.length})
       </button>
@@ -377,7 +377,7 @@ function FichaDeRevisao({
             type="button"
             onClick={() => void semPrazo()}
             disabled={salvando}
-            className="mt-1.5 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+            className="mt-1.5 text-meta text-[var(--ink-3)] underline-offset-2 hover:text-[var(--accent-texto)] hover:underline disabled:opacity-50"
           >
             Este contrato não tem prazo determinado
           </button>

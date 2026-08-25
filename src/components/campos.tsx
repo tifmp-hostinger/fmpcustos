@@ -33,7 +33,7 @@ export function CampoSenha({
       <label className="block">
         <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
           {rotulo}
-          {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
+          {obrigatorio && <span className="ml-0.5 text-[var(--accent-texto)]">*</span>}
         </span>
         <span className="relative block">
           <input
@@ -120,7 +120,7 @@ export function Campo({
     <label className="block">
       <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
         {rotulo}
-        {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
+        {obrigatorio && <span className="ml-0.5 text-[var(--accent-texto)]">*</span>}
       </span>
       <input
         {...resto}
@@ -144,7 +144,7 @@ export function Campo({
         }`}
       />
       {erro ? (
-        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent)]">
+        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent-texto)]">
           {erro}
         </span>
       ) : (
@@ -192,7 +192,7 @@ export function Selecao({
     <label className="block">
       <span className="mb-1.5 block text-dado font-medium text-[var(--ink-2)]">
         {rotulo}
-        {obrigatorio && <span className="ml-0.5 text-[var(--accent)]">*</span>}
+        {obrigatorio && <span className="ml-0.5 text-[var(--accent-texto)]">*</span>}
       </span>
       <select
         name={nome}
@@ -214,11 +214,11 @@ export function Selecao({
         ))}
       </select>
       {erro ? (
-        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent)]">
+        <span id={idErro} className="mt-1 block text-xs font-medium text-[var(--accent-texto)]">
           {erro}
         </span>
       ) : legado ? (
-        <span id={idErro} className="mt-1 block text-xs text-[var(--accent)]">
+        <span id={idErro} className="mt-1 block text-xs text-[var(--accent-texto)]">
           O valor gravado não está mais na lista. Escolha um antes de salvar.
         </span>
       ) : (
@@ -274,7 +274,7 @@ export function Aviso({
       role="status"
       className={`rounded-lg border-l-[3px] px-3 py-2 text-sm ${
         erro
-          ? "border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--accent)]"
+          ? "border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--accent-texto)]"
           : "border-emerald-600 bg-emerald-600/8 text-emerald-700 dark:text-emerald-400"
       }`}
     >

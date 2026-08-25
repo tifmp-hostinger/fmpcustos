@@ -52,7 +52,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <h1 className="titulo-pagina">
-          Falta vincular você a um <em className="text-[var(--accent)]">setor</em>
+          Falta vincular você a um <em className="text-[var(--accent-texto)]">setor</em>
         </h1>
         <p className="mt-3 text-base text-[var(--ink-2)]">
           Seu usuário existe, mas ainda não está ligado a nenhuma área — por isso não há nada para
@@ -178,7 +178,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
                     por item. O cartão mostra os primeiros; o link mostra todos. */}
                 <Link
                   href={urlDaLista({ natureza: "tudo", situacao: "pendencia" })}
-                  className="text-meta font-medium text-[var(--accent)] no-underline hover:underline"
+                  className="text-meta font-medium text-[var(--accent-texto)] no-underline hover:underline"
                 >
                   Resolver tudo de uma vez
                 </Link>
@@ -226,7 +226,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
                     <li key={m.id}>
                       <Link
                         href={`/custos/${m.id}`}
-                        className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent)]"
+                        className="flex items-baseline justify-between gap-3 py-2.5 no-underline hover:text-[var(--accent-texto)]"
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-medium">{m.descricao}</span>
@@ -246,7 +246,7 @@ async function InicioDoSetor({ usuario }: { usuario: Usuario }) {
               )}
               <Link
                 href="/custos"
-                className="mt-3 inline-flex items-center gap-1.5 text-dado font-medium text-[var(--accent)] no-underline hover:underline"
+                className="mt-3 inline-flex items-center gap-1.5 text-dado font-medium text-[var(--accent-texto)] no-underline hover:underline"
               >
                 Ver todos os custos <IconeSeta className="size-4" />
               </Link>
@@ -284,7 +284,7 @@ function Pendente({ id, texto, acao }: { id: string; texto: string; acao: string
         className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface)] px-3.5 py-2.5 text-sm no-underline hover:bg-[var(--ground)]"
       >
         <span className="min-w-0 truncate text-[var(--ink)]">{texto}</span>
-        <span className="flex shrink-0 items-center gap-1 text-dado font-medium text-[var(--accent)]">
+        <span className="flex shrink-0 items-center gap-1 text-dado font-medium text-[var(--accent-texto)]">
           {acao} <IconeSeta className="size-4" />
         </span>
       </Link>
@@ -354,7 +354,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
         o da{" "}
         <Link
           href={urlDaLista({ natureza: "tudo", situacao: "todos" })}
-          className="text-[var(--accent)]"
+          className="text-[var(--accent-texto)]"
         >
           lista completa de custos
         </Link>
@@ -458,7 +458,7 @@ async function InicioCorporativo({ usuario }: { usuario: Usuario }) {
             aparece como “Não rateado”. Dinheiro sem dono não pode ficar invisível —{" "}
             <Link
               href={urlDaLista({ situacao: "ativos", setor: SEM_SETOR })}
-              className="font-medium text-[var(--accent)]"
+              className="font-medium text-[var(--accent-texto)]"
             >
               ver quais são
             </Link>
@@ -568,7 +568,7 @@ function GuiaInicial({
             {!p.feito && (
               <Link
                 href={p.href}
-                className="mt-2.5 inline-flex items-center gap-1 text-dado font-medium text-[var(--accent)] no-underline hover:underline"
+                className="mt-2.5 inline-flex items-center gap-1 text-dado font-medium text-[var(--accent-texto)] no-underline hover:underline"
               >
                 {p.acao} <IconeSeta className="size-4" />
               </Link>
@@ -615,7 +615,7 @@ function CartaoRenovacoes({
             <li key={r.id}>
               <Link
                 href={`/custos/${r.id}`}
-                className="flex items-baseline justify-between gap-3 text-dado no-underline hover:text-[var(--accent)]"
+                className="flex items-baseline justify-between gap-3 text-dado no-underline hover:text-[var(--accent-texto)]"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{r.descricao}</span>
@@ -655,7 +655,9 @@ function PendenciaResumo({
   const limpo = n === 0;
   const corpo = (
     <>
-      <span className={`text-xl font-semibold tabular-nums ${limpo ? "" : "text-[var(--accent)]"}`}>
+      <span
+        className={`text-xl font-semibold tabular-nums ${limpo ? "" : "text-[var(--accent-texto)]"}`}
+      >
         {n}
       </span>
       <span className="mt-0.5 block text-dado text-[var(--ink-2)]">{rotulo}</span>
@@ -675,7 +677,7 @@ function PendenciaResumo({
         className="-m-2 block rounded-lg p-2 no-underline transition-colors hover:bg-[var(--ground)]"
       >
         {corpo}
-        <span className="mt-1 block text-micro font-medium text-[var(--accent)]">
+        <span className="mt-1 block text-micro font-medium text-[var(--accent-texto)]">
           Resolver na lista →
         </span>
       </Link>

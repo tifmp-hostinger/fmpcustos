@@ -40,6 +40,7 @@ export function MenuDeLinha({
   registrarAbertura,
   conteudoGatilho,
   classeGatilho,
+  cabecalho,
 }: {
   /** Rótulo acessível do gatilho: "Ações de Adobe Creative Cloud". */
   rotulo: string;
@@ -53,6 +54,19 @@ export function MenuDeLinha({
    */
   conteudoGatilho?: React.ReactNode;
   classeGatilho?: string;
+  /**
+   * Conteúdo não interativo no topo do menu — de quem é esta conta, a que se
+   * refere esta lista.
+   *
+   * Existe porque a alternativa que se tentou primeiro estava errada: pôr o
+   * nome como um item `desabilitado`. Um item desabilitado significa "uma ação
+   * que você não pode tomar agora", e um nome não é ação nenhuma. Pior, era
+   * concreto: o menu foca o item de índice 0 ao abrir, `<button disabled>` não
+   * recebe foco, e todos os itens são `tabIndex={-1}` — quem navegava por
+   * teclado abria o menu da conta e não alcançava nem "Trocar senha" nem
+   * "Sair". Antes de virar menu, os dois eram controles focáveis no cabeçalho.
+   */
+  cabecalho?: React.ReactNode;
   /**
    * Entrega ao pai uma função que abre este menu, para o clique com o botão
    * direito na linha inteira cair no mesmo lugar — é o gesto que a pessoa já
@@ -213,6 +227,13 @@ export function MenuDeLinha({
             }}
             className="z-50 w-[232px] rounded-fmp-md border border-[var(--rule)] bg-[var(--surface)] p-1.5 shadow-xl shadow-black/10"
           >
+            {cabecalho && (
+              /* Fora da lista de `menuitem`: o leitor de tela anuncia "menu com
+                 2 itens", e não com 3 dos quais um é impossível de escolher. */
+              <div className="border-b border-[var(--rule)] px-2.5 pt-1.5 pb-2.5 text-meta text-[var(--ink-3)]">
+                {cabecalho}
+              </div>
+            )}
             {itens.map((item, n) => (
               <div key={item.rotulo}>
                 {item.separadorAntes && (
@@ -248,7 +269,7 @@ function ItemDoMenu({
     item.desabilitado
       ? "cursor-not-allowed text-[var(--ink-3)]"
       : item.perigoso
-        ? "text-[var(--ink)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)]"
+        ? "text-[var(--ink)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent-texto)]"
         : "text-[var(--ink)] hover:bg-[var(--ground)]"
   } ${ativo && !item.desabilitado ? "bg-[var(--ground)]" : ""}`;
 
