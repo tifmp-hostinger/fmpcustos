@@ -5,9 +5,16 @@ import { useRouter } from "next/navigation";
 import { importarColados } from "./acoes";
 import { useAviso } from "@/components/avisos";
 import { Selecao } from "@/components/campos";
-import { formatarBRL } from "@/lib/dinheiro";
-import { ROTULOS_PERIODICIDADE } from "@/lib/opcoes";
-import { CAMPOS, MAXIMO_LINHAS, lerColagem, type ChaveCampo, type Mapa } from "@/lib/planilha";
+import { formatarBRL, lerValorDigitado } from "@/lib/dinheiro";
+import { ROTULOS_NATUREZA, ROTULOS_PERIODICIDADE } from "@/lib/opcoes";
+import {
+  CAMPOS,
+  MAXIMO_LINHAS,
+  lerColagem,
+  somaColada,
+  type ChaveCampo,
+  type Mapa,
+} from "@/lib/planilha";
 import { IconeAlerta, IconeCheck } from "@/components/icones";
 import type { Resultado } from "@/lib/acoes";
 import { classesDeBotao } from "@/components/botao";
@@ -62,8 +69,30 @@ export function Colador({
     return r;
   }, null);
 
-  const prontas = leitura?.linhas.filter((l) => l.problemas.length === 0) ?? [];
-  const comProblema = leitura?.linhas.filter((l) => l.problemas.length > 0) ?? [];
+  // Memorizadas de propósito: `prontas` alimenta o useMemo da soma, e um array
+  // novo a cada render tornaria aquele memo inútil.
+  const prontas = useMemo(
+    () => leitura?.linhas.filter((l) => l.problemas.length === 0) ?? [],
+    [leitura],
+  );
+  const comProblema = useMemo(
+    () => leitura?.linhas.filter((l) => l.problemas.length > 0) ?? [],
+    [leitura],
+  );
+
+  // CONFERÊNCIA DO TOTAL
+  //
+  // A prévia responde "entendi trinta linhas" e não responde "entendi o mesmo
+  // dinheiro". Uma coluna de valor mapeada na coluna errada mantém a contagem
+  // de linhas intacta e muda o total — é o único erro de colagem que passa por
+  // todas as outras checagens. Comparar contra o total que a pessoa lê na
+  // própria planilha é o que o pega.
+  const soma = useMemo(() => somaColada(prontas), [prontas]);
+  const [esperado, setEsperado] = useState("");
+  const esperadoLido = esperado.trim() === "" ? null : lerValorDigitado(esperado);
+  const diferenca =
+    esperadoLido === null ? null : Number(soma.total) - Number(esperadoLido);
+  const bate = diferenca !== null && Math.abs(diferenca) < 0.005;
 
   function trocarColuna(campo: ChaveCampo, indice: number) {
     const base = leitura?.mapa ?? null;
@@ -147,6 +176,29 @@ export function Colador({
                 />
               ))}
             </div>
+
+            {leitura.ambiguas.length > 0 && (
+              <div className="mt-3 rounded-fmp-md border border-amber-300/70 bg-amber-50 p-3 text-meta text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+                <p className="flex items-start gap-2">
+                  <IconeAlerta className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    {leitura.ambiguas.length === 1
+                      ? "Uma coluna ficou de fora porque o sistema não adivinha o que ela é:"
+                      : "Estas colunas ficaram de fora porque o sistema não adivinha o que elas são:"}
+                  </span>
+                </p>
+                <ul className="mt-1.5 space-y-1 pl-6">
+                  {leitura.ambiguas.map((a) => (
+                    <li key={a.indice}>
+                      <strong>
+                        {a.indice + 1}. {a.titulo}
+                      </strong>{" "}
+                      — {a.recado}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
 
           <section>
@@ -174,6 +226,7 @@ export function Colador({
                     <th className="px-3 py-2.5 text-left font-semibold">Custo</th>
                     <th className="px-3 py-2.5 text-right font-semibold">Valor</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Cobrança</th>
+                    <th className="px-3 py-2.5 text-left font-semibold">Natureza</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Renova</th>
                   </tr>
                 </thead>
@@ -214,6 +267,9 @@ export function Colador({
                         <td className="px-3 py-2 text-[var(--ink-2)]">
                           {ROTULOS_PERIODICIDADE[linha.periodicidade]}
                         </td>
+                        <td className="px-3 py-2 text-[var(--ink-2)]">
+                          {ROTULOS_NATUREZA[linha.natureza] ?? linha.natureza}
+                        </td>
                         <td className="px-3 py-2 tabular-nums text-[var(--ink-2)]">
                           {linha.dataFim
                             ? linha.dataFim.toLocaleDateString("pt-BR", { timeZone: "UTC" })
@@ -225,6 +281,56 @@ export function Colador({
                 </tbody>
               </table>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-fmp-md border border-[var(--rule)] bg-[var(--surface-2)] px-4 py-3">
+              <div>
+                <p className="rotulo-coluna">Soma do que vai entrar</p>
+                <p className="mt-0.5 text-dado tabular-nums">
+                  <strong className="text-base">{formatarBRL(soma.total)}</strong>
+                  <span className="ml-2 text-[var(--ink-3)]">
+                    em {soma.comValor} {soma.comValor === 1 ? "linha" : "linhas"}
+                    {soma.semValor > 0 && ` · ${soma.semValor} sem valor, a apurar`}
+                  </span>
+                </p>
+              </div>
+
+              <label className="flex flex-wrap items-center gap-2 text-meta text-[var(--ink-2)]">
+                <span>Total que a sua planilha mostra</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={esperado}
+                  onChange={(e) => setEsperado(e.target.value)}
+                  placeholder="0,00"
+                  aria-label="Total que a sua planilha mostra, para conferência"
+                  className="w-36 rounded-fmp-sm border border-[var(--rule)] bg-[var(--surface)] px-2.5 py-1.5 text-right text-dado tabular-nums"
+                />
+                {esperadoLido !== null && (
+                  <span
+                    className={
+                      bate
+                        ? "font-semibold text-emerald-700 dark:text-emerald-400"
+                        : "font-semibold text-[var(--accent-texto)]"
+                    }
+                  >
+                    {bate
+                      ? "bate"
+                      : `difere ${formatarBRL(Math.abs(diferenca ?? 0).toFixed(2))}`}
+                  </span>
+                )}
+                {esperado.trim() !== "" && esperadoLido === null && (
+                  <span className="text-[var(--ink-3)]">não entendi esse número</span>
+                )}
+              </label>
+            </div>
+
+            {esperadoLido !== null && !bate && (
+              <p className="mt-2 text-meta text-[var(--accent-texto)]">
+                A contagem de linhas pode estar certa e o dinheiro errado — normalmente é a coluna
+                de valor apontada para a coluna vizinha. Confira o mapeamento acima antes de
+                importar.
+              </p>
+            )}
 
             {comProblema.length > 0 && (
               <p className="mt-2.5 text-meta text-[var(--ink-3)]">

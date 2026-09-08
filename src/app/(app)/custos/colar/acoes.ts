@@ -61,7 +61,9 @@ export async function importarColados(
   if (validas.length === 0) {
     return falha("Nenhuma linha está pronta para importar. Corrija os problemas apontados.");
   }
-  if (validas.length > MAXIMO_LINHAS) return falha("Cole no máximo 200 linhas por vez.");
+  if (validas.length > MAXIMO_LINHAS) {
+    return falha(`Cole no máximo ${MAXIMO_LINHAS} linhas por vez.`);
+  }
 
   // Fornecedores e categorias resolvidos ANTES da transação, em lote: dentro
   // dela, uma consulta por linha em trinta linhas seguraria conexão à toa e
@@ -113,11 +115,20 @@ export async function importarColados(
             ? (porFornecedor.get(normalizar(linha.fornecedor)) ?? null)
             : null,
           categoriaId,
-          natureza: "RECORRENTE",
+          // A natureza vem da linha, e não fixa em RECORRENTE como antes.
+          // Gravar tudo como recorrente transformava cada compra avulsa em
+          // mensalidade eterna: a planilha de Marketing tem 153 delas, o que
+          // somaria mais de um milhão de reais por mês ao custo da fundação.
+          natureza: linha.natureza,
+          // Compra avulsa é cobrança única por definição — o modelo de
+          // cobrança acompanha a natureza para a lista não prometer
+          // recorrência onde não há.
+          modeloCobranca: linha.natureza === "PONTUAL" ? "PONTUAL" : "FIXO",
           periodicidade: linha.periodicidade,
           valorPeriodo: linha.valorPeriodo,
           ...valores,
           quantidade: linha.quantidade,
+          dataInicio: linha.dataInicio,
           dataFim: linha.dataFim,
           observacoes: linha.observacoes,
           // Importado nasce EM_ANALISE, nunca ATIVO: trinta linhas coladas

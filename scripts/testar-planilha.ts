@@ -1,9 +1,12 @@
 import {
+  colunasAmbiguas,
   lerColagem,
   lerData,
+  lerNatureza,
   lerPeriodicidade,
   pareceCabecalho,
   separarCelulas,
+  somaColada,
 } from "../src/lib/planilha";
 
 let falhas = 0;
@@ -119,10 +122,161 @@ ok('"anual" → ANUAL', lerPeriodicidade("anual") === "ANUAL");
 ok("vazio não vira nada", lerPeriodicidade("") === null);
 
 console.log("\n— Teto de linhas —");
-const muitas = Array.from({ length: 250 }, (_, i) => `Custo ${i}\tFornecedor\t100,00`).join("\n");
+const muitas = Array.from({ length: 350 }, (_, i) => `Custo ${i}\tFornecedor\t100,00`).join("\n");
 l = lerColagem(muitas);
-ok("corta em 200 linhas", l.linhas.length === 200, `${l.linhas.length}`);
+ok("corta em 300 linhas", l.linhas.length === 300, `${l.linhas.length}`);
 ok("e diz quantas ficaram de fora", l.cortadas === 50, `${l.cortadas}`);
+ok(
+  "cabe a maior aba setorial real, de 172 linhas",
+  lerColagem(
+    Array.from({ length: 172 }, (_, i) => `Custo ${i}\tFornecedor\t100,00`).join("\n"),
+  ).cortadas === 0,
+);
+
+// ---------------------------------------------------------------------------
+// NATUREZA
+//
+// Antes desta versão a colagem gravava RECORRENTE em tudo. Numa planilha com
+// 153 compras avulsas isso somaria mais de um milhão de reais por mês ao custo
+// recorrente da fundação, cada brinde virando mensalidade eterna.
+// ---------------------------------------------------------------------------
+console.log("\n— Natureza —");
+ok('"pontual" → PONTUAL', lerNatureza("Pontual") === "PONTUAL");
+ok('"compra avulsa" → PONTUAL', lerNatureza("Compra avulsa") === "PONTUAL");
+ok('"recorrente" → RECORRENTE', lerNatureza("Recorrente") === "RECORRENTE");
+ok('"assinatura" → RECORRENTE', lerNatureza("Assinatura") === "RECORRENTE");
+ok('"investimento" → CAPEX', lerNatureza("Investimento") === "CAPEX");
+ok('"folha" → PESSOAL', lerNatureza("Folha de pagamento") === "PESSOAL");
+ok("vazio não vira nada", lerNatureza("") === null);
+ok(
+  '"contrato pontual" cai em PONTUAL, não em RECORRENTE',
+  lerNatureza("contrato pontual") === "PONTUAL",
+  String(lerNatureza("contrato pontual")),
+);
+
+const COM_NATUREZA = [
+  "Descrição\tFornecedor\tValor\tPeriodicidade\tNatureza",
+  "Ecobag preta — Cidade da Advocacia\tInova Gifts\t27.000,00\tÚnico\tPontual",
+  "Microsoft 365\tMicrosoft\t1.931,30\tMensal\tRecorrente",
+].join("\n");
+l = lerColagem(COM_NATUREZA);
+ok("mapeia a coluna de natureza", l.mapa.natureza === 4, String(l.mapa.natureza));
+ok("lê PONTUAL da coluna", l.linhas[0].natureza === "PONTUAL", l.linhas[0].natureza);
+ok("lê RECORRENTE da coluna", l.linhas[1].natureza === "RECORRENTE", l.linhas[1].natureza);
+
+console.log("\n— Natureza derivada, quando não há coluna —");
+l = lerColagem(
+  ["Descrição\tValor\tPeriodicidade", "Brindes\t27.000,00\tÚnico", "Licença\t500,00\tMensal"].join(
+    "\n",
+  ),
+);
+ok(
+  "pagamento único vira compra pontual",
+  l.linhas[0].natureza === "PONTUAL",
+  l.linhas[0].natureza,
+);
+ok("e o aviso conta que foi derivado", l.linhas[0].avisos.some((a) => a.includes("compra pontual")));
+ok("mensal segue recorrente", l.linhas[1].natureza === "RECORRENTE", l.linhas[1].natureza);
+ok(
+  "compra pontual sem data de aquisição avisa",
+  l.linhas[0].avisos.some((a) => a.includes("pendência")),
+  l.linhas[0].avisos.join(" · "),
+);
+
+console.log("\n— Contradição declarada é problema, não silêncio —");
+l = lerColagem(
+  ["Descrição\tValor\tPeriodicidade\tNatureza", "Coisa\t100,00\tÚnico\tRecorrente"].join("\n"),
+);
+ok(
+  "recorrente com pagamento único não passa",
+  l.linhas[0].problemas.some((p) => p.includes("escolha uma das duas")),
+  l.linhas[0].problemas.join(" · "),
+);
+l = lerColagem(
+  ["Descrição\tValor\tNatureza", "Coisa\t100,00\tsei lá o que"].join("\n"),
+);
+ok(
+  "natureza ilegível é problema declarado",
+  l.linhas[0].problemas.some((p) => p.includes("não reconheci a natureza")),
+  l.linhas[0].problemas.join(" · "),
+);
+
+// ---------------------------------------------------------------------------
+// "VENCIMENTO" NÃO É DATA DE RENOVAÇÃO
+//
+// A planilha de Marketing tem uma coluna VENCIMENTO com a data de cada boleto.
+// Lida como fim de contrato, cada cobrança virava renovação e ia alimentar o
+// alerta de vencimento com ruído.
+// ---------------------------------------------------------------------------
+console.log("\n— A coluna “Vencimento” não é adivinhada —");
+const COM_VENCIMENTO = [
+  "Descrição\tFornecedor\tValor\tVencimento",
+  "Plano Premium\tObvio\t600,00\t10/04/2026",
+].join("\n");
+l = lerColagem(COM_VENCIMENTO);
+ok("não cai em “Renova em”", l.mapa.dataFim === -1, String(l.mapa.dataFim));
+ok("e a linha não ganha data de renovação", l.linhas[0].dataFim === null);
+ok("mas a coluna é apontada como ambígua", l.ambiguas.length === 1, JSON.stringify(l.ambiguas));
+ok(
+  "com recado que diz o que fazer",
+  l.ambiguas[0]?.recado.includes("Renova em"),
+  l.ambiguas[0]?.recado ?? "",
+);
+ok(
+  "“Renova em” continua sendo reconhecida",
+  lerColagem(["Descrição\tValor\tRenova em", "Coisa\t10,00\t31/12/2026"].join("\n")).mapa
+    .dataFim === 2,
+);
+ok(
+  "coluna já mapeada não aparece como ambígua",
+  colunasAmbiguas(["Descrição", "Vencimento"], {
+    ...l.mapa,
+    dataFim: 1,
+  }).length === 0,
+);
+
+console.log("\n— Data de início —");
+l = lerColagem(
+  ["Descrição\tValor\tAquisição\tPeriodicidade", "Ecobag\t27.000,00\t15/08/2026\tÚnico"].join(
+    "\n",
+  ),
+);
+ok("mapeia “Aquisição” como início", l.mapa.dataInicio === 2, String(l.mapa.dataInicio));
+ok(
+  "e lê a data",
+  l.linhas[0].dataInicio?.toISOString().slice(0, 10) === "2026-08-15",
+  l.linhas[0].dataInicio?.toISOString().slice(0, 10) ?? "null",
+);
+ok(
+  "com data de aquisição, o aviso de pendência não aparece",
+  !l.linhas[0].avisos.some((a) => a.includes("pendência")),
+  l.linhas[0].avisos.join(" · "),
+);
+
+// ---------------------------------------------------------------------------
+// SOMA PARA CONFERÊNCIA
+//
+// A prévia dizia "entendi trinta linhas" e não dizia "entendi o mesmo
+// dinheiro". Coluna de valor apontada para a vizinha mantém a contagem e muda
+// o total.
+// ---------------------------------------------------------------------------
+console.log("\n— Soma do que vai entrar —");
+let soma = somaColada(
+  lerColagem(
+    [
+      "Descrição\tValor",
+      "Um\t1.234,56",
+      "Dois\t0,44",
+      "Três\t",
+      "Quatro\t10.000,00",
+    ].join("\n"),
+  ).linhas,
+);
+ok("soma em centavos, sem erro de ponto flutuante", soma.total === "11235.00", soma.total);
+ok("conta quantas tinham valor", soma.comValor === 3, String(soma.comValor));
+ok("e quantas ficaram a apurar", soma.semValor === 1, String(soma.semValor));
+soma = somaColada([]);
+ok("colagem vazia soma zero", soma.total === "0.00", soma.total);
 
 console.log(falhas === 0 ? "\n✓ todos os casos passaram\n" : `\n✗ ${falhas} falha(s)\n`);
 process.exit(falhas === 0 ? 0 : 1);

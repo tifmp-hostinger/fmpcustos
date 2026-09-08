@@ -27,7 +27,7 @@
     "testar:planilha": "tsx scripts/testar-planilha.ts",
     "dev:e2e-memoria": "node scripts/dev/e2e-memoria.mjs",
     "dev:e2e-lote": "node scripts/dev/e2e-lote.mjs",
-    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs && node scripts/dev/e2e-organizacao.mjs && node scripts/dev/e2e-naturezas.mjs && node scripts/dev/e2e-visoes.mjs && node scripts/dev/e2e-rateio-todos.mjs && node scripts/dev/e2e-flutuantes.mjs && node scripts/dev/e2e-telefone.mjs",
+    "dev:e2e-tudo": "node scripts/dev/e2e.mjs && node scripts/dev/e2e-navegacao.mjs && node scripts/dev/e2e-memoria.mjs && node scripts/dev/e2e-lote.mjs && node scripts/dev/e2e-moeda.mjs && node scripts/dev/e2e-alertas.mjs && node scripts/dev/e2e-organizacao.mjs && node scripts/dev/e2e-naturezas.mjs && node scripts/dev/e2e-visoes.mjs && node scripts/dev/e2e-rateio-todos.mjs && node scripts/dev/e2e-flutuantes.mjs && node scripts/dev/e2e-telefone.mjs && node scripts/dev/e2e-colar.mjs",
     "testar:dinheiro": "tsx scripts/testar-dinheiro.ts",
     "dev:e2e-moeda": "node scripts/dev/e2e-moeda.mjs",
     "rotina": "tsx scripts/rotina.ts",
@@ -41,7 +41,8 @@
     "dev:e2e-telefone": "node scripts/dev/e2e-telefone.mjs",
     "dev:e2e-flutuantes": "node scripts/dev/e2e-flutuantes.mjs",
     "dev:e2e-rateio-todos": "node scripts/dev/e2e-rateio-todos.mjs",
-    "testar:contraste": "tsx scripts/testar-contraste.ts"
+    "testar:contraste": "tsx scripts/testar-contraste.ts",
+    "dev:e2e-colar": "node scripts/dev/e2e-colar.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
